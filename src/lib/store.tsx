@@ -33,12 +33,28 @@ import type {
   AmdecEntry,
   AmdecInput,
   AmdecRow,
+  CapaAction,
+  CapaActionInput,
+  CapaActionRow,
+  FiveWhyAnalysis,
+  FiveWhyAnalysisInput,
+  FiveWhyAnalysisRow,
+  FiveWhyLevel,
+  FiveWhyLevelInput,
+  FiveWhyLevelRow,
   Id,
   Invitation,
+  IshikawaAnalysis,
+  IshikawaAnalysisInput,
+  IshikawaAnalysisRow,
+  IshikawaCause,
+  IshikawaCauseInput,
+  IshikawaCauseRow,
   Member,
   MemberInput,
   MemberRow,
   Project,
+  ProjectType,
   ActionStatus,
   RaciRole,
   ProjectMember,
@@ -49,6 +65,11 @@ import {
   actionInputToRow,
   amdecFromRow,
   amdecInputToRow,
+  capaActionFromRow,
+  fiveWhyAnalysisFromRow,
+  fiveWhyLevelFromRow,
+  ishikawaAnalysisFromRow,
+  ishikawaCauseFromRow,
   memberFromRow,
   projectMemberFromRow,
 } from '@/lib/types';
@@ -60,6 +81,7 @@ interface ProjectMeta {
   name: string;
   description?: string;
   ownerId: string;
+  projectType: ProjectType;
   project_members?: ProjectMember[];
   createdAt: string;
 }
@@ -74,9 +96,12 @@ interface WorkspaceState {
   actions: Action[];
   amdecs: AmdecEntry[];
   invitations: Invitation[];
+  fiveWhyAnalyses: FiveWhyAnalysis[];
+  ishikawaAnalyses: IshikawaAnalysis[];
+  capaActions: CapaAction[];
 
   setCurrentProject: (id: Id) => void;
-  createProject: (name: string, description?: string) => Promise<void>;
+  createProject: (name: string, description?: string, projectType?: ProjectType) => Promise<void>;
   updateProject: (id: Id, patch: { name?: string; description?: string }) => Promise<void>;
   seedDemoProject: () => Promise<void>;
 
@@ -97,6 +122,23 @@ interface WorkspaceState {
 
   createInvitation: (projectId: Id) => Promise<void>;
   revokeInvitation: (id: Id) => Promise<void>;
+
+  addFiveWhyAnalysis: (projectId: Id, input: FiveWhyAnalysisInput) => Promise<void>;
+  updateFiveWhyAnalysis: (id: Id, patch: Partial<FiveWhyAnalysisInput>) => Promise<void>;
+  deleteFiveWhyAnalysis: (id: Id) => Promise<void>;
+  addFiveWhyLevel: (analysisId: Id, projectId: Id) => Promise<void>;
+  updateFiveWhyLevel: (levelId: Id, analysisId: Id, patch: Partial<FiveWhyLevelInput>) => Promise<void>;
+  deleteFiveWhyLevel: (levelId: Id, analysisId: Id, projectId: Id) => Promise<void>;
+
+  addIshikawaAnalysis: (projectId: Id, input: IshikawaAnalysisInput) => Promise<void>;
+  updateIshikawaAnalysis: (id: Id, patch: Partial<IshikawaAnalysisInput>) => Promise<void>;
+  deleteIshikawaAnalysis: (id: Id) => Promise<void>;
+  addIshikawaCause: (analysisId: Id, projectId: Id, input: IshikawaCauseInput) => Promise<void>;
+  deleteIshikawaCause: (causeId: Id, analysisId: Id) => Promise<void>;
+
+  addCapaAction: (projectId: Id, input: CapaActionInput) => Promise<void>;
+  updateCapaAction: (id: Id, patch: Partial<CapaActionInput>) => Promise<void>;
+  deleteCapaAction: (id: Id) => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceState | null>(null);
@@ -127,6 +169,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [actions, setActions] = useState<Action[]>([]);
   const [amdecs, setAmdecs] = useState<AmdecEntry[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [fiveWhyAnalyses, setFiveWhyAnalyses] = useState<FiveWhyAnalysis[]>([]);
+  const [ishikawaAnalyses, setIshikawaAnalyses] = useState<IshikawaAnalysis[]>([]);
+  const [capaActions, setCapaActions] = useState<CapaAction[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<Id | null>(null);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -141,7 +186,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const fetchProjects = useCallback(async (): Promise<ProjectMeta[]> => {
     const { data, error } = await supabase
       .from('projects')
-      .select('id, name, description, created_at, owner_id, project_members(project_id, user_id, role, joined_at, profiles(id, email, display_name))')
+      .select('id, name, description, project_type, created_at, owner_id, project_members(project_id, user_id, role, joined_at, profiles(id, email, display_name))')
       .order('created_at');
     if (error) {
       console.error('[pilotix] fetchProjects:', error.message);
@@ -153,6 +198,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       description: (r.description as string | null) ?? undefined,
       createdAt: r.created_at as string,
       ownerId: r.owner_id as string,
+      projectType: (r.project_type as ProjectType) ?? 'gestion',
       project_members: (r.project_members || []).map(projectMemberFromRow),
     }));
     setMetas(list);
@@ -161,7 +207,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const fetchProjectData = useCallback(
     async (projectId: Id) => {
-      const [m, a, z, inv] = await Promise.all([
+      const [m, a, z, inv, fwa, isha, capa] = await Promise.all([
         supabase.from('members').select('*').eq('project_id', projectId).order('created_at'),
         supabase.from('actions').select('*').eq('project_id', projectId).order('created_at'),
         supabase.from('amdec_items').select('*').eq('project_id', projectId).order('created_at'),
@@ -171,6 +217,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           .eq('project_id', projectId)
           .gt('expires_at', new Date().toISOString())
           .order('created_at', { ascending: false }),
+        supabase
+          .from('five_why_analyses')
+          .select('*, five_why_levels(*)')
+          .eq('project_id', projectId)
+          .order('created_at'),
+        supabase
+          .from('ishikawa_analyses')
+          .select('*, ishikawa_causes(*)')
+          .eq('project_id', projectId)
+          .order('created_at'),
+        supabase.from('capa_actions').select('*').eq('project_id', projectId).order('created_at'),
       ]);
       setMembers(((m.data ?? []) as MemberRow[]).map(memberFromRow));
       setActions(((a.data ?? []) as ActionRow[]).map(actionFromRow));
@@ -182,6 +239,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           expiresAt: r.expires_at as string,
         })),
       );
+      if (!fwa.error) setFiveWhyAnalyses(((fwa.data ?? []) as FiveWhyAnalysisRow[]).map(fiveWhyAnalysisFromRow));
+      if (!isha.error) setIshikawaAnalyses(((isha.data ?? []) as IshikawaAnalysisRow[]).map(ishikawaAnalysisFromRow));
+      if (!capa.error) setCapaActions(((capa.data ?? []) as CapaActionRow[]).map(capaActionFromRow));
     },
     [supabase],
   );
@@ -238,7 +298,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       const filter = `project_id=eq.${currentProjectId}`;
       let ch = supabase.channel(`project-${currentProjectId}`);
-      for (const table of ['members', 'actions', 'amdec_items']) {
+      for (const table of ['members', 'actions', 'amdec_items', 'five_why_analyses', 'five_why_levels', 'ishikawa_analyses', 'ishikawa_causes', 'capa_actions']) {
         ch = ch.on(
           'postgres_changes',
           { event: '*', schema: 'public', table, filter },
@@ -267,20 +327,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setActions([]);
       setAmdecs([]);
       setInvitations([]);
+      setFiveWhyAnalyses([]);
+      setIshikawaAnalyses([]);
+      setCapaActions([]);
       void fetchProjectData(id);
     },
     [fetchProjectData],
   );
 
   const createProject = useCallback(
-    async (name: string, description?: string) => {
+    async (name: string, description?: string, projectType: ProjectType = 'gestion') => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
       const { data, error } = await supabase
         .from('projects')
-        .insert({ name, description: description ?? null, owner_id: user.id })
+        .insert({ name, description: description ?? null, owner_id: user.id, project_type: projectType })
         .select('id')
         .single();
       if (error) return onError('Création du projet impossible', error.message);
@@ -548,6 +611,258 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [supabase, currentProjectId, fetchProjectData],
   );
 
+  /* --- RDP : 5 Pourquoi ------------------------------------------------------- */
+
+  const addFiveWhyAnalysis = useCallback(
+    async (projectId: Id, input: FiveWhyAnalysisInput) => {
+      const id = uid();
+      const createdAt = new Date().toISOString();
+      setFiveWhyAnalyses((s) => [...s, { id, projectId, ...input, levels: [], createdAt }]);
+      const { error } = await supabase.from('five_why_analyses').insert({
+        id,
+        project_id: projectId,
+        title: input.title,
+        problem_statement: input.problemStatement,
+        pdca_phase: input.pdcaPhase,
+      });
+      if (error) {
+        onError("Création de l'analyse impossible", error.message);
+        await fetchProjectData(projectId);
+      }
+    },
+    [supabase, fetchProjectData],
+  );
+
+  const updateFiveWhyAnalysis = useCallback(
+    async (id: Id, patch: Partial<FiveWhyAnalysisInput>) => {
+      setFiveWhyAnalyses((s) =>
+        s.map((a) => (a.id === id ? { ...a, ...patch } : a)),
+      );
+      const row: Record<string, unknown> = {};
+      if (patch.title !== undefined) row.title = patch.title;
+      if (patch.problemStatement !== undefined) row.problem_statement = patch.problemStatement;
+      if (patch.pdcaPhase !== undefined) row.pdca_phase = patch.pdcaPhase;
+      const { error } = await supabase.from('five_why_analyses').update(row).eq('id', id);
+      if (error) {
+        onError("Modification de l'analyse impossible", error.message);
+        if (currentProjectId) await fetchProjectData(currentProjectId);
+      }
+    },
+    [supabase, currentProjectId, fetchProjectData],
+  );
+
+  const deleteFiveWhyAnalysis = useCallback(
+    async (id: Id) => {
+      setFiveWhyAnalyses((s) => s.filter((a) => a.id !== id));
+      const { error } = await supabase.from('five_why_analyses').delete().eq('id', id);
+      if (error) {
+        onError("Suppression de l'analyse impossible", error.message);
+        if (currentProjectId) await fetchProjectData(currentProjectId);
+      }
+    },
+    [supabase, currentProjectId, fetchProjectData],
+  );
+
+  const addFiveWhyLevel = useCallback(
+    async (analysisId: Id, projectId: Id) => {
+      const id = uid();
+      const createdAt = new Date().toISOString();
+      setFiveWhyAnalyses((s) =>
+        s.map((a) => {
+          if (a.id !== analysisId) return a;
+          const nextNum = (a.levels[a.levels.length - 1]?.levelNum ?? 0) + 1;
+          if (nextNum > 5) return a;
+          const newLevel: FiveWhyLevel = {
+            id, analysisId, projectId, levelNum: nextNum,
+            whyQuestion: '', becauseAnswer: '', isRootCause: false, createdAt,
+          };
+          return { ...a, levels: [...a.levels, newLevel] };
+        }),
+      );
+      const analysis = fiveWhyAnalyses.find((a) => a.id === analysisId);
+      const nextNum = (analysis?.levels[analysis.levels.length - 1]?.levelNum ?? 0) + 1;
+      if (nextNum > 5) return;
+      const { error } = await supabase.from('five_why_levels').insert({
+        id, analysis_id: analysisId, project_id: projectId,
+        level_num: nextNum, why_question: '', because_answer: '', is_root_cause: false,
+      });
+      if (error) {
+        onError("Ajout du niveau impossible", error.message);
+        await fetchProjectData(projectId);
+      }
+    },
+    [supabase, fiveWhyAnalyses, fetchProjectData],
+  );
+
+  const updateFiveWhyLevel = useCallback(
+    async (levelId: Id, analysisId: Id, patch: Partial<FiveWhyLevelInput>) => {
+      setFiveWhyAnalyses((s) =>
+        s.map((a) => {
+          if (a.id !== analysisId) return a;
+          return { ...a, levels: a.levels.map((l) => (l.id === levelId ? { ...l, ...patch } : l)) };
+        }),
+      );
+      const row: Record<string, unknown> = {};
+      if (patch.whyQuestion !== undefined) row.why_question = patch.whyQuestion;
+      if (patch.becauseAnswer !== undefined) row.because_answer = patch.becauseAnswer;
+      if (patch.isRootCause !== undefined) row.is_root_cause = patch.isRootCause;
+      const { error } = await supabase.from('five_why_levels').update(row).eq('id', levelId);
+      if (error) {
+        onError("Modification du niveau impossible", error.message);
+        if (currentProjectId) await fetchProjectData(currentProjectId);
+      }
+    },
+    [supabase, currentProjectId, fetchProjectData],
+  );
+
+  const deleteFiveWhyLevel = useCallback(
+    async (levelId: Id, analysisId: Id, projectId: Id) => {
+      setFiveWhyAnalyses((s) =>
+        s.map((a) => {
+          if (a.id !== analysisId) return a;
+          const filtered = a.levels.filter((l) => l.id !== levelId);
+          return { ...a, levels: filtered };
+        }),
+      );
+      const { error } = await supabase.from('five_why_levels').delete().eq('id', levelId);
+      if (error) {
+        onError("Suppression du niveau impossible", error.message);
+        await fetchProjectData(projectId);
+      }
+    },
+    [supabase, fetchProjectData],
+  );
+
+  /* --- RDP : Ishikawa --------------------------------------------------------- */
+
+  const addIshikawaAnalysis = useCallback(
+    async (projectId: Id, input: IshikawaAnalysisInput) => {
+      const id = uid();
+      const createdAt = new Date().toISOString();
+      setIshikawaAnalyses((s) => [...s, { id, projectId, ...input, causes: [], createdAt }]);
+      const { error } = await supabase.from('ishikawa_analyses').insert({
+        id, project_id: projectId, title: input.title, effect: input.effect,
+      });
+      if (error) {
+        onError("Création de l'analyse impossible", error.message);
+        await fetchProjectData(projectId);
+      }
+    },
+    [supabase, fetchProjectData],
+  );
+
+  const updateIshikawaAnalysis = useCallback(
+    async (id: Id, patch: Partial<IshikawaAnalysisInput>) => {
+      setIshikawaAnalyses((s) => s.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+      const { error } = await supabase.from('ishikawa_analyses').update(patch).eq('id', id);
+      if (error) {
+        onError("Modification de l'analyse impossible", error.message);
+        if (currentProjectId) await fetchProjectData(currentProjectId);
+      }
+    },
+    [supabase, currentProjectId, fetchProjectData],
+  );
+
+  const deleteIshikawaAnalysis = useCallback(
+    async (id: Id) => {
+      setIshikawaAnalyses((s) => s.filter((a) => a.id !== id));
+      const { error } = await supabase.from('ishikawa_analyses').delete().eq('id', id);
+      if (error) {
+        onError("Suppression de l'analyse impossible", error.message);
+        if (currentProjectId) await fetchProjectData(currentProjectId);
+      }
+    },
+    [supabase, currentProjectId, fetchProjectData],
+  );
+
+  const addIshikawaCause = useCallback(
+    async (analysisId: Id, projectId: Id, input: IshikawaCauseInput) => {
+      const id = uid();
+      const createdAt = new Date().toISOString();
+      const newCause: IshikawaCause = { id, analysisId, projectId, ...input, createdAt };
+      setIshikawaAnalyses((s) =>
+        s.map((a) => (a.id === analysisId ? { ...a, causes: [...a.causes, newCause] } : a)),
+      );
+      const { error } = await supabase.from('ishikawa_causes').insert({
+        id, analysis_id: analysisId, project_id: projectId,
+        category: input.category, cause_text: input.causeText,
+      });
+      if (error) {
+        onError("Ajout de la cause impossible", error.message);
+        await fetchProjectData(projectId);
+      }
+    },
+    [supabase, fetchProjectData],
+  );
+
+  const deleteIshikawaCause = useCallback(
+    async (causeId: Id, analysisId: Id) => {
+      setIshikawaAnalyses((s) =>
+        s.map((a) =>
+          a.id === analysisId ? { ...a, causes: a.causes.filter((c) => c.id !== causeId) } : a,
+        ),
+      );
+      const { error } = await supabase.from('ishikawa_causes').delete().eq('id', causeId);
+      if (error) onError("Suppression de la cause impossible", error.message);
+    },
+    [supabase],
+  );
+
+  /* --- RDP : CAPA ------------------------------------------------------------- */
+
+  const addCapaAction = useCallback(
+    async (projectId: Id, input: CapaActionInput) => {
+      const id = uid();
+      const createdAt = new Date().toISOString();
+      setCapaActions((s) => [...s, { id, projectId, createdAt, ...input }]);
+      const { error } = await supabase.from('capa_actions').insert({
+        id, project_id: projectId,
+        type: input.type, title: input.title, description: input.description,
+        responsible_id: input.responsibleId ?? null,
+        status: input.status,
+        due_date: input.dueDate ?? null,
+        source: input.source ?? null,
+      });
+      if (error) {
+        onError("Création de l'action CAPA impossible", error.message);
+        await fetchProjectData(projectId);
+      }
+    },
+    [supabase, fetchProjectData],
+  );
+
+  const updateCapaAction = useCallback(
+    async (id: Id, patch: Partial<CapaActionInput>) => {
+      setCapaActions((s) => s.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+      const row: Record<string, unknown> = {};
+      if (patch.type !== undefined) row.type = patch.type;
+      if (patch.title !== undefined) row.title = patch.title;
+      if (patch.description !== undefined) row.description = patch.description;
+      if ('responsibleId' in patch) row.responsible_id = patch.responsibleId ?? null;
+      if (patch.status !== undefined) row.status = patch.status;
+      if ('dueDate' in patch) row.due_date = patch.dueDate ?? null;
+      if ('source' in patch) row.source = patch.source ?? null;
+      const { error } = await supabase.from('capa_actions').update(row).eq('id', id);
+      if (error) {
+        onError("Modification de l'action CAPA impossible", error.message);
+        if (currentProjectId) await fetchProjectData(currentProjectId);
+      }
+    },
+    [supabase, currentProjectId, fetchProjectData],
+  );
+
+  const deleteCapaAction = useCallback(
+    async (id: Id) => {
+      setCapaActions((s) => s.filter((a) => a.id !== id));
+      const { error } = await supabase.from('capa_actions').delete().eq('id', id);
+      if (error) {
+        onError("Suppression de l'action CAPA impossible", error.message);
+        if (currentProjectId) await fetchProjectData(currentProjectId);
+      }
+    },
+    [supabase, currentProjectId, fetchProjectData],
+  );
+
   /* --- Invitations ------------------------------------------------------------ */
 
   const createInvitation = useCallback(
@@ -707,6 +1022,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     metas,
     projects,
     members,
+    fiveWhyAnalyses,
+    ishikawaAnalyses,
+    capaActions,
     currentProjectId,
     actions,
     amdecs,
@@ -729,6 +1047,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     deleteAmdec,
     createInvitation,
     revokeInvitation,
+    addFiveWhyAnalysis,
+    updateFiveWhyAnalysis,
+    deleteFiveWhyAnalysis,
+    addFiveWhyLevel,
+    updateFiveWhyLevel,
+    deleteFiveWhyLevel,
+    addIshikawaAnalysis,
+    updateIshikawaAnalysis,
+    deleteIshikawaAnalysis,
+    addIshikawaCause,
+    deleteIshikawaCause,
+    addCapaAction,
+    updateCapaAction,
+    deleteCapaAction,
   };
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
@@ -770,4 +1102,22 @@ export function useProjectAmdecs(projectId: Id | undefined): AmdecEntry[] {
 export function memberName(project: Project | null, id: Id | undefined): string {
   if (!id || !project) return '—';
   return project.members.find((m) => m.id === id)?.name ?? 'Membre supprimé';
+}
+
+export function useProjectFiveWhys(projectId: Id | undefined): FiveWhyAnalysis[] {
+  const { fiveWhyAnalyses } = useWorkspace();
+  if (!projectId) return [];
+  return fiveWhyAnalyses.filter((a) => a.projectId === projectId);
+}
+
+export function useProjectIshikawa(projectId: Id | undefined): IshikawaAnalysis[] {
+  const { ishikawaAnalyses } = useWorkspace();
+  if (!projectId) return [];
+  return ishikawaAnalyses.filter((a) => a.projectId === projectId);
+}
+
+export function useProjectCapa(projectId: Id | undefined): CapaAction[] {
+  const { capaActions } = useWorkspace();
+  if (!projectId) return [];
+  return capaActions.filter((a) => a.projectId === projectId);
 }

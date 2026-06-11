@@ -91,3 +91,41 @@ export const IconUsers = () => (
     <path d="M21.5 16c0-2.2-1.8-4-4-4h-1" />
   </svg>
 );
+
+export const IconFiveWhys = () => (
+  <svg {...base}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </svg>
+);
+
+export const IconIshikawa = () => (
+  <svg {...base}>
+    <line x1="2" y1="12" x2="21" y2="12" />
+    <path d="M6 12V8M6 12V16" />
+    <path d="M10 12V6M10 12V18" />
+    <path d="M14 12V8M14 12V16" />
+    <path d="M18 12V6M18 12V18" />
+    <circle cx="21.5" cy="12" r="1.5" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const IconCapa = () => (
+  <svg {...base}>
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <polyline points="9 12 11 14 15 10" />
+  </svg>
+);
+
+export const IconCheck = () => (
+  <svg {...base}>
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+export const IconChevronLeft = () => (
+  <svg {...base}>
+    <polyline points="15 18 9 12 15 6" />
+  </svg>
+);

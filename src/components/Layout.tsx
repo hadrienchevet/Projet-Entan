@@ -3,13 +3,16 @@
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useWorkspace } from '@/lib/store';
+import { useCurrentProject, useWorkspace } from '@/lib/store';
 import { ProjectFormModal } from './ProjectFormModal';
 import { ThemeToggle } from './ThemeToggle';
 import {
   IconActions,
   IconAmdec,
+  IconCapa,
   IconDashboard,
+  IconFiveWhys,
+  IconIshikawa,
   IconLogout,
   IconPlanning,
   IconPlus,
@@ -17,7 +20,7 @@ import {
   IconUsers,
 } from './icons';
 
-const NAV = [
+const NAV_GESTION = [
   { to: '/', label: 'Dashboard', icon: <IconDashboard /> },
   { to: '/raci', label: 'RACI', icon: <IconRaci /> },
   { to: '/amdec', label: 'AMDEC', icon: <IconAmdec /> },
@@ -26,10 +29,20 @@ const NAV = [
   { to: '/access', label: 'Accès', icon: <IconUsers /> },
 ];
 
+const NAV_RDP = [
+  { to: '/', label: 'Tableau de bord', icon: <IconDashboard /> },
+  { to: '/cinq-pourquoi', label: '5 Pourquoi', icon: <IconFiveWhys /> },
+  { to: '/ishikawa', label: 'Ishikawa', icon: <IconIshikawa /> },
+  { to: '/capa', label: 'CAPA', icon: <IconCapa /> },
+  { to: '/access', label: 'Accès', icon: <IconUsers /> },
+];
+
 export function Layout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { projects, currentProjectId, setCurrentProject, userEmail } = useWorkspace();
+  const currentProject = useCurrentProject();
   const [creating, setCreating] = useState(false);
+  const nav = currentProject?.projectType === 'rdp' ? NAV_RDP : NAV_GESTION;
 
   return (
     <div className="app">
@@ -58,7 +71,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="nav">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link
               key={item.to}
               href={item.to}

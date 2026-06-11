@@ -1,5 +1,5 @@
-import { DashboardPage } from '@/modules/dashboard/DashboardPage';
+import { SmartDashboard } from '@/modules/dashboard/SmartDashboard';
 
 export default function Page() {
-  return <DashboardPage />;
+  return <SmartDashboard />;
 }

@@ -14,6 +14,8 @@
 
 export type Id = string;
 
+export type ProjectType = 'gestion' | 'rdp';
+
 export type ActionStatus = 'todo' | 'in_progress' | 'done';
 
 export type RaciRole = 'R' | 'A' | 'C' | 'I';
@@ -48,6 +50,7 @@ export interface ProjectMeta {
   description?: string;
   createdAt: string;
   ownerId: string;
+  projectType: ProjectType;
   project_members?: ProjectMember[];
 }
 
@@ -56,6 +59,7 @@ export interface Project {
   name: string;
   description?: string;
   ownerId: string;
+  projectType: ProjectType;
   /** L'équipe appartient au projet : seule source de membres pour le RACI. */
   members: Member[];
   project_members?: ProjectMember[];
@@ -298,4 +302,255 @@ export function amdecInputToRow(input: Partial<AmdecInput>): Record<string, unkn
   if (input.occurrence !== undefined) row.occurrence = input.occurrence;
   if (input.detection !== undefined) row.detection = input.detection;
   return row;
+}
+
+/* --- Modèle RDP (Résolution de Problèmes) --------------------------------- */
+
+export type PdcaPhase = 'plan' | 'do' | 'check' | 'act' | 'closed';
+
+export const PDCA_LABELS: Record<PdcaPhase, string> = {
+  plan: 'Plan',
+  do: 'Do',
+  check: 'Check',
+  act: 'Act',
+  closed: 'Clôturée',
+};
+
+/** 5 Pourquoi — une analyse = un problème + jusqu'à 5 niveaux de "Pourquoi / Parce que". */
+export interface FiveWhyAnalysis {
+  id: Id;
+  projectId: Id;
+  title: string;
+  problemStatement: string;
+  pdcaPhase: PdcaPhase;
+  levels: FiveWhyLevel[];
+  createdAt: string;
+}
+
+export interface FiveWhyLevel {
+  id: Id;
+  analysisId: Id;
+  projectId: Id;
+  levelNum: number;
+  whyQuestion: string;
+  becauseAnswer: string;
+  isRootCause: boolean;
+  createdAt: string;
+}
+
+export interface FiveWhyAnalysisInput {
+  title: string;
+  problemStatement: string;
+  pdcaPhase: PdcaPhase;
+}
+
+export interface FiveWhyLevelInput {
+  whyQuestion: string;
+  becauseAnswer: string;
+  isRootCause: boolean;
+}
+
+/** Ishikawa 6M — une analyse = un effet + des causes groupées par catégorie. */
+export type IshikawaCategory =
+  | 'Matière'
+  | 'Méthode'
+  | 'Machine'
+  | "Main-d'œuvre"
+  | 'Milieu'
+  | 'Mesure';
+
+export const ISHIKAWA_CATEGORIES: IshikawaCategory[] = [
+  'Matière',
+  'Méthode',
+  'Machine',
+  "Main-d'œuvre",
+  'Milieu',
+  'Mesure',
+];
+
+export interface IshikawaAnalysis {
+  id: Id;
+  projectId: Id;
+  title: string;
+  effect: string;
+  causes: IshikawaCause[];
+  createdAt: string;
+}
+
+export interface IshikawaCause {
+  id: Id;
+  analysisId: Id;
+  projectId: Id;
+  category: IshikawaCategory;
+  causeText: string;
+  createdAt: string;
+}
+
+export interface IshikawaAnalysisInput {
+  title: string;
+  effect: string;
+}
+
+export interface IshikawaCauseInput {
+  category: IshikawaCategory;
+  causeText: string;
+}
+
+/** CAPA — actions correctives et préventives. */
+export type CapaType = 'corrective' | 'preventive';
+export type CapaStatus = 'open' | 'in_progress' | 'closed' | 'verified';
+
+export const CAPA_TYPE_LABELS: Record<CapaType, string> = {
+  corrective: 'Corrective',
+  preventive: 'Préventive',
+};
+
+export const CAPA_STATUS_LABELS: Record<CapaStatus, string> = {
+  open: 'Ouverte',
+  in_progress: 'En cours',
+  closed: 'Clôturée',
+  verified: 'Vérifiée',
+};
+
+export interface CapaAction {
+  id: Id;
+  projectId: Id;
+  type: CapaType;
+  title: string;
+  description: string;
+  responsibleId?: Id;
+  status: CapaStatus;
+  dueDate?: string;
+  source?: string;
+  createdAt: string;
+}
+
+export interface CapaActionInput {
+  type: CapaType;
+  title: string;
+  description: string;
+  responsibleId?: Id;
+  status: CapaStatus;
+  dueDate?: string;
+  source?: string;
+}
+
+/* --- Row types Supabase pour le mode RDP ----------------------------------- */
+
+export interface FiveWhyAnalysisRow {
+  id: string;
+  project_id: string;
+  title: string;
+  problem_statement: string;
+  pdca_phase: PdcaPhase;
+  created_at: string;
+  five_why_levels?: FiveWhyLevelRow[];
+}
+
+export interface FiveWhyLevelRow {
+  id: string;
+  analysis_id: string;
+  project_id: string;
+  level_num: number;
+  why_question: string;
+  because_answer: string;
+  is_root_cause: boolean;
+  created_at: string;
+}
+
+export interface IshikawaAnalysisRow {
+  id: string;
+  project_id: string;
+  title: string;
+  effect: string;
+  created_at: string;
+  ishikawa_causes?: IshikawaCauseRow[];
+}
+
+export interface IshikawaCauseRow {
+  id: string;
+  analysis_id: string;
+  project_id: string;
+  category: IshikawaCategory;
+  cause_text: string;
+  created_at: string;
+}
+
+export interface CapaActionRow {
+  id: string;
+  project_id: string;
+  type: CapaType;
+  title: string;
+  description: string;
+  responsible_id: string | null;
+  status: CapaStatus;
+  due_date: string | null;
+  source: string | null;
+  created_at: string;
+}
+
+/* --- Mappers RDP ----------------------------------------------------------- */
+
+export function fiveWhyAnalysisFromRow(r: FiveWhyAnalysisRow): FiveWhyAnalysis {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    title: r.title,
+    problemStatement: r.problem_statement,
+    pdcaPhase: r.pdca_phase,
+    levels: ((r.five_why_levels ?? []) as FiveWhyLevelRow[])
+      .map(fiveWhyLevelFromRow)
+      .sort((a, b) => a.levelNum - b.levelNum),
+    createdAt: r.created_at,
+  };
+}
+
+export function fiveWhyLevelFromRow(r: FiveWhyLevelRow): FiveWhyLevel {
+  return {
+    id: r.id,
+    analysisId: r.analysis_id,
+    projectId: r.project_id,
+    levelNum: r.level_num,
+    whyQuestion: r.why_question,
+    becauseAnswer: r.because_answer,
+    isRootCause: r.is_root_cause,
+    createdAt: r.created_at,
+  };
+}
+
+export function ishikawaAnalysisFromRow(r: IshikawaAnalysisRow): IshikawaAnalysis {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    title: r.title,
+    effect: r.effect,
+    causes: ((r.ishikawa_causes ?? []) as IshikawaCauseRow[]).map(ishikawaCauseFromRow),
+    createdAt: r.created_at,
+  };
+}
+
+export function ishikawaCauseFromRow(r: IshikawaCauseRow): IshikawaCause {
+  return {
+    id: r.id,
+    analysisId: r.analysis_id,
+    projectId: r.project_id,
+    category: r.category,
+    causeText: r.cause_text,
+    createdAt: r.created_at,
+  };
+}
+
+export function capaActionFromRow(r: CapaActionRow): CapaAction {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    type: r.type,
+    title: r.title,
+    description: r.description,
+    responsibleId: r.responsible_id ?? undefined,
+    status: r.status,
+    dueDate: r.due_date ?? undefined,
+    source: r.source ?? undefined,
+    createdAt: r.created_at,
+  };
 }
