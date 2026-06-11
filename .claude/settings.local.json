@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)",
+      "mcp__Claude_Preview__preview_start",
+      "PowerShell(\\(Get-Content \"D:\\\\Projet entreprenariat\\\\Gestion de projet\\\\src\\\\styles\\\\global.css\" | Measure-Object -Line\\).Lines)",
+      "PowerShell($p = \"D:\\\\Projet entreprenariat\\\\Gestion de projet\\\\src\\\\styles\\\\global.css\"; $lines = Get-Content $p -Encoding UTF8 -TotalCount 743; [System.IO.File]::WriteAllLines\\($p, $lines, \\(New-Object System.Text.UTF8Encoding\\($false\\)\\)\\); \\(Get-Content $p | Measure-Object -Line\\).Lines)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm run *)"
+    ]
+  }
+}
