@@ -14,6 +14,7 @@ import {
   IconPlanning,
   IconPlus,
   IconRaci,
+  IconUsers,
 } from './icons';
 
 const NAV = [
@@ -22,6 +23,7 @@ const NAV = [
   { to: '/amdec', label: 'AMDEC', icon: <IconAmdec /> },
   { to: '/actions', label: 'Actions', icon: <IconActions /> },
   { to: '/planning', label: 'Planning', icon: <IconPlanning /> },
+  { to: '/access', label: 'Accès', icon: <IconUsers /> },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {

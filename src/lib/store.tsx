@@ -76,8 +76,10 @@ interface WorkspaceState {
   addMember: (projectId: Id, input: MemberInput) => Promise<void>;
   updateMember: (projectId: Id, memberId: Id, patch: Partial<MemberInput>) => Promise<void>;
   removeMember: (projectId: Id, memberId: Id) => Result;
+  removeProjectMember: (projectId: Id, userId: string) => Promise<void>;
 
-  addAction: (projectId: Id, input: ActionInput) => Promise<void>;
+  addAmdec: (projectId: Id, input: AmdecInput) => Promise<void>;
+
   updateAction: (id: Id, patch: Partial<ActionInput>) => Promise<void>;
   deleteAction: (id: Id) => Promise<void>;
   setActionStatus: (id: Id, status: ActionStatus) => Promise<void>;
@@ -133,17 +135,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const fetchProjects = useCallback(async (): Promise<ProjectMeta[]> => {
     const { data, error } = await supabase
       .from('projects')
-      .select('id, name, description, created_at')
+      .select('id, name, description, created_at, owner_id, project_members(project_id, user_id, role, joined_at, profiles(id, email, display_name))')
       .order('created_at');
     if (error) {
       console.error('[pilotix] fetchProjects:', error.message);
       return [];
     }
-    const list = (data ?? []).map((r) => ({
+    const list = (data ?? []).map((r: any) => ({
       id: r.id as Id,
       name: r.name as string,
       description: (r.description as string | null) ?? undefined,
       createdAt: r.created_at as string,
+      ownerId: r.owner_id as string,
+      project_members: (r.project_members || []).map(projectMemberFromRow),
     }));
     setMetas(list);
     return list;
@@ -300,12 +304,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const addMember = useCallback(
     async (projectId: Id, input: MemberInput) => {
       const id = uid();
-      setMembers((s) => [...s, { id, name: input.name, role: input.role }]);
+      setMembers((s) => [...s, { id, name: input.name, role: input.role, userId: input.userId }]);
       const { error } = await supabase
         .from('members')
-        .insert({ id, project_id: projectId, name: input.name, job_role: input.role });
+        .insert({
+          id,
+          project_id: projectId,
+          name: input.name,
+          job_role: input.role,
+          user_id: input.userId || null,
+        });
       if (error) {
-        onError("Ajout du membre impossible", error.message);
+        onError('Ajout du membre impossible', error.message);
         await fetchProjectData(projectId);
       }
     },
@@ -723,6 +733,15 @@ export function useProjectActions(projectId: Id | undefined): Action[] {
 
 export function useProjectAmdecs(projectId: Id | undefined): AmdecEntry[] {
   const { amdecs } = useWorkspace();
+  if (!projectId) return [];
+  return amdecs.filter((a) => a.projectId === projectId);
+}
+
+export function memberName(project: Project | null, id: Id | undefined): string {
+  if (!id || !project) return '—';
+  return project.members.find((m) => m.id === id)?.name ?? 'Membre supprimé';
+}
+ } = useWorkspace();
   if (!projectId) return [];
   return amdecs.filter((a) => a.projectId === projectId);
 }

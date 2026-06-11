@@ -268,20 +268,42 @@ function MemberFormModal({
   member?: Member;
   onClose: () => void;
 }) {
+  const project = useCurrentProject();
   const { addMember, updateMember } = useWorkspace();
   const [name, setName] = useState(member?.name ?? '');
   const [role, setRole] = useState(member?.role ?? '');
+  const [userId, setUserId] = useState(member?.userId ?? '');
   const [error, setError] = useState('');
+
+  // Liste des utilisateurs du projet qui n'ont pas encore de membre RACI lié
+  // (sauf celui qu'on est en train d'éditer).
+  const availableUsers =
+    project?.project_members?.filter(
+      (pm) => !project.members.some((m) => m.userId === pm.userId) || pm.userId === member?.userId,
+    ) || [];
+
+  const onUserChange = (id: string) => {
+    setUserId(id);
+    if (id) {
+      const pm = availableUsers.find((u) => u.userId === id);
+      if (pm && !name) setName(pm.profile?.displayName || pm.profile?.email || '');
+    }
+  };
 
   const submit = () => {
     if (!name.trim()) {
       setError('Le nom est obligatoire.');
       return;
     }
+    const input = {
+      name: name.trim(),
+      role: role.trim(),
+      userId: userId || undefined,
+    };
     if (member) {
-      void updateMember(projectId, member.id, { name: name.trim(), role: role.trim() });
+      void updateMember(projectId, member.id, input);
     } else {
-      void addMember(projectId, { name: name.trim(), role: role.trim() });
+      void addMember(projectId, input);
     }
     onClose();
   };
@@ -302,8 +324,22 @@ function MemberFormModal({
       }
     >
       <div className="field">
+        <label>Lier à un compte utilisateur (optionnel)</label>
+        <select value={userId} onChange={(e) => onUserChange(e.target.value)}>
+          <option value="">— Membre sans compte (ex. prestataire, atelier) —</option>
+          {availableUsers.map((u) => (
+            <option key={u.userId} value={u.userId}>
+              {u.profile?.displayName || u.profile?.email} ({u.profile?.email})
+            </option>
+          ))}
+        </select>
+        <p className="form-hint">
+          Lier un compte permet à l&apos;utilisateur de recevoir des notifications (à venir).
+        </p>
+      </div>
+      <div className="field">
         <label>
-          Nom <span className="req">*</span>
+          Nom affiché dans le RACI <span className="req">*</span>
         </label>
         <input
           type="text"

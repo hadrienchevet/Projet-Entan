@@ -113,6 +113,7 @@ export const RACI_LABELS: Record<RaciRole, string> = {
 export interface MemberInput {
   name: string;
   role: string;
+  userId?: string;
 }
 
 export interface ActionInput {
@@ -180,6 +181,24 @@ export interface AmdecRow {
 
 export function memberFromRow(r: MemberRow): Member {
   return { id: r.id, name: r.name, role: r.job_role, userId: r.user_id ?? undefined };
+}
+
+export function profileFromRow(r: ProfileRow): UserProfile {
+  return {
+    id: r.id,
+    email: r.email,
+    displayName: r.display_name ?? undefined,
+  };
+}
+
+export function projectMemberFromRow(r: ProjectMemberRow): ProjectMember {
+  return {
+    projectId: r.project_id,
+    userId: r.user_id,
+    role: r.role,
+    joinedAt: r.joined_at,
+    profile: r.profiles ? profileFromRow(r.profiles) : undefined,
+  };
 }
 
 export function actionFromRow(r: ActionRow): Action {

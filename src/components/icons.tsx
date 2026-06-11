@@ -82,3 +82,12 @@ export const IconLogout = () => (
     <path d="M16 17l5-5-5-5M21 12H9" />
   </svg>
 );
+
+export const IconUsers = () => (
+  <svg {...base}>
+    <circle cx="12" cy="7" r="4" />
+    <path d="M5.5 21c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5" />
+    <path d="M18.5 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+    <path d="M21.5 16c0-2.2-1.8-4-4-4h-1" />
+  </svg>
+);
