@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Pilotix',
+  title: 'Projet Entan',
   description:
     'Pilotage de projets industriels — RACI, AMDEC, actions et planning, en équipe et en temps réel.',
 };
