@@ -41,6 +41,8 @@ import type {
   Project,
   ActionStatus,
   RaciRole,
+  ProjectMember,
+  ProjectMeta as ProjectMetaType,
 } from '@/lib/types';
 import {
   actionFromRow,
@@ -48,6 +50,7 @@ import {
   amdecFromRow,
   amdecInputToRow,
   memberFromRow,
+  projectMemberFromRow,
 } from '@/lib/types';
 
 export type Result = { ok: true } | { ok: false; error: string };
@@ -56,13 +59,17 @@ interface ProjectMeta {
   id: Id;
   name: string;
   description?: string;
+  ownerId: string;
+  project_members?: ProjectMember[];
   createdAt: string;
 }
 
 interface WorkspaceState {
   loading: boolean;
   userEmail: string | null;
+  metas: ProjectMeta[];
   projects: Project[];
+  members: Member[];
   currentProjectId: Id | null;
   actions: Action[];
   amdecs: AmdecEntry[];
@@ -78,8 +85,7 @@ interface WorkspaceState {
   removeMember: (projectId: Id, memberId: Id) => Result;
   removeProjectMember: (projectId: Id, userId: string) => Promise<void>;
 
-  addAmdec: (projectId: Id, input: AmdecInput) => Promise<void>;
-
+  addAction: (projectId: Id, input: ActionInput) => Promise<void>;
   updateAction: (id: Id, patch: Partial<ActionInput>) => Promise<void>;
   deleteAction: (id: Id) => Promise<void>;
   setActionStatus: (id: Id, status: ActionStatus) => Promise<void>;
@@ -382,19 +388,32 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           await fetchProjectData(projectId);
           return;
         }
-        // Membre rattaché à un compte : on retire aussi son accès au projet.
         if (member?.userId) {
-          await supabase
-            .from('project_members')
-            .delete()
-            .eq('project_id', projectId)
-            .eq('user_id', member.userId);
+          // On ne retire plus l'accès d'office : on délie juste le membre RACI.
+          // Le membre garde son accès au projet jusqu'à retrait via l'onglet "Accès".
         }
       })();
 
       return { ok: true };
     },
     [supabase, actions, members, fetchProjectData],
+  );
+
+  const removeProjectMember = useCallback(
+    async (projectId: Id, userId: string) => {
+      const { error } = await supabase
+        .from('project_members')
+        .delete()
+        .eq('project_id', projectId)
+        .eq('user_id', userId);
+
+      if (error) {
+        onError("Erreur lors de la suppression de l'accès", error.message);
+      } else {
+        await fetchProjectData(projectId);
+      }
+    },
+    [supabase, fetchProjectData],
   );
 
   /* --- Actions -------------------------------------------------------------- */
@@ -685,7 +704,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const value: WorkspaceState = {
     loading,
     userEmail,
+    metas,
     projects,
+    members,
     currentProjectId,
     actions,
     amdecs,
@@ -697,6 +718,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     addMember,
     updateMember,
     removeMember,
+    removeProjectMember,
     addAction,
     updateAction,
     deleteAction,
@@ -721,8 +743,16 @@ export function useWorkspace(): WorkspaceState {
 }
 
 export function useCurrentProject(): Project | null {
-  const { projects, currentProjectId } = useWorkspace();
-  return projects.find((p) => p.id === currentProjectId) ?? null;
+  const { metas, currentProjectId, members, invitations } = useWorkspace();
+  const meta = metas.find((p) => p.id === currentProjectId);
+  if (!meta) return null;
+
+  return {
+    ...meta,
+    members,
+    // Invitations n'est pas dans le type Project mais pourrait l'être.
+    // Pour l'instant on garde la compatibilité avec l'interface Project.
+  };
 }
 
 export function useProjectActions(projectId: Id | undefined): Action[] {
@@ -733,15 +763,6 @@ export function useProjectActions(projectId: Id | undefined): Action[] {
 
 export function useProjectAmdecs(projectId: Id | undefined): AmdecEntry[] {
   const { amdecs } = useWorkspace();
-  if (!projectId) return [];
-  return amdecs.filter((a) => a.projectId === projectId);
-}
-
-export function memberName(project: Project | null, id: Id | undefined): string {
-  if (!id || !project) return '—';
-  return project.members.find((m) => m.id === id)?.name ?? 'Membre supprimé';
-}
- } = useWorkspace();
   if (!projectId) return [];
   return amdecs.filter((a) => a.projectId === projectId);
 }

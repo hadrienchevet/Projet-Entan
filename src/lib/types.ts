@@ -25,15 +25,40 @@ export interface Member {
   /** Fonction / poste (ex. "Chef de projet", "Qualité"). */
   role: string;
   /** Compte rattaché (undefined = membre ajouté à la main, sans compte). */
-  userId?: Id;
+  userId?: string;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  displayName?: string;
+}
+
+export interface ProjectMember {
+  projectId: Id;
+  userId: string;
+  role: 'owner' | 'member';
+  joinedAt: string;
+  profile?: UserProfile;
+}
+
+export interface ProjectMeta {
+  id: Id;
+  name: string;
+  description?: string;
+  createdAt: string;
+  ownerId: string;
+  project_members?: ProjectMember[];
 }
 
 export interface Project {
   id: Id;
   name: string;
   description?: string;
+  ownerId: string;
   /** L'équipe appartient au projet : seule source de membres pour le RACI. */
   members: Member[];
+  project_members?: ProjectMember[];
   createdAt: string;
 }
 
@@ -148,6 +173,20 @@ export interface MemberRow {
   name: string;
   job_role: string;
   created_at: string;
+}
+
+export interface ProfileRow {
+  id: string;
+  email: string;
+  display_name: string | null;
+}
+
+export interface ProjectMemberRow {
+  project_id: string;
+  user_id: string;
+  role: 'owner' | 'member';
+  joined_at: string;
+  profiles?: ProfileRow;
 }
 
 export interface ActionRow {
