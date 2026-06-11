@@ -119,7 +119,7 @@ function LoginForm() {
           <span className="logo-lg" style={{ width: 40, height: 40, fontSize: 16, borderRadius: 10, background: 'var(--accent)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700 }}>
             PX
           </span>
-          <h1>Pilotix</h1>
+          <h1>Projet Entan</h1>
           <p>
             Pilotez vos projets industriels : RACI, AMDEC, actions et planning — en équipe et en
             temps réel.
