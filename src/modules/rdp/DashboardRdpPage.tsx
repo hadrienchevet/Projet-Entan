@@ -1,132 +1,176 @@
 'use client';
 
-import { useCurrentProject, useProjectCapa, useProjectFiveWhys, useProjectIshikawa } from '@/lib/store';
-import { CAPA_STATUS_LABELS, PDCA_LABELS, type PdcaPhase } from '@/lib/types';
-import { PdcaBadge, CapaStatusBadge, CapaTypeBadge } from '@/components/Badges';
+import Link from 'next/link';
+import {
+  useCurrentProject,
+  useProjectCapa,
+  useProjectIndicators,
+  useProjectIshikawa,
+  useProjectSolutions,
+  useProjectSubjects,
+  useWorkspace,
+} from '@/lib/store';
+import { RDP_PHASES } from '@/lib/rdp';
 
-const PDCA_PHASES: PdcaPhase[] = ['plan', 'do', 'check', 'act'];
-
+/**
+ * Tableau de bord RDP — avancement dans la démarche en 7 phases (0 → 6),
+ * indicateurs de performance et état des actions.
+ */
 export function DashboardRdpPage() {
   const project = useCurrentProject();
-  const fiveWhys = useProjectFiveWhys(project?.id);
+  const subjects = useProjectSubjects(project?.id);
   const ishikawaList = useProjectIshikawa(project?.id);
+  const solutions = useProjectSolutions(project?.id);
+  const indicators = useProjectIndicators(project?.id);
   const capaActions = useProjectCapa(project?.id);
+  const { setRdpPhase } = useWorkspace();
 
   if (!project) return null;
 
-  const openCapa = capaActions.filter((a) => a.status === 'open' || a.status === 'in_progress');
-  const closedCapa = capaActions.filter((a) => a.status === 'closed' || a.status === 'verified');
+  const currentPhase = project.rdpCurrentPhase ?? 0;
+  const phaseMeta = RDP_PHASES[currentPhase] ?? RDP_PHASES[0];
 
-  const activeFiveWhy = fiveWhys[fiveWhys.length - 1];
-  const currentPhase: PdcaPhase = activeFiveWhy?.pdcaPhase ?? 'plan';
-
-  const recentCapa = [...capaActions]
-    .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? '') || a.createdAt.localeCompare(b.createdAt))
-    .slice(0, 6);
+  const retainedSubject = subjects.find((s) => s.retained);
+  const causesCount = ishikawaList.reduce((n, a) => n + a.causes.length, 0);
+  const retainedSolutions = solutions.filter((s) => s.retained);
+  const phase5 = capaActions.filter((a) => a.phase === 5);
+  const phase5Open = phase5.filter((a) => a.status === 'open' || a.status === 'in_progress');
+  const phase6 = capaActions.filter((a) => a.phase === 6);
 
   return (
     <div className="page">
       <div className="page-header">
         <div>
           <h1>Tableau de bord</h1>
-          <p className="subtitle">Résolution de problèmes — PDCA · 5 Pourquoi · Ishikawa · CAPA</p>
+          <p className="subtitle">
+            Résolution de problèmes — démarche en 7 phases, simple, efficace, adaptable à tout le monde.
+          </p>
         </div>
         <span className="badge rdp-badge">RDP</span>
       </div>
 
-      {/* Contexte du problème */}
-      {project.description && (
-        <div className="card" style={{ borderLeft: '3px solid var(--accent)' }}>
-          <div className="card-header">
-            <h2>Problème à résoudre</h2>
-          </div>
-          <p style={{ margin: 0, color: 'var(--text)' }}>{project.description}</p>
+      {/* Sujet retenu */}
+      {retainedSubject && (
+        <div className="card" style={{ borderLeft: '3px solid var(--accent)', padding: '12px 16px' }}>
+          <span className="muted" style={{ fontSize: 12 }}>Sujet traité</span>
+          <p style={{ fontWeight: 600, marginTop: 2 }}>{retainedSubject.label}</p>
         </div>
       )}
 
-      {/* PDCA Progress */}
+      {/* Avancement de la démarche */}
       <div className="card">
         <div className="card-header">
-          <h2>Avancement PDCA</h2>
+          <h2>Démarche — phase {currentPhase} sur 6</h2>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              className="btn btn-sm"
+              disabled={currentPhase === 0}
+              onClick={() => void setRdpPhase(project.id, currentPhase - 1)}
+            >
+              ← Phase précédente
+            </button>
+            <button
+              className="btn btn-sm btn-primary"
+              disabled={currentPhase === 6}
+              onClick={() => void setRdpPhase(project.id, currentPhase + 1)}
+            >
+              Phase suivante →
+            </button>
+          </div>
         </div>
-        <div className="pdca-steps">
-          {PDCA_PHASES.map((phase) => {
-            const phaseOrder: PdcaPhase[] = ['plan', 'do', 'check', 'act', 'closed'];
-            const cur = phaseOrder.indexOf(currentPhase);
-            const idx = PDCA_PHASES.indexOf(phase);
-            const isDone = cur > idx;
-            const isActive = currentPhase === phase || (currentPhase === 'closed' && phase === 'act');
-            return (
-              <div
-                key={phase}
-                className={`pdca-step${isActive ? ' active' : isDone ? ' done' : ''}`}
-              >
-                <span className="pdca-step-label">{PDCA_LABELS[phase]}</span>
-              </div>
-            );
-          })}
+
+        <div className="pdca-steps phase-steps">
+          {RDP_PHASES.map((p) => (
+            <button
+              key={p.num}
+              type="button"
+              className={`pdca-step${p.num === currentPhase ? ' active' : p.num < currentPhase ? ' done' : ''}`}
+              onClick={() => void setRdpPhase(project.id, p.num)}
+              title={p.description}
+            >
+              <span className="phase-step-num">{p.num}</span>
+              <span className="pdca-step-label">{p.label}</span>
+            </button>
+          ))}
         </div>
-        {currentPhase === 'closed' && (
-          <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>
-            Résolution clôturée.
-          </p>
-        )}
-        {fiveWhys.length === 0 && (
-          <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>
-            Créez une analyse 5 Pourquoi pour suivre la phase PDCA.
-          </p>
-        )}
+
+        <div className="phase-current">
+          <div>
+            <p style={{ fontWeight: 600 }}>
+              Phase {phaseMeta.num} — {phaseMeta.label}
+            </p>
+            <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>{phaseMeta.description}</p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+              {phaseMeta.tools.map((t) => (
+                <span key={t} className="badge source">{t}</span>
+              ))}
+            </div>
+          </div>
+          <Link href={phaseMeta.href} className="btn btn-primary" style={{ flexShrink: 0 }}>
+            Ouvrir la phase →
+          </Link>
+        </div>
       </div>
 
       {/* Statistiques */}
-      <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 0 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
         <div className="card stat-card">
-          <div className="stat-value">{fiveWhys.length}</div>
-          <div className="stat-label">Analyses 5 Pourquoi</div>
+          <div className="stat-value">{subjects.length}</div>
+          <div className="stat-label">Sujets identifiés</div>
         </div>
         <div className="card stat-card">
-          <div className="stat-value">{ishikawaList.length}</div>
-          <div className="stat-label">Diagrammes Ishikawa</div>
+          <div className="stat-value">{causesCount}</div>
+          <div className="stat-label">Causes (Ishikawa)</div>
         </div>
         <div className="card stat-card">
           <div className="stat-value">
-            <span style={{ color: openCapa.length > 0 ? 'var(--accent)' : 'inherit' }}>{openCapa.length}</span>
-            <span className="muted" style={{ fontSize: 14, fontWeight: 400 }}>/{capaActions.length}</span>
+            {retainedSolutions.length}
+            <span className="muted" style={{ fontSize: 14, fontWeight: 400 }}>/{solutions.length}</span>
           </div>
-          <div className="stat-label">CAPA ouvertes / total</div>
+          <div className="stat-label">Solutions retenues</div>
+        </div>
+        <div className="card stat-card">
+          <div className="stat-value">
+            <span style={{ color: phase5Open.length > 0 ? 'var(--accent)' : 'inherit' }}>
+              {phase5Open.length}
+            </span>
+            <span className="muted" style={{ fontSize: 14, fontWeight: 400 }}>/{phase5.length}</span>
+          </div>
+          <div className="stat-label">Actions ouvertes</div>
         </div>
       </div>
 
-      {/* CAPA récentes */}
+      {/* Tableau de bord — indicateurs */}
       <div className="card">
         <div className="card-header">
-          <h2>Actions CAPA</h2>
-          {closedCapa.length > 0 && (
-            <span className="badge crit-low">{closedCapa.length} clôturée{closedCapa.length > 1 ? 's' : ''}</span>
-          )}
+          <h2>Indicateurs de performance</h2>
+          <Link href="/probleme" className="btn btn-sm">Gérer les indicateurs</Link>
         </div>
-        {capaActions.length === 0 ? (
+        {indicators.length === 0 ? (
           <div className="empty">
-            <p>Aucune action CAPA pour le moment. Créez des actions correctives ou préventives dans l&apos;onglet CAPA.</p>
+            <p>
+              Aucun indicateur. Définissez-les en phase 1 pour mesurer l&apos;évolution des
+              écarts entre situation actuelle et situation souhaitée.
+            </p>
           </div>
         ) : (
           <div className="table-wrap">
             <table className="data">
               <thead>
                 <tr>
-                  <th>Titre</th>
-                  <th>Type</th>
-                  <th>Statut</th>
-                  <th>Échéance</th>
+                  <th>Indicateur</th>
+                  <th>Valeur actuelle</th>
+                  <th>Objectif</th>
+                  <th>Fréquence</th>
                 </tr>
               </thead>
               <tbody>
-                {recentCapa.map((a) => (
-                  <tr key={a.id}>
-                    <td className="cell-title">{a.title}</td>
-                    <td><CapaTypeBadge type={a.type} /></td>
-                    <td><CapaStatusBadge status={a.status} /></td>
-                    <td>{a.dueDate ?? <span className="muted">—</span>}</td>
+                {indicators.map((i) => (
+                  <tr key={i.id}>
+                    <td className="cell-title">{i.name}</td>
+                    <td>{i.currentValue || <span className="muted">—</span>}{i.unit && i.currentValue ? ` ${i.unit}` : ''}</td>
+                    <td>{i.targetValue || <span className="muted">—</span>}{i.unit && i.targetValue ? ` ${i.unit}` : ''}</td>
+                    <td>{i.frequency || <span className="muted">—</span>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -135,34 +179,23 @@ export function DashboardRdpPage() {
         )}
       </div>
 
-      {/* Résumé 5P */}
-      {fiveWhys.length > 0 && (
-        <div className="card">
-          <div className="card-header">
-            <h2>5 Pourquoi</h2>
-          </div>
-          <div className="table-wrap">
-            <table className="data">
-              <thead>
-                <tr>
-                  <th>Titre</th>
-                  <th>Phase PDCA</th>
-                  <th>Niveaux</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fiveWhys.map((a) => (
-                  <tr key={a.id}>
-                    <td className="cell-title">{a.title}</td>
-                    <td><PdcaBadge phase={a.pdcaPhase} /></td>
-                    <td>{a.levels.length} / 5</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {/* Standardisation */}
+      {currentPhase >= 6 && (
+        <div className="card" style={{ padding: '12px 16px' }}>
+          <span className="muted" style={{ fontSize: 12 }}>Standardisation</span>
+          <p style={{ marginTop: 2 }}>
+            {phase6.length === 0
+              ? 'Aucune action de standardisation pour le moment.'
+              : `${phase6.length} action(s) de standardisation planifiée(s).`}{' '}
+            <Link href="/standardisation" className="link">Ouvrir la phase 6</Link>
+          </p>
         </div>
       )}
+
+      <p className="muted" style={{ fontSize: 12, textAlign: 'center', fontStyle: 'italic' }}>
+        « Ce n&apos;est pas avec ceux qui ont créé les problèmes qu&apos;il faut espérer les
+        résoudre. » — Shigeo Shingo
+      </p>
     </div>
   );
 }

@@ -19,9 +19,10 @@ import { IconEdit, IconPlus, IconTrash } from '@/components/icons';
 
 type Filter = 'all' | CapaType;
 
-export function CapaPage() {
+/** Plan d'action PDCA — phase 5 (mise en œuvre) ou phase 6 (standardisation). */
+export function CapaPage({ phase = 5 }: { phase?: 5 | 6 }) {
   const project = useCurrentProject();
-  const capaActions = useProjectCapa(project?.id);
+  const allCapa = useProjectCapa(project?.id);
   const { deleteCapaAction } = useWorkspace();
 
   const [filter, setFilter] = useState<Filter>('all');
@@ -30,6 +31,7 @@ export function CapaPage() {
 
   if (!project) return null;
 
+  const capaActions = allCapa.filter((a) => a.phase === phase);
   const visible = filter === 'all' ? capaActions : capaActions.filter((a) => a.type === filter);
   const sorted = [...visible].sort((a, b) => {
     const s = { open: 0, in_progress: 1, closed: 2, verified: 3 };
@@ -42,13 +44,15 @@ export function CapaPage() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>CAPA</h1>
+          <h1>{phase === 5 ? 'Phase 5 — Mettre en œuvre' : 'Phase 6 — Standardiser'}</h1>
           <p className="subtitle">
-            Actions Correctives et Préventives — suivi des mesures issues de l&apos;analyse.
+            {phase === 5
+              ? 'Plan d’action lié au PDCA et au QQOQCP — qui fait quoi, où, quand, comment et pourquoi.'
+              : 'Étendre la solution aux autres procédés et pérenniser — esprit Kaizen : on peut toujours améliorer.'}
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => setCreating(true)}>
-          <IconPlus /> Nouvelle action CAPA
+          <IconPlus /> Nouvelle action
         </button>
       </div>
 
@@ -130,11 +134,12 @@ export function CapaPage() {
       </div>
 
       {creating && (
-        <CapaFormModal projectId={project.id} members={project.members} onClose={() => setCreating(false)} />
+        <CapaFormModal projectId={project.id} phase={phase} members={project.members} onClose={() => setCreating(false)} />
       )}
       {editing && (
         <CapaFormModal
           projectId={project.id}
+          phase={phase}
           action={editing}
           members={project.members}
           onClose={() => setEditing(null)}
@@ -148,11 +153,13 @@ export function CapaPage() {
 
 function CapaFormModal({
   projectId,
+  phase,
   action,
   members,
   onClose,
 }: {
   projectId: Id;
+  phase: 5 | 6;
   action?: CapaAction;
   members: { id: Id; name: string }[];
   onClose: () => void;
@@ -180,6 +187,7 @@ function CapaFormModal({
       status,
       dueDate: dueDate || undefined,
       source: source.trim() || undefined,
+      phase,
     };
     if (action) {
       void updateCapaAction(action.id, input);

@@ -51,7 +51,7 @@ export function ProjectFormModal({ project, onClose }: Props) {
           <div className="project-type-selector">
             {([
               { value: 'gestion' as ProjectType, title: 'Gestion de projet', desc: 'RACI, AMDEC, actions et planning' },
-              { value: 'rdp' as ProjectType, title: 'Résolution de problèmes', desc: '5 Pourquoi, Ishikawa 6M, CAPA' },
+              { value: 'rdp' as ProjectType, title: 'Résolution de problèmes', desc: 'Démarche en 7 phases : sujet, QQOQCP, Ishikawa, solutions, PDCA' },
             ] as const).map(({ value, title, desc }) => (
               <label key={value} className={`type-option${projectType === value ? ' selected' : ''}`}>
                 <input type="radio" name="project-type" value={value}

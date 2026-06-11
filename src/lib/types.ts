@@ -51,6 +51,8 @@ export interface ProjectMeta {
   createdAt: string;
   ownerId: string;
   projectType: ProjectType;
+  /** Phase courante de la démarche RDP (0 = sujet … 6 = standardiser). */
+  rdpCurrentPhase: number;
   project_members?: ProjectMember[];
 }
 
@@ -60,6 +62,7 @@ export interface Project {
   description?: string;
   ownerId: string;
   projectType: ProjectType;
+  rdpCurrentPhase: number;
   /** L'équipe appartient au projet : seule source de membres pour le RACI. */
   members: Member[];
   project_members?: ProjectMember[];
@@ -350,7 +353,7 @@ export interface FiveWhyLevelInput {
   isRootCause: boolean;
 }
 
-/** Ishikawa 6M — une analyse = un effet + des causes groupées par catégorie. */
+/** Ishikawa 5M (méthodologie RDP) — un effet + des causes classées par nature. */
 export type IshikawaCategory =
   | 'Matière'
   | 'Méthode'
@@ -365,7 +368,6 @@ export const ISHIKAWA_CATEGORIES: IshikawaCategory[] = [
   'Machine',
   "Main-d'œuvre",
   'Milieu',
-  'Mesure',
 ];
 
 export interface IshikawaAnalysis {
@@ -422,6 +424,8 @@ export interface CapaAction {
   status: CapaStatus;
   dueDate?: string;
   source?: string;
+  /** Phase de la démarche : 5 = mise en œuvre, 6 = standardisation. */
+  phase: 5 | 6;
   createdAt: string;
 }
 
@@ -433,6 +437,7 @@ export interface CapaActionInput {
   status: CapaStatus;
   dueDate?: string;
   source?: string;
+  phase: 5 | 6;
 }
 
 /* --- Row types Supabase pour le mode RDP ----------------------------------- */
@@ -486,6 +491,7 @@ export interface CapaActionRow {
   status: CapaStatus;
   due_date: string | null;
   source: string | null;
+  phase: number | null;
   created_at: string;
 }
 
@@ -551,6 +557,230 @@ export function capaActionFromRow(r: CapaActionRow): CapaAction {
     status: r.status,
     dueDate: r.due_date ?? undefined,
     source: r.source ?? undefined,
+    phase: r.phase === 6 ? 6 : 5,
+    createdAt: r.created_at,
+  };
+}
+
+/* --- Méthodologie RDP en 7 phases (0 → 6) ----------------------------------- */
+
+/** Phase 0 — sujet issu du brainstorming, priorisé par fréquence × impact. */
+export interface RdpSubject {
+  id: Id;
+  projectId: Id;
+  label: string;
+  /** Fréquence d'apparition du problème, 1 à 4. */
+  frequency: number;
+  /** Impact du problème, 1 à 4. */
+  impact: number;
+  /** Sujet retenu pour la démarche (un seul par projet). */
+  retained: boolean;
+  createdAt: string;
+}
+
+export interface RdpSubjectInput {
+  label: string;
+  frequency: number;
+  impact: number;
+}
+
+/** Phase 1 — fiche problème : QQOQCP + situations + écart (une par projet). */
+export interface RdpProblem {
+  projectId: Id;
+  quoi: string;
+  qui: string;
+  ou: string;
+  quand: string;
+  comment: string;
+  pourquoi: string;
+  situationActuelle: string;
+  situationSouhaitee: string;
+  ecart: string;
+  objectifs: string;
+}
+
+export type RdpProblemInput = Omit<RdpProblem, 'projectId'>;
+
+/** Indicateur du tableau de bord (phases 1 et 5). */
+export interface RdpIndicator {
+  id: Id;
+  projectId: Id;
+  name: string;
+  unit: string;
+  currentValue: string;
+  targetValue: string;
+  /** Fréquence de relevé (ex. « hebdomadaire »). */
+  frequency: string;
+  /** Responsable de la mise à jour (membre de l'équipe). */
+  responsibleId?: Id;
+  createdAt: string;
+}
+
+export interface RdpIndicatorInput {
+  name: string;
+  unit: string;
+  currentValue: string;
+  targetValue: string;
+  frequency: string;
+  responsibleId?: Id;
+}
+
+/** Phases 3-4 — solution évaluée par la matrice de décision. */
+export interface RdpSolution {
+  id: Id;
+  projectId: Id;
+  /** Cause traitée (issue de l'Ishikawa). */
+  causeId?: Id;
+  title: string;
+  description: string;
+  /** Efficacité attendue, 1 à 4. */
+  effectiveness: number;
+  /** Facilité de mise en œuvre, 1 à 4. */
+  ease: number;
+  /** Coût : 4 = très peu coûteux, 1 = très coûteux. */
+  cost: number;
+  retained: boolean;
+  createdAt: string;
+}
+
+export interface RdpSolutionInput {
+  causeId?: Id;
+  title: string;
+  description: string;
+  effectiveness: number;
+  ease: number;
+  cost: number;
+}
+
+/** Score de la matrice de décision (3 à 12). */
+export function solutionScore(s: Pick<RdpSolution, 'effectiveness' | 'ease' | 'cost'>): number {
+  return s.effectiveness + s.ease + s.cost;
+}
+
+/** Score de priorisation d'un sujet (1 à 16). */
+export function subjectScore(s: Pick<RdpSubject, 'frequency' | 'impact'>): number {
+  return s.frequency * s.impact;
+}
+
+/* --- Rows Supabase (méthodologie) ------------------------------------------- */
+
+export interface RdpSubjectRow {
+  id: string;
+  project_id: string;
+  label: string;
+  frequency: number;
+  impact: number;
+  retained: boolean;
+  created_at: string;
+}
+
+export interface RdpProblemRow {
+  project_id: string;
+  quoi: string;
+  qui: string;
+  ou: string;
+  quand: string;
+  comment: string;
+  pourquoi: string;
+  situation_actuelle: string;
+  situation_souhaitee: string;
+  ecart: string;
+  objectifs: string;
+}
+
+export interface RdpIndicatorRow {
+  id: string;
+  project_id: string;
+  name: string;
+  unit: string;
+  current_value: string;
+  target_value: string;
+  frequency: string;
+  responsible_id: string | null;
+  created_at: string;
+}
+
+export interface RdpSolutionRow {
+  id: string;
+  project_id: string;
+  cause_id: string | null;
+  title: string;
+  description: string;
+  effectiveness: number;
+  ease: number;
+  cost: number;
+  retained: boolean;
+  created_at: string;
+}
+
+export function rdpSubjectFromRow(r: RdpSubjectRow): RdpSubject {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    label: r.label,
+    frequency: r.frequency,
+    impact: r.impact,
+    retained: r.retained,
+    createdAt: r.created_at,
+  };
+}
+
+export function rdpProblemFromRow(r: RdpProblemRow): RdpProblem {
+  return {
+    projectId: r.project_id,
+    quoi: r.quoi,
+    qui: r.qui,
+    ou: r.ou,
+    quand: r.quand,
+    comment: r.comment,
+    pourquoi: r.pourquoi,
+    situationActuelle: r.situation_actuelle,
+    situationSouhaitee: r.situation_souhaitee,
+    ecart: r.ecart,
+    objectifs: r.objectifs,
+  };
+}
+
+export function rdpProblemInputToRow(input: Partial<RdpProblemInput>): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  if (input.quoi !== undefined) row.quoi = input.quoi;
+  if (input.qui !== undefined) row.qui = input.qui;
+  if (input.ou !== undefined) row.ou = input.ou;
+  if (input.quand !== undefined) row.quand = input.quand;
+  if (input.comment !== undefined) row.comment = input.comment;
+  if (input.pourquoi !== undefined) row.pourquoi = input.pourquoi;
+  if (input.situationActuelle !== undefined) row.situation_actuelle = input.situationActuelle;
+  if (input.situationSouhaitee !== undefined) row.situation_souhaitee = input.situationSouhaitee;
+  if (input.ecart !== undefined) row.ecart = input.ecart;
+  if (input.objectifs !== undefined) row.objectifs = input.objectifs;
+  return row;
+}
+
+export function rdpIndicatorFromRow(r: RdpIndicatorRow): RdpIndicator {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    name: r.name,
+    unit: r.unit,
+    currentValue: r.current_value,
+    targetValue: r.target_value,
+    frequency: r.frequency,
+    responsibleId: r.responsible_id ?? undefined,
+    createdAt: r.created_at,
+  };
+}
+
+export function rdpSolutionFromRow(r: RdpSolutionRow): RdpSolution {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    causeId: r.cause_id ?? undefined,
+    title: r.title,
+    description: r.description,
+    effectiveness: r.effectiveness,
+    ease: r.ease,
+    cost: r.cost,
+    retained: r.retained,
     createdAt: r.created_at,
   };
 }

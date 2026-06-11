@@ -9,14 +9,17 @@ import { ThemeToggle } from './ThemeToggle';
 import {
   IconActions,
   IconAmdec,
+  IconBulb,
   IconCapa,
   IconDashboard,
-  IconFiveWhys,
   IconIshikawa,
+  IconLayers,
   IconLogout,
   IconPlanning,
   IconPlus,
   IconRaci,
+  IconStar,
+  IconTarget,
   IconUsers,
 } from './icons';
 
@@ -31,9 +34,12 @@ const NAV_GESTION = [
 
 const NAV_RDP = [
   { to: '/', label: 'Tableau de bord', icon: <IconDashboard /> },
-  { to: '/cinq-pourquoi', label: '5 Pourquoi', icon: <IconFiveWhys /> },
-  { to: '/ishikawa', label: 'Ishikawa', icon: <IconIshikawa /> },
-  { to: '/capa', label: 'CAPA', icon: <IconCapa /> },
+  { to: '/sujet', label: '0 · Sujet', icon: <IconStar /> },
+  { to: '/probleme', label: '1 · Problème', icon: <IconTarget /> },
+  { to: '/ishikawa', label: '2 · Causes', icon: <IconIshikawa /> },
+  { to: '/solutions', label: '3-4 · Solutions', icon: <IconBulb /> },
+  { to: '/capa', label: '5 · Mise en œuvre', icon: <IconCapa /> },
+  { to: '/standardisation', label: '6 · Standardiser', icon: <IconLayers /> },
   { to: '/access', label: 'Accès', icon: <IconUsers /> },
 ];
 

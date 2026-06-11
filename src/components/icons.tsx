@@ -124,6 +124,35 @@ export const IconCheck = () => (
   </svg>
 );
 
+export const IconStar = () => (
+  <svg {...base}>
+    <path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6-5.4-2.9-5.4 2.9 1.1-6L3.2 9.4l6.1-.8L12 3z" />
+  </svg>
+);
+
+export const IconTarget = () => (
+  <svg {...base}>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="5" />
+    <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const IconBulb = () => (
+  <svg {...base}>
+    <path d="M9 18h6M10 21h4" />
+    <path d="M12 3a6 6 0 0 0-4 10.5c.8.7 1.3 1.5 1.5 2.5h5c.2-1 .7-1.8 1.5-2.5A6 6 0 0 0 12 3z" />
+  </svg>
+);
+
+export const IconLayers = () => (
+  <svg {...base}>
+    <path d="M12 2L2 7.5 12 13l10-5.5L12 2z" />
+    <path d="M2 12.5L12 18l10-5.5" />
+    <path d="M2 17.5L12 23l10-5.5" />
+  </svg>
+);
+
 export const IconChevronLeft = () => (
   <svg {...base}>
     <polyline points="15 18 9 12 15 6" />

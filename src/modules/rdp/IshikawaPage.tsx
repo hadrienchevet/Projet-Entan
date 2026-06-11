@@ -38,9 +38,10 @@ export function IshikawaPage() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Ishikawa</h1>
+          <h1>Phase 2 — Rechercher les causes</h1>
           <p className="subtitle">
-            Diagramme causes-effets 6M — identifiez les causes par catégorie.
+            Brainstormez toutes les causes possibles, classez-les par nature avec le
+            diagramme d&apos;Ishikawa / 5M.
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => setCreating(true)}>
