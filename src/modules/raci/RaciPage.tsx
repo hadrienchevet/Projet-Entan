@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { memberName, useCurrentProject, useProjectActions, useWorkspace } from '@/lib/store';
 import type { Action, Id, Member, RaciRole } from '@/lib/types';
 import { Modal } from '@/components/Modal';
-import { IconEdit, IconLink, IconPlus, IconTrash } from '@/components/icons';
+import { IconEdit, IconPlus, IconTrash } from '@/components/icons';
 
 /** Rôle RACI du membre sur une action (vue dérivée de l'action). */
 function roleOf(action: Action, memberId: Id): RaciRole | '' {
@@ -42,12 +42,6 @@ export function RaciPage() {
 
   const responsibleCount = (memberId: Id) =>
     actions.filter((a) => a.responsibleId === memberId).length;
-
-  const copyInvite = async (id: Id, token: string) => {
-    await navigator.clipboard.writeText(`${window.location.origin}/invite/${token}`);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
 
   return (
     <div className="page">
@@ -127,52 +121,6 @@ export function RaciPage() {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
-
-      {/* --- Invitations : rejoindre l'équipe avec un compte ------------------ */}
-      <div className="card">
-        <div className="card-header">
-          <div className="card-title-group">
-            <h2>Inviter par lien</h2>
-            <span className="muted" style={{ fontSize: 12 }}>
-              la personne qui ouvre le lien rejoint l&apos;équipe avec son compte
-            </span>
-          </div>
-          <button className="btn btn-sm" onClick={() => void createInvitation(project.id)}>
-            <IconLink /> Générer un lien
-          </button>
-        </div>
-        {invitations.length === 0 ? (
-          <div className="empty">
-            <p>
-              Aucun lien actif. Générez-en un et partagez-le — validité 7 jours. Les membres
-              ajoutés à la main ci-dessus peuvent collaborer plus tard en ouvrant un lien.
-            </p>
-          </div>
-        ) : (
-          invitations.map((inv) => (
-            <div key={inv.id} className="list-row">
-              <div className="row-main">
-                <div className="row-title invite-url">
-                  {typeof window !== 'undefined' ? window.location.origin : ''}/invite/{inv.token}
-                </div>
-                <div className="row-sub">
-                  Expire le {new Date(inv.expiresAt).toLocaleDateString('fr-FR')}
-                </div>
-              </div>
-              <button className="btn btn-sm" onClick={() => void copyInvite(inv.id, inv.token)}>
-                {copiedId === inv.id ? 'Copié ✓' : 'Copier'}
-              </button>
-              <button
-                className="icon-btn danger"
-                onClick={() => void revokeInvitation(inv.id)}
-                aria-label="Révoquer ce lien"
-              >
-                <IconTrash />
-              </button>
-            </div>
-          ))
         )}
       </div>
 

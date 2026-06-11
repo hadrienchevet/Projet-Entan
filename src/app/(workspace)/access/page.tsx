@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { useCurrentProject, useWorkspace } from '@/lib/store';
-import { IconTrash } from '@/components/icons';
+import { IconLink, IconTrash } from '@/components/icons';
+import type { Id } from '@/lib/types';
 
 export default function AccessPage() {
   const project = useCurrentProject();
-  const { removeProjectMember } = useWorkspace();
+  const { removeProjectMember, invitations, createInvitation, revokeInvitation } = useWorkspace();
+  const [copiedId, setCopiedId] = useState<Id | null>(null);
 
   if (!project) return null;
 
@@ -15,20 +18,72 @@ export default function AccessPage() {
     void removeProjectMember(project.id, userId);
   };
 
+  const copyInvite = async (id: Id, token: string) => {
+    await navigator.clipboard.writeText(`${window.location.origin}/invite/${token}`);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   return (
     <div className="page">
       <div className="page-header">
         <div>
           <h1>Accès au projet</h1>
           <p className="subtitle">
-            Liste des utilisateurs ayant un compte et pouvant consulter ce projet.
+            Gérez les personnes pouvant consulter ce projet et invitez de nouveaux collaborateurs.
           </p>
         </div>
       </div>
 
       <div className="card">
         <div className="card-header">
-          <h2>Utilisateurs connectés ({project.project_members?.length || 0})</h2>
+          <div className="card-title-group">
+            <h2>Inviter par lien</h2>
+            <span className="muted" style={{ fontSize: 12 }}>
+              toute personne ayant le lien peut rejoindre le projet
+            </span>
+          </div>
+          <button className="btn btn-sm" onClick={() => void createInvitation(project.id)}>
+            <IconLink /> Générer un lien
+          </button>
+        </div>
+        {invitations.length === 0 ? (
+          <div className="empty">
+            <p>
+              Aucun lien actif. Générez-en un et partagez-le (validité 7 jours).
+            </p>
+          </div>
+        ) : (
+          <div className="list">
+            {invitations.map((inv) => (
+              <div key={inv.id} className="list-row">
+                <div className="row-main">
+                  <div className="row-title invite-url">
+                    {typeof window !== 'undefined' ? window.location.origin : ''}/invite/{inv.token}
+                  </div>
+                  <div className="row-sub">
+                    Expire le {new Date(inv.expiresAt).toLocaleDateString('fr-FR')}
+                  </div>
+                </div>
+                <button className="btn btn-sm" onClick={() => void copyInvite(inv.id, inv.token)}>
+                  {copiedId === inv.id ? 'Copié ✓' : 'Copier'}
+                </button>
+                <button
+                  className="icon-btn danger"
+                  onClick={() => void revokeInvitation(inv.id)}
+                  aria-label="Révoquer ce lien"
+                >
+                  <IconTrash />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="card" style={{ marginTop: 24 }}>
+        <div className="card-header">
+          <h2>Utilisateurs ayant accès ({project.project_members?.length || 0})</h2>
         </div>
         <div className="table-wrap">
           <table className="data">
