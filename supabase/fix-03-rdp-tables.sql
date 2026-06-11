@@ -1,5 +1,5 @@
 -- =============================================================================
--- PILOTIX — Migration fix-03 : mode Résolution de Problèmes (RDP)
+-- PROJET ENTAN — Migration fix-03 : mode Résolution de Problèmes (RDP)
 -- À exécuter dans le SQL Editor du dashboard Supabase.
 -- Prérequis : fix-02-v1-model.sql déjà appliqué.
 -- =============================================================================

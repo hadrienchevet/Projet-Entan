@@ -54,7 +54,7 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="app">
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <span className="logo">PX</span>
+          <span className="logo">PE</span>
           Projet Entan
         </div>
 

@@ -19,7 +19,7 @@ export function ThemeToggle() {
     setDark(next);
     document.documentElement.classList.toggle('dark', next);
     try {
-      localStorage.setItem('pilotix-theme', next ? 'dark' : 'light');
+      localStorage.setItem('entan-theme', next ? 'dark' : 'light');
     } catch {
       // stockage indisponible (navigation privée…) : le choix vaut pour la session
     }

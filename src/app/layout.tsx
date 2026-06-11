@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 /** Applique le thème avant le premier rendu (pas de flash clair/sombre). */
-const themeInit = `(function(){try{var t=localStorage.getItem('pilotix-theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');}catch(e){}})();`;
+const themeInit = `(function(){try{var t=localStorage.getItem('entan-theme')||localStorage.getItem('pilotix-theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark');}catch(e){}})();`;
 
 export default function RootLayout({
   children,

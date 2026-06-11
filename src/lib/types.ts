@@ -1,5 +1,5 @@
 /**
- * Modèle de données central de Pilotix — identique à la V1 (Project Ops Hub).
+ * Modèle de données central de Projet Entan — identique à la V1 (Project Ops Hub).
  *
  * Tous les modules (RACI, AMDEC, Actions, Planning) référencent ces mêmes
  * entités : aucune donnée n'est dupliquée entre modules.

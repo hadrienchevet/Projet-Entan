@@ -1,5 +1,5 @@
 -- =============================================================================
--- PILOTIX — Migration fix-04 : méthodologie RDP en 7 phases (0 → 6)
+-- PROJET ENTAN — Migration fix-04 : méthodologie RDP en 7 phases (0 → 6)
 -- Source : « Méthodologie de résolution de problème » (P. Caliot).
 -- À exécuter dans le SQL Editor du dashboard Supabase.
 -- Prérequis : fix-03-rdp-tables.sql déjà appliqué.

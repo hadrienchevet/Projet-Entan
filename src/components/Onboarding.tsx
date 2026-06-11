@@ -11,12 +11,11 @@ export function Onboarding() {
 
   return (
     <div className="onboarding">
-      <span className="logo-lg">PX</span>
-      <h1>Bienvenue dans Pilotix</h1>
+      <span className="logo-lg">PE</span>
+      <h1>Bienvenue dans Projet Entan</h1>
       <p>
-        Pilotez vos projets industriels de bout en bout : responsabilités (RACI), risques (AMDEC),
-        actions et planning — quatre modules connectés autour des mêmes données, en équipe et en
-        temps réel.
+        Pilotez vos projets industriels de bout en bout — gestion de projet (RACI, AMDEC, actions,
+        planning) ou résolution de problèmes en 7 phases — en équipe et en temps réel.
       </p>
       <div className="onboarding-actions">
         <button className="btn btn-primary" onClick={() => setCreating(true)}>

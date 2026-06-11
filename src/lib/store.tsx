@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Store central de Pilotix — même API que le store Zustand de la V1, mais
+ * Store central de Projet Entan — même API que le store Zustand de la V1, mais
  * persisté dans Supabase et synchronisé en temps réel entre les membres.
  *
  * - Les lectures viennent d'un état local (chargé par projet) : les pages
@@ -185,7 +185,7 @@ interface WorkspaceState {
 
 const WorkspaceContext = createContext<WorkspaceState | null>(null);
 
-const CURRENT_KEY = 'pilotix-current-project';
+const CURRENT_KEY = 'entan-current-project';
 
 /** Retire un membre des champs A / C / I d'une action (jamais du R). */
 function stripRaci(action: Action, memberId: Id): Action {
@@ -223,7 +223,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   const onError = (context: string, message: string) => {
-    console.error(`[pilotix] ${context}:`, message);
+    console.error(`[entan] ${context}:`, message);
     window.alert(`${context} : ${message}`);
   };
 
@@ -235,7 +235,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       .select('id, name, description, project_type, rdp_current_phase, created_at, owner_id, project_members(project_id, user_id, role, joined_at, profiles(id, email, display_name))')
       .order('created_at');
     if (error) {
-      console.error('[pilotix] fetchProjects:', error.message);
+      console.error('[entan] fetchProjects:', error.message);
       return [];
     }
     const list = (data ?? []).map((r: any) => ({

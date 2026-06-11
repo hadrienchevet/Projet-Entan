@@ -117,12 +117,12 @@ function LoginForm() {
       <div className="card auth-card">
         <div className="auth-brand">
           <span className="logo-lg" style={{ width: 40, height: 40, fontSize: 16, borderRadius: 10, background: 'var(--accent)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700 }}>
-            PX
+            PE
           </span>
           <h1>Projet Entan</h1>
           <p>
-            Pilotez vos projets industriels : RACI, AMDEC, actions et planning — en équipe et en
-            temps réel.
+            Pilotez vos projets industriels : gestion de projet ou résolution de problèmes — en
+            équipe et en temps réel.
           </p>
         </div>
 

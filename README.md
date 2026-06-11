@@ -1,41 +1,60 @@
-# Pilotix
+# Projet Entan
 
-Plateforme SaaS de pilotage de projets industriels et de management visuel :
-**AMDEC** (analyse de risques), **RACI** (responsabilités), **actions correctives**
-et **cockpit de suivi** — multi-utilisateurs, collaboratif, temps réel.
+Plateforme SaaS de pilotage de projets industriels — multi-utilisateurs,
+collaborative, temps réel. Deux modes de travail au choix à la création d'un
+projet :
+
+- **Gestion de projet** : RACI (responsabilités), AMDEC (analyse de risques,
+  cotation G/O/D 1–4), actions et planning (calendrier + Gantt) — quatre
+  modules connectés autour des mêmes données.
+- **Résolution de problèmes (RDP)** : démarche guidée en 7 phases —
+  choisir un sujet (brainstorming, tableau à double entrée, 5 Pourquoi),
+  poser le problème (QQOQCP, écart, indicateurs), rechercher les causes
+  (Ishikawa / 5M), rechercher et choisir les solutions (matrice de décision),
+  mettre en œuvre (plan d'action PDCA), standardiser.
 
 ## Stack et choix techniques
 
 | Brique | Choix | Pourquoi |
 |---|---|---|
-| Frontend | **Next.js 16** (App Router, Server Components) | Server Actions = pas de couche API à maintenir |
+| Frontend | **Next.js 16** (App Router) | Pages client portées de la V1, auth côté serveur |
 | Backend + DB | **Supabase** (Postgres) | Auth, Realtime et RLS intégrés, zéro serveur à gérer |
 | Auth | **Supabase Auth** (email + mot de passe) | Sessions par cookies via `@supabase/ssr` |
-| Temps réel | **Supabase Realtime** | `postgres_changes` + `router.refresh()` : la base reste l'unique source de vérité |
-| Sécurité | **Row Level Security** | Isolation multi-tenant par projet, appliquée en base — pas dans le code applicatif |
+| Temps réel | **Supabase Realtime** | `postgres_changes` → refetch des données du projet |
+| Sécurité | **Row Level Security** | Isolation multi-tenant par projet, appliquée en base |
 | Hosting | **Vercel** | Déploiement direct du repo |
 
 Décisions structurantes :
 
-- **Pas de couche API custom** : les écritures passent par des Server Actions
-  ([src/lib/actions.ts](src/lib/actions.ts)), les lectures par les Server Components.
-  La RLS garantit qu'aucune requête ne sort du périmètre des projets de l'utilisateur,
-  même si le code applicatif est bugué.
-- **Criticité AMDEC calculée en base** (colonne générée `G × O × D`, cotation 1–4) :
-  impossible d'avoir une criticité incohérente.
-- **Temps réel sans état client** : un seul composant
-  ([realtime-refresher.tsx](src/components/realtime-refresher.tsx)) écoute les
-  changements Postgres du projet et re-rend les Server Components.
-- **Invitations** : token unique consommé par une fonction SQL `SECURITY DEFINER`
-  (`accept_invitation`) — l'invité n'étant pas encore membre, c'est le seul endroit
-  autorisé à écrire dans `project_members`.
+- **L'UX est la copie conforme de la V1** (Project Ops Hub) : mêmes écrans,
+  mêmes règles métier. Le store central
+  ([src/lib/store.tsx](src/lib/store.tsx), `WorkspaceProvider`) réimplémente
+  l'API du store Zustand de la V1 sur Supabase — écritures optimistes,
+  refetch en cas d'erreur, synchronisation temps réel entre membres. Les
+  pages des modules ([src/modules/](src/modules/)) ne savent pas que
+  Supabase existe.
+- **L'équipe (`members`) appartient au projet** : on ajoute « Marc,
+  responsable maintenance » sans qu'il ait de compte ; s'il rejoint via une
+  invitation, son compte s'y rattache. Le RACI vit sur l'action
+  (`responsible_id` obligatoire, `accountable_id`, `consulted_ids[]`,
+  `informed_ids[]`).
+- **Criticité AMDEC calculée en base** (colonne générée `G × O × D`,
+  cotation 1–4 ; ≥ 24 critique, ≥ 12 à surveiller).
+- **Deux thèmes** (clair ivoire / sombre brun-anthracite, style app Claude) :
+  les composants ne consomment que les tokens CSS de
+  [globals.css](src/app/globals.css), bascule persistée, préférence système
+  par défaut, anti-flash dans le layout racine.
+- **Invitations** : token unique consommé par une fonction SQL
+  `SECURITY DEFINER` (`accept_invitation`) — l'invité n'étant pas encore
+  membre, c'est le seul endroit autorisé à écrire dans `project_members`.
 
 ## Démarrage
 
 ### 1. Créer le projet Supabase
 
 1. [supabase.com](https://supabase.com) → New project.
-2. SQL Editor → coller et exécuter **`supabase/schema.sql`** (tables, RLS, fonctions, realtime).
+2. SQL Editor → exécuter **`supabase/schema.sql`** (installation neuve), puis
+   les migrations **`fix-01` → `fix-04`** dans l'ordre (base existante).
 3. Authentication → Providers → Email : activé par défaut.
    *Pour tester sans serveur mail : désactiver « Confirm email ».*
 
@@ -56,29 +75,45 @@ Ajouter l'URL Vercel dans Supabase → Authentication → URL Configuration
 
 ## Parcours utilisateur
 
-1. **Inscription / connexion** (`/login`) — un profil public est créé automatiquement.
-2. **Projets** (`/projects`) — création ; le créateur devient `owner` et premier membre.
-3. **Invitation** — Équipe → « Générer un lien » → partager `/invite/{token}` ;
-   l'invité se connecte (redirection automatique) et rejoint le projet.
-4. **Modules** : Cockpit (indicateurs), AMDEC (G/O/D 1–4, criticité ≥ 24 critique,
-   ≥ 12 à surveiller, « + Action » génère l'action corrective liée), Actions
-   (assignation, statut, échéance), RACI (matrice actions × membres, clic = cycle
-   R → A → C → I), Équipe (membres, invitations).
+1. **Inscription / connexion** (`/login`) — un profil public est créé
+   automatiquement.
+2. **Premier projet** — choix du type (gestion de projet ou RDP) ; le
+   créateur devient `owner`. La navigation s'adapte au type du projet.
+3. **Invitation** — onglet Accès → « Générer un lien » → partager
+   `/invite/{token}` ; l'invité se connecte et rejoint le projet.
+4. **Modules gestion** : Dashboard (retards, risques, charge équipe),
+   RACI (équipe + matrice), AMDEC (« + action » génère l'action corrective
+   liée), Actions, Planning (calendrier, Gantt, liste).
+5. **Phases RDP** : tableau de bord d'avancement (phase courante partagée),
+   puis une page par phase — Sujet, Problème, Causes, Solutions,
+   Mise en œuvre, Standardiser.
 
-Tout changement fait par un membre apparaît chez les autres sans recharger (Realtime).
+Tout changement fait par un membre apparaît chez les autres sans recharger
+(Realtime).
 
 ## Modèle de données
 
 ```
-profiles          (miroir public de auth.users, trigger à l'inscription)
-projects          (owner_id)
-project_members   (project_id, user_id, role owner|member)  ← source des permissions
-invitations       (token unique, expiration 7 j)
-amdec_items       (G/O/D 1–4, criticality = colonne générée)
-actions           (statut todo|in_progress|done, assignee, due_date, lien amdec_item_id)
-raci_roles        (action × membre → R|A|C|I, unique par couple)
+profiles            (miroir public de auth.users, trigger à l'inscription)
+projects            (owner_id, project_type gestion|rdp, rdp_current_phase 0-6)
+project_members     (project_id, user_id, role owner|member)  ← source des permissions
+members             (l'équipe métier : nom + fonction, user_id nullable)
+invitations         (token unique, expiration 7 j)
+
+-- Gestion de projet
+amdec_items         (G/O/D 1–4, criticality = colonne générée)
+actions             (RACI complet, statut, dates, lien amdec_item_id)
+
+-- Résolution de problèmes
+rdp_subjects        (phase 0 : brainstorming, fréquence × impact, sujet retenu)
+rdp_problem         (phase 1 : QQOQCP, situations, écart, objectifs — 1/projet)
+rdp_indicators      (tableau de bord : valeur actuelle vs objectif)
+five_why_analyses   (+ five_why_levels : chaîne des 5 Pourquoi)
+ishikawa_analyses   (+ ishikawa_causes : causes classées par 5M)
+rdp_solutions       (matrice de décision : efficacité + facilité + coût)
+capa_actions        (plan d'action PDCA, phase 5 ou 6)
 ```
 
-Toutes les tables métier portent `project_id` ; les politiques RLS s'appuient sur
-`is_project_member()` (SECURITY DEFINER, sans récursion). Voir
-[supabase/schema.sql](supabase/schema.sql) — commenté section par section.
+Toutes les tables métier portent `project_id` ; les politiques RLS s'appuient
+sur `is_project_member()` (SECURITY DEFINER, sans récursion). Voir
+[supabase/schema.sql](supabase/schema.sql) et les migrations `fix-*.sql`.

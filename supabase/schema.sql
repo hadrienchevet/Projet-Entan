@@ -1,5 +1,5 @@
 -- ===========================================================================
--- PILOTIX — Schéma Supabase (modèle V1 : équipe, RACI porté par les actions)
+-- PROJET ENTAN — Schéma Supabase (modèle V1 : équipe, RACI porté par les actions)
 -- À exécuter dans le SQL Editor du dashboard Supabase (installation neuve).
 -- Base existante : utiliser les fichiers fix-*.sql dans l'ordre.
 --
