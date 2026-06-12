@@ -1,4 +1,4 @@
-﻿import { IconHelp } from '@/components/icons';
+import { IconAmdec, IconHelp, IconPlanning, IconRaci } from '@/components/icons';
 
 export default function HelpPage() {
   return (
@@ -8,7 +8,7 @@ export default function HelpPage() {
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <IconHelp /> Aide & Tutoriel
           </h1>
-          <p className="subtitle">Apprenez Ã  maÃ®triser Projet Entan en quelques minutes.</p>
+          <p className="subtitle">Apprenez à maîtriser Projet Entan en quelques minutes.</p>
         </div>
       </div>
 
@@ -17,65 +17,65 @@ export default function HelpPage() {
           <div className="help-content">
             <h2 style={{ marginBottom: '12px' }}>Bienvenue dans votre Hub de gestion de projet</h2>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
-              DÃ©couvrez comment utiliser Projet Entan pour piloter vos projets industriels.
+              Découvrez comment utiliser Projet Entan pour piloter vos projets industriels.
             </p>
-            
-            <div className="video-container" style={{ 
-              aspectRatio: '16/9', 
-              background: '#000', 
+
+            <div className="video-container" style={{
+              aspectRatio: '16/9',
+              background: '#000',
               borderRadius: '12px',
               overflow: 'hidden',
               position: 'relative',
               boxShadow: 'var(--shadow-modal)',
               border: '1px solid var(--border)'
             }}>
-              <iframe 
-                src="/lancement.html" 
-                style={{ 
-                  width: '100%', 
-                  height: '100%', 
+              <iframe
+                src="/lancement.html"
+                style={{
+                  width: '100%',
+                  height: '100%',
                   border: 'none',
                   display: 'block'
                 }}
-                title="Animation de prÃ©sentation"
+                title="Animation de présentation"
                 allowFullScreen
               />
             </div>
 
             <div style={{ marginTop: '12px', textAlign: 'center' }}>
-              <a 
-                href="/lancement.html" 
-                target="_blank" 
+              <a
+                href="/lancement.html"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-ghost btn-sm"
               >
-                Ouvrir l'animation en plein Ã©cran â†—
+                Ouvrir l&apos;animation en plein écran →
               </a>
             </div>
 
             <div style={{ marginTop: '40px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px' }}>
               <div>
                 <h4 style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: 'var(--accent)' }}>â€¢</span> RACI
+                  <span style={{ color: 'var(--accent)', display: 'inline-flex' }}><IconRaci /></span> RACI
                 </h4>
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                  DÃ©finissez qui est Responsable, Accountable, ConsultÃ© ou InformÃ© pour chaque action.
+                  Définissez qui est Responsable, Accountable, Consulté ou Informé pour chaque action.
                 </p>
               </div>
               <div>
                 <h4 style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: 'var(--accent)' }}>â€¢</span> AMDEC
+                  <span style={{ color: 'var(--accent)', display: 'inline-flex' }}><IconAmdec /></span> AMDEC
                 </h4>
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                  Analysez les risques techniques et gÃ©nÃ©rez des actions correctives directement.
+                  Analysez les risques techniques et générez des actions correctives directement.
                 </p>
               </div>
               <div>
                 <h4 style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: 'var(--accent)' }}>â€¢</span> Planning
+                  <span style={{ color: 'var(--accent)', display: 'inline-flex' }}><IconPlanning /></span> Planning
                 </h4>
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                  Visualisez vos Ã©chÃ©ances sur un calendrier ou un diagramme de Gantt interactif.
+                  Visualisez vos échéances sur un calendrier ou un diagramme de Gantt interactif.
                 </p>
               </div>
             </div>

@@ -33,19 +33,19 @@ const NAV_GESTION = [
   { to: '/actions', label: 'Actions', icon: <IconActions /> },
   { to: '/planning', label: 'Planning', icon: <IconPlanning /> },
   { to: '/liens', label: 'Liens', icon: <IconTree /> },
-  { to: '/access', label: 'AccÃ¨s', icon: <IconUsers /> },
+  { to: '/access', label: 'Accès', icon: <IconUsers /> },
 ];
 
 const NAV_RDP = [
   { to: '/', label: 'Tableau de bord', icon: <IconDashboard /> },
-  { to: '/sujet', label: '0 Â· Sujet', icon: <IconStar /> },
-  { to: '/probleme', label: '1 Â· ProblÃ¨me', icon: <IconTarget /> },
-  { to: '/ishikawa', label: '2 Â· Causes', icon: <IconIshikawa /> },
-  { to: '/solutions', label: '3-4 Â· Solutions', icon: <IconBulb /> },
-  { to: '/capa', label: '5 Â· Mise en Å“uvre', icon: <IconCapa /> },
-  { to: '/standardisation', label: '6 Â· Standardiser', icon: <IconLayers /> },
+  { to: '/sujet', label: '0 · Sujet', icon: <IconStar /> },
+  { to: '/probleme', label: '1 · Problème', icon: <IconTarget /> },
+  { to: '/ishikawa', label: '2 · Causes', icon: <IconIshikawa /> },
+  { to: '/solutions', label: '3-4 · Solutions', icon: <IconBulb /> },
+  { to: '/capa', label: '5 · Mise en œuvre', icon: <IconCapa /> },
+  { to: '/standardisation', label: '6 · Standardiser', icon: <IconLayers /> },
   { to: '/liens', label: 'Liens', icon: <IconTree /> },
-  { to: '/access', label: 'AccÃ¨s', icon: <IconUsers /> },
+  { to: '/access', label: 'Accès', icon: <IconUsers /> },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -107,7 +107,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <div className="sidebar-footer-row" style={{ alignItems: 'center' }}>
             <form action="/auth/signout" method="post" style={{ flex: 1 }}>
               <button type="submit" className="btn btn-ghost btn-sm" style={{ width: '100%' }}>
-                <IconLogout /> DÃ©connexion
+                <IconLogout /> Déconnexion
               </button>
             </form>
             <ThemeToggle />
@@ -139,3 +139,6 @@ export function Layout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+
+
