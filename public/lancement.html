@@ -6,10 +6,13 @@
 <title>Projet Entan — In real time</title>
 <!--
   Film de lancement Projet Entan — 46 s, 7 scènes, 16:9, style keynote.
-  Langage caméra : dolly 3D avec parallaxe (scène 1), flip 3D + balayage
-  lumineux (logo), entrées de panneaux en perspective, zooms de focus pendant
-  chaque scène, orbite 3D (collaboration), sorties « zoom à travers » floutées,
-  halo lumineux qui glisse de scène en scène.
+  Langage caméra :
+  - plans larges courts pour poser le contexte (entrées en perspective) ;
+  - PLANS DE COUPE MACRO sur l'élément clé : le reste de l'app est flouté et
+    assombri (profondeur de champ), l'élément est incliné en 3D et la caméra
+    s'approche en prenant un angle — sur la scène 5 elle SUIT la jauge
+    d'avancement qui se remplit ;
+  - sorties « zoom à travers » floutées, halo lumineux itinérant, vignette.
   Lecture : démarre seule. Clic = rejouer. Touches 1 à 7 = aller à la scène.
   Enregistrement : plein écran (F11) puis Win+Alt+R (Game Bar) ou OBS.
   Musique : piste minimaliste (piano/pulse), montée à 10 s, respiration à 25 s,
@@ -41,11 +44,10 @@
   html, body { height: 100%; background: var(--bg); overflow: hidden; }
   body { display: grid; place-items: center; font-family: var(--sans); color: var(--text); }
 
-  /* Scène 1280×720 mise à l'échelle pour remplir l'écran. */
   #viewport { width: 1280px; height: 720px; position: relative; transform-origin: center; }
   #stage { position: absolute; inset: 0; background: var(--bg); overflow: hidden; }
 
-  /* Halo lumineux itinérant : il glisse d'une scène à l'autre (continuité). */
+  /* Halo lumineux itinérant. */
   #glow {
     position: absolute; left: -450px; top: -450px; width: 900px; height: 900px;
     border-radius: 50%; pointer-events: none; z-index: 1;
@@ -63,19 +65,18 @@
   .scene { position: absolute; inset: 0; z-index: 2; opacity: 0; transition: opacity .55s var(--ease); pointer-events: none; }
   .scene.on { opacity: 1; }
 
-  /* fx = entrée/sortie caméra de la scène · cam = mouvement continu (dolly, zoom, orbite). */
-  .fx, .cam { position: absolute; inset: 0; }
+  /* fx = entrée/sortie de la scène · cam = respiration du plan large ·
+     shot = plan de coupe macro qui isole l'élément clé. */
+  .fx, .cam, .shot { position: absolute; inset: 0; }
   .cam { transform-origin: center 46%; }
 
-  /* Sortie commune : on traverse la scène (zoom avant + flou de mouvement). */
   .scene.out .fx { animation: fxOut .85s var(--ease-in) forwards !important; }
-  @keyframes fxOut {
-    to { opacity: 0; transform: scale(1.16); filter: blur(18px); }
-  }
+  .scene.out .shot { animation: fxOut .85s var(--ease-in) forwards !important; }
+  @keyframes fxOut { to { opacity: 0; transform: scale(1.16); filter: blur(18px); } }
 
   /* Légendes. */
   .cap {
-    position: absolute; left: 0; right: 0; text-align: center; z-index: 10;
+    position: absolute; left: 0; right: 0; text-align: center; z-index: 12;
     font-size: 40px; font-weight: 600; letter-spacing: -0.5px;
     opacity: 0; transform: translateY(16px) scale(.985);
   }
@@ -84,7 +85,29 @@
   .cap.low { bottom: 54px; font-size: 30px; text-shadow: 0 2px 24px rgb(0 0 0 / .8); }
   @keyframes capIn { to { opacity: 1; transform: translateY(0) scale(1); } }
 
-  /* ───────── Scène 1 — chaos (parallaxe 3D, la caméra avance) ───────── */
+  /* ── Plans de coupe macro : scrim de profondeur de champ + carte 3D ── */
+  .shot { z-index: 8; opacity: 0; }
+  .on .shot { animation: shotIn .85s var(--ease) both; }
+  @keyframes shotIn {
+    from { opacity: 0; transform: scale(1.28); filter: blur(10px); }
+    to { opacity: 1; transform: scale(1); filter: blur(0); }
+  }
+  .scrim {
+    position: absolute; inset: 0;
+    background: rgb(5 5 5 / .5);
+    backdrop-filter: blur(14px) brightness(.5) saturate(.7);
+  }
+  .shot-cam { position: absolute; inset: 0; display: grid; place-items: center; }
+  .macro {
+    background: var(--panel-2); border: 1px solid #45433e; border-radius: 18px;
+    box-shadow: 0 60px 140px rgb(0 0 0 / .8), 0 0 0 1px rgb(255 255 255 / .03) inset;
+  }
+  .macro-label {
+    font-size: 15px; text-transform: uppercase; letter-spacing: 2.5px;
+    color: var(--muted); font-weight: 600;
+  }
+
+  /* ───────── Scène 1 — chaos (dolly 3D, parallaxe) ───────── */
   #s1 { perspective: 1100px; }
   #s1 .fx, #s1 .cam { transform-style: preserve-3d; }
   .on#s1 .fx { animation: fxIn1 .9s var(--ease) both; }
@@ -100,11 +123,7 @@
     box-shadow: 0 12px 40px rgb(0 0 0 / .5); filter: saturate(.4);
     opacity: 0; scale: .9; translate: 0 0 var(--z, 0px);
   }
-  .on .junk {
-    animation:
-      junkIn .9s var(--ease) forwards,
-      driftJ 6s ease-in-out infinite alternate;
-  }
+  .on .junk { animation: junkIn .9s var(--ease) forwards, driftJ 6s ease-in-out infinite alternate; }
   @keyframes junkIn { to { opacity: 1; scale: 1; } }
   @keyframes driftJ {
     from { translate: 0 0 var(--z, 0px); rotate: var(--r, 0deg); }
@@ -159,25 +178,19 @@
     from { opacity: 0; transform: translateY(22px); letter-spacing: 6px; }
     to { opacity: 1; transform: translateY(0); letter-spacing: -1px; }
   }
-  .tagline {
-    margin-top: 14px; font-size: 15px; letter-spacing: 5px; color: var(--accent);
-    text-transform: uppercase; opacity: 0;
-  }
+  .tagline { margin-top: 14px; font-size: 15px; letter-spacing: 5px; color: var(--accent); text-transform: uppercase; opacity: 0; }
   .on .tagline { animation: capIn 1s var(--ease) 1.7s forwards; }
   #s2 .cap { color: var(--text-2); font-size: 24px; font-weight: 500; bottom: 70px; top: auto; }
   .on#s2 .cap { animation-delay: 2.4s; }
 
-  /* ───────── Panneau UI commun (scènes 3 à 6) ───────── */
+  /* ───────── Panneau UI commun ───────── */
   .panel {
     position: absolute; left: 90px; right: 90px; top: 56px; bottom: 128px;
     background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
     display: flex; overflow: hidden;
     box-shadow: 0 40px 120px rgb(0 0 0 / .6);
   }
-  .side {
-    width: 200px; background: #171614; border-right: 1px solid var(--border);
-    padding: 18px 12px; flex-shrink: 0;
-  }
+  .side { width: 200px; background: #171614; border-right: 1px solid var(--border); padding: 18px 12px; flex-shrink: 0; }
   .side .mini-mark {
     display: flex; align-items: center; gap: 9px; font-family: var(--serif);
     font-weight: 600; font-size: 15px; margin-bottom: 22px; padding-left: 6px;
@@ -209,18 +222,16 @@
     border: 1.5px solid var(--panel);
   }
 
-  /* ───────── Scène 3 — temps réel (bascule vers le haut, dolly vers le graphe) ── */
+  /* ───────── Scène 3 — temps réel ─────────
+     Plan large 0→3,4 s puis MACRO : la carte « Actions en cours » passe
+     de 14 à 15 sous nos yeux. */
   .on#s3 .fx { animation: fxIn3 1.15s var(--ease) both; }
   @keyframes fxIn3 {
     from { opacity: 0; transform: perspective(1300px) rotateX(12deg) translateY(90px) scale(.92); filter: blur(10px); }
     to { opacity: 1; transform: none; filter: blur(0); }
   }
   .on#s3 .cam { animation: cam3 8s var(--ease) forwards; }
-  @keyframes cam3 {
-    0% { transform: scale(1) translate(0, 0); }
-    55% { transform: scale(1.05) translate(-12px, -6px); }
-    100% { transform: scale(1.1) translate(-28px, -16px); }
-  }
+  @keyframes cam3 { from { transform: scale(1); } to { transform: scale(1.05); } }
   .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 18px; }
   .stat {
     background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;
@@ -237,41 +248,48 @@
     background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;
     padding: 18px; height: 240px; display: flex; align-items: flex-end; gap: 18px;
   }
-  .bar {
-    flex: 1; border-radius: 6px 6px 2px 2px; background: var(--accent-soft);
-    transform: scaleY(0); transform-origin: bottom; height: calc(var(--h) * 1%);
-  }
+  .bar { flex: 1; border-radius: 6px 6px 2px 2px; background: var(--accent-soft); transform: scaleY(0); transform-origin: bottom; height: calc(var(--h) * 1%); }
   .bar.hot { background: var(--accent); }
   .on .bar { animation: growBar 1.2s var(--ease) forwards; }
-  .on .bar:nth-child(1) { animation-delay: 1.35s; } .on .bar:nth-child(2) { animation-delay: 1.47s; }
-  .on .bar:nth-child(3) { animation-delay: 1.59s; } .on .bar:nth-child(4) { animation-delay: 1.71s; }
-  .on .bar:nth-child(5) { animation-delay: 1.83s; } .on .bar:nth-child(6) { animation-delay: 1.95s; }
-  .on .bar:nth-child(7) { animation-delay: 2.07s; } .on .bar:nth-child(8) { animation-delay: 2.19s; }
+  .on .bar:nth-child(1) { animation-delay: 1.2s; } .on .bar:nth-child(2) { animation-delay: 1.32s; }
+  .on .bar:nth-child(3) { animation-delay: 1.44s; } .on .bar:nth-child(4) { animation-delay: 1.56s; }
+  .on .bar:nth-child(5) { animation-delay: 1.68s; } .on .bar:nth-child(6) { animation-delay: 1.8s; }
+  .on .bar:nth-child(7) { animation-delay: 1.92s; } .on .bar:nth-child(8) { animation-delay: 2.04s; }
   @keyframes growBar { 0% { transform: scaleY(0); } 70% { transform: scaleY(1.06); } 100% { transform: scaleY(1); } }
-  .toast {
-    position: absolute; right: 26px; bottom: 24px; background: var(--panel-2);
-    border: 1px solid var(--border); border-left: 3px solid var(--green);
-    border-radius: 10px; padding: 11px 16px; font-size: 13px; color: var(--text-2);
-    box-shadow: 0 16px 50px rgb(0 0 0 / .5); opacity: 0; transform: translateX(40px) scale(.95);
-  }
-  .on .toast { animation: toastIn .8s var(--ease) 4.4s forwards; }
-  @keyframes toastIn { 70% { transform: translateX(-4px) scale(1.01); } to { opacity: 1; transform: translateX(0) scale(1); } }
-  .toast b { color: var(--text); }
 
-  /* ───────── Scène 4 — AMDEC (glissé caméra depuis la droite, zoom criticité) ── */
+  .on#s3 .shot { animation-delay: 3.4s; }
+  /* La caméra s'approche en prenant un angle, puis se redresse légèrement. */
+  .on#s3 .shot .shot-cam { animation: shotCam3 4s var(--ease) 3.4s both; }
+  @keyframes shotCam3 {
+    from { transform: perspective(1400px) rotateY(-22deg) rotateX(7deg) scale(.96); }
+    to { transform: perspective(1400px) rotateY(-9deg) rotateX(3deg) scale(1.1); }
+  }
+  .macro-stat { width: 560px; padding: 44px 52px; position: relative; }
+  .macro-stat .num { font-size: 130px; font-weight: 700; letter-spacing: -5px; line-height: 1.05; position: relative; height: 140px; }
+  .macro-stat .num span { position: absolute; left: 0; top: 0; }
+  .macro-stat .n-old { opacity: 1; }
+  .macro-stat .n-new { opacity: 0; transform: translateY(46px); color: var(--accent); }
+  .on#s3 .n-old { animation: numOut .5s var(--ease) 5.5s forwards; }
+  .on#s3 .n-new { animation: numIn .65s var(--ease) 5.6s forwards; }
+  @keyframes numOut { to { opacity: 0; transform: translateY(-42px); filter: blur(4px); } }
+  @keyframes numIn { to { opacity: 1; transform: translateY(0); } }
+  .macro-stat .plus-chip {
+    position: absolute; right: 40px; top: 48px;
+    background: var(--green-soft); color: var(--green); font-size: 15px; font-weight: 600;
+    border-radius: 99px; padding: 8px 16px; opacity: 0; transform: translateY(12px) scale(.9);
+  }
+  .on#s3 .plus-chip { animation: chipIn .6s var(--ease) 5.7s forwards; }
+  .macro-stat .live { position: absolute; right: 44px; bottom: 46px; }
+
+  /* ───────── Scène 4 — AMDEC ─────────
+     Plan large 0→2,6 s puis MACRO : la criticité 36 → 12 en gros plan. */
   .on#s4 .fx { animation: fxIn4 1.1s var(--ease) both; }
   @keyframes fxIn4 {
     from { opacity: 0; transform: perspective(1300px) translateX(210px) rotateY(-11deg) scale(.96); filter: blur(8px); }
     to { opacity: 1; transform: none; filter: blur(0); }
   }
   .on#s4 .cam { animation: cam4 7s var(--ease) forwards; }
-  @keyframes cam4 {
-    0% { transform: scale(1) translate(0, 0); }
-    30% { transform: scale(1.03) translate(-16px, -6px); }
-    58% { transform: scale(1.2) translate(-170px, -52px); }
-    82% { transform: scale(1.2) translate(-170px, -52px); }
-    100% { transform: scale(1.16) translate(-150px, -44px); }
-  }
+  @keyframes cam4 { from { transform: scale(1); } to { transform: scale(1.04); } }
   table.ui { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   table.ui th {
     text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .6px;
@@ -281,52 +299,101 @@
   table.ui td:first-child { color: var(--text); font-weight: 500; }
   table.ui tbody tr { opacity: 0; }
   .on table.ui tbody tr { animation: rowIn .8s var(--ease) forwards; }
-  .on table.ui tbody tr:nth-child(1) { animation-delay: .75s; }
-  .on table.ui tbody tr:nth-child(2) { animation-delay: .95s; }
-  .on table.ui tbody tr:nth-child(3) { animation-delay: 1.15s; }
+  .on table.ui tbody tr:nth-child(1) { animation-delay: .7s; }
+  .on table.ui tbody tr:nth-child(2) { animation-delay: .9s; }
+  .on table.ui tbody tr:nth-child(3) { animation-delay: 1.1s; }
   @keyframes rowIn { from { opacity: 0; transform: translateX(34px); } to { opacity: 1; transform: translateX(0); } }
 
-  /* Bascule de criticité : deux badges superposés. */
+  .on#s4 .shot { animation-delay: 2.6s; }
+  /* Travelling latéral : la caméra glisse le long de la ligne, en angle. */
+  .on#s4 .shot .shot-cam { animation: shotCam4 4.2s var(--ease) 2.6s both; }
+  @keyframes shotCam4 {
+    from { transform: perspective(1400px) rotateY(16deg) rotateX(4deg) translateX(70px) scale(.98); }
+    to { transform: perspective(1400px) rotateY(8deg) rotateX(2deg) translateX(-46px) scale(1.12); }
+  }
+  .macro-risk { width: 780px; padding: 36px 44px; }
+  .macro-risk .risk-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+  .macro-risk h3 { font-family: var(--serif); font-size: 30px; font-weight: 600; }
+  .macro-risk .sub { color: var(--muted); font-size: 15px; margin-bottom: 26px; }
+  .macro-risk .risk-line { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+  .chip-action {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 600;
+    color: #e89b80; background: var(--accent-soft); border-radius: 99px; padding: 9px 18px;
+    opacity: 0; transform: translateY(10px) scale(.9);
+  }
+  .on#s4 .macro-risk .chip-action { animation: chipIn .65s var(--ease) 4s forwards; }
+  @keyframes chipIn { 70% { transform: translateY(-2px) scale(1.05); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .swap-big { position: relative; width: 230px; height: 44px; }
+  .swap-big .badge { position: absolute; right: 0; top: 0; font-size: 19px; padding: 9px 20px; }
+  .swap-big .after { opacity: 0; transform: scale(.6) rotateX(70deg); }
+  .on#s4 .swap-big .before { animation: swapOut .45s var(--ease) 5.2s forwards; }
+  .on#s4 .swap-big .after { animation: swapIn .7s var(--ease) 5.45s forwards; }
+  @keyframes swapOut { to { opacity: 0; transform: scale(.7) rotateX(-60deg); } }
+  @keyframes swapIn { 55% { transform: scale(1.16) rotateX(0deg); } to { opacity: 1; transform: scale(1) rotateX(0deg); } }
+
+  /* Petite bascule (utilisée en plan large scène 6). */
   .swap { position: relative; display: inline-block; min-width: 96px; height: 24px; }
   .swap .badge { position: absolute; left: 0; top: 0; }
   .swap .after { opacity: 0; transform: scale(.6) rotateX(70deg); }
-  .on .swap.go .before { animation: swapOut .45s var(--ease) 3.6s forwards; }
-  .on .swap.go .after { animation: swapIn .7s var(--ease) 3.85s forwards; }
-  @keyframes swapOut { to { opacity: 0; transform: scale(.7) rotateX(-60deg); } }
-  @keyframes swapIn { 55% { transform: scale(1.16) rotateX(0deg); } to { opacity: 1; transform: scale(1) rotateX(0deg); } }
-  .chip-action {
-    display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
-    color: #e89b80; background: var(--accent-soft); border-radius: 99px; padding: 4px 11px;
-    opacity: 0; transform: translateY(8px) scale(.9);
-  }
-  .on .chip-action { animation: chipIn .6s var(--ease) 2.8s forwards; }
-  @keyframes chipIn { 70% { transform: translateY(-2px) scale(1.04); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .on .swap.go .before { animation: swapOut .45s var(--ease) var(--swap-d, 3.6s) forwards; }
+  .on .swap.go .after { animation: swapIn .7s var(--ease) calc(var(--swap-d, 3.6s) + .25s) forwards; }
 
-  /* ───────── Scène 5 — actions (glissé depuis la gauche, zoom statuts) ───────── */
+  /* ───────── Scène 5 — actions ─────────
+     Plan large 0→3 s puis MACRO « Avancement » : la jauge se remplit et la
+     caméra SUIT la tête de jauge, carte inclinée dans le plan 3D. */
   .on#s5 .fx { animation: fxIn5 1.1s var(--ease) both; }
   @keyframes fxIn5 {
     from { opacity: 0; transform: perspective(1300px) translateX(-210px) rotateY(11deg) scale(.96); filter: blur(8px); }
     to { opacity: 1; transform: none; filter: blur(0); }
   }
   .on#s5 .cam { animation: cam5 10s var(--ease) forwards; }
-  @keyframes cam5 {
-    0% { transform: scale(1) translate(0, 0); }
-    38% { transform: scale(1.15) translate(-140px, -30px); }
-    68% { transform: scale(1.15) translate(-140px, -30px); }
-    100% { transform: scale(1.05) translate(-50px, -10px); }
-  }
+  @keyframes cam5 { from { transform: scale(1); } to { transform: scale(1.04); } }
   .prog { height: 7px; background: #2c2b28; border-radius: 99px; overflow: hidden; flex: 1; max-width: 320px; }
   .prog i { display: block; height: 100%; width: 38%; background: var(--accent); border-radius: 99px; }
-  .on .prog i { animation: progGo 2.4s var(--ease) 3.4s forwards; }
-  @keyframes progGo { to { width: 82%; } }
   .check { stroke: var(--green); stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
-  /* ───────── Scène 6 — collaboration (la caméra orbite doucement) ───────── */
-  .on#s6 .fx { animation: fxIn6 1.1s var(--ease) both; }
-  @keyframes fxIn6 {
-    from { opacity: 0; transform: scale(1.14); filter: blur(12px); }
-    to { opacity: 1; transform: scale(1); filter: blur(0); }
+  .on#s5 .shot { animation-delay: 3s; }
+  /* La caméra s'approche en angle PUIS panote de gauche à droite en suivant
+     la tête de la jauge pendant le remplissage (4,2 s → 7,4 s). */
+  .on#s5 .shot .shot-cam { animation: shotCam5in 1.2s var(--ease) 3s both, shotCam5pan 3.2s linear 4.2s forwards; }
+  @keyframes shotCam5in {
+    from { transform: perspective(1500px) rotateY(24deg) rotateX(8deg) translateX(150px) scale(.92); }
+    to { transform: perspective(1500px) rotateY(18deg) rotateX(6deg) translateX(150px) scale(1.18); }
   }
+  @keyframes shotCam5pan {
+    from { transform: perspective(1500px) rotateY(18deg) rotateX(6deg) translateX(150px) scale(1.18); }
+    to { transform: perspective(1500px) rotateY(10deg) rotateX(4deg) translateX(-190px) scale(1.24); }
+  }
+  .macro-prog { width: 880px; padding: 46px 56px 56px; position: relative; }
+  .macro-prog .ph { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 38px; }
+  .macro-prog h3 { font-family: var(--serif); font-size: 32px; font-weight: 600; }
+  .gauge { position: relative; height: 30px; background: #1a1917; border: 1px solid #34332f; border-radius: 99px; }
+  .gauge i {
+    position: absolute; left: 3px; top: 3px; bottom: 3px; width: 38%;
+    background: linear-gradient(90deg, #a85a3e, var(--accent));
+    border-radius: 99px;
+    box-shadow: 0 0 24px rgb(217 119 87 / .45);
+  }
+  .on#s5 .gauge i { animation: fillBig 3.2s linear 4.2s forwards; }
+  @keyframes fillBig { to { width: 82%; } }
+  /* La bulle de pourcentage voyage avec la tête de jauge. */
+  .gauge .head {
+    position: absolute; left: 38%; top: -54px; translate: -50% 0;
+    background: var(--accent); color: #fff; font-size: 19px; font-weight: 700;
+    border-radius: 10px; padding: 7px 14px; white-space: nowrap;
+  }
+  .gauge .head::after {
+    content: ''; position: absolute; left: 50%; bottom: -5px; translate: -50% 0;
+    border: 6px solid transparent; border-top-color: var(--accent); border-bottom: 0;
+  }
+  .on#s5 .gauge .head { animation: headTravel 3.2s linear 4.2s forwards; }
+  @keyframes headTravel { to { left: 82%; } }
+  .macro-prog .pmeta { display: flex; justify-content: space-between; margin-top: 22px; font-size: 15px; color: var(--muted); }
+  .macro-prog .pmeta b { color: var(--green); font-weight: 600; }
+
+  /* ───────── Scène 6 — collaboration (orbite 3D, curseurs) ───────── */
+  .on#s6 .fx { animation: fxIn6 1.1s var(--ease) both; }
+  @keyframes fxIn6 { from { opacity: 0; transform: scale(1.14); filter: blur(12px); } to { opacity: 1; transform: scale(1); filter: blur(0); } }
   .on#s6 .cam { animation: cam6 7s ease-in-out forwards; }
   @keyframes cam6 {
     0% { transform: perspective(1300px) rotateY(-2.6deg) rotateX(.8deg) scale(1.04); }
@@ -370,7 +437,7 @@
   .on .sync-flash { animation: flash 1.2s var(--ease) 4.4s; }
   @keyframes flash { 30% { background: var(--accent-soft); } }
 
-  /* ───────── Scène 7 — final (lent retrait de caméra, logo flottant) ───────── */
+  /* ───────── Scène 7 — final ───────── */
   #s7 .cam { display: grid; place-items: center; }
   .on#s7 .fx { animation: fxIn7 1.2s var(--ease) both; }
   @keyframes fxIn7 { from { opacity: 0; transform: scale(.9); filter: blur(10px); } to { opacity: 1; transform: scale(1); filter: blur(0); } }
@@ -385,12 +452,8 @@
   .on#s7 .wordmark { animation-delay: .75s; }
   .on#s7 .mark::after { animation-delay: 1.2s; }
 
-  /* Barre de progression discrète + aide. */
   #prog-line { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--accent); opacity: .35; width: 0; z-index: 50; }
-  #hint {
-    position: fixed; right: 18px; bottom: 14px; font-size: 12px; color: #6b6960;
-    opacity: 0; transition: opacity .6s; z-index: 60;
-  }
+  #hint { position: fixed; right: 18px; bottom: 14px; font-size: 12px; color: #6b6960; opacity: 0; transition: opacity .6s; z-index: 60; }
   #hint.show { opacity: 1; }
 </style>
 </head>
@@ -477,11 +540,25 @@
                 <div class="bar" style="--h:56"></div><div class="bar hot" style="--h:78"></div>
                 <div class="bar" style="--h:70"></div><div class="bar hot" style="--h:88"></div>
               </div>
-              <div class="toast">✓ <b>Claire</b> vient de terminer « Audit 5S »</div>
             </div>
           </div>
         </div>
-        <p class="cap low" style="animation-delay:1.8s;">See your projects in real time.</p>
+        <p class="cap low" style="animation-delay:1.6s;">See your projects in real time.</p>
+      </div>
+      <!-- MACRO : une action de plus, en direct. -->
+      <div class="shot">
+        <div class="scrim"></div>
+        <div class="shot-cam">
+          <div class="macro macro-stat">
+            <div class="macro-label">Actions en cours</div>
+            <div class="num">
+              <span class="n-old">14</span>
+              <span class="n-new">15</span>
+            </div>
+            <div class="plus-chip">+1 · ajoutée par Claire</div>
+            <span class="live"><i></i>Temps réel</span>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -504,24 +581,18 @@
                 <span class="live"><i></i>Temps réel</span>
               </div>
               <table class="ui">
-                <thead><tr><th>Élément</th><th>Mode de défaillance</th><th>Action</th><th>Criticité</th></tr></thead>
+                <thead><tr><th>Élément</th><th>Mode de défaillance</th><th>Criticité</th></tr></thead>
                 <tbody>
                   <tr>
                     <td>Convoyeur principal</td><td>Arrêt inopiné</td>
-                    <td><span class="chip-action">+ Plan de maintenance</span></td>
-                    <td>
-                      <span class="swap go">
-                        <span class="badge b-red before">36 · Critique</span>
-                        <span class="badge b-amber after">12 · Maîtrisé</span>
-                      </span>
-                    </td>
+                    <td><span class="badge b-red">36 · Critique</span></td>
                   </tr>
                   <tr>
-                    <td>Poste de vissage</td><td>Couple hors tolérance</td><td></td>
+                    <td>Poste de vissage</td><td>Couple hors tolérance</td>
                     <td><span class="badge b-red">24 · Critique</span></td>
                   </tr>
                   <tr>
-                    <td>Bord de ligne</td><td>Rupture de composants</td><td></td>
+                    <td>Bord de ligne</td><td>Rupture de composants</td>
                     <td><span class="badge b-amber">12 · À surveiller</span></td>
                   </tr>
                 </tbody>
@@ -529,11 +600,31 @@
             </div>
           </div>
         </div>
-        <p class="cap low" style="animation-delay:1.8s;">Anticipate what matters.</p>
+        <p class="cap low" style="animation-delay:1.5s;">Anticipate what matters.</p>
+      </div>
+      <!-- MACRO : le risque n°1 passe sous contrôle. -->
+      <div class="shot">
+        <div class="scrim"></div>
+        <div class="shot-cam">
+          <div class="macro macro-risk">
+            <div class="risk-head">
+              <h3>Convoyeur principal</h3>
+              <span class="macro-label">Risque n°1</span>
+            </div>
+            <div class="sub">Arrêt inopiné — usure prématurée des roulements</div>
+            <div class="risk-line">
+              <span class="chip-action">+ Plan de maintenance préventive</span>
+              <span class="swap-big">
+                <span class="badge b-red before">36 · Critique</span>
+                <span class="badge b-amber after">12 · Maîtrisé</span>
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- SCÈNE 5 — actions & RACI -->
+    <!-- SCÈNE 5 — actions & avancement -->
     <section class="scene" id="s5">
       <div class="fx">
         <div class="cam">
@@ -561,15 +652,7 @@
                     <td>Plan de maintenance des roulements</td>
                     <td><span class="av">ML</span>&nbsp; Marc <span class="badge b-grey" style="margin-left:6px;">R</span></td>
                     <td>18 juin</td>
-                    <td>
-                      <span class="swap go">
-                        <span class="badge b-grey before">À faire</span>
-                        <span class="badge b-green after">
-                          <svg width="12" height="12" viewBox="0 0 24 24" style="margin-right:5px;"><path class="check" d="M4 12.5 9.5 18 20 6" /></svg>
-                          Terminée
-                        </span>
-                      </span>
-                    </td>
+                    <td><span class="badge b-green"><svg width="12" height="12" viewBox="0 0 24 24" style="margin-right:5px;"><path class="check" d="M4 12.5 9.5 18 20 6" /></svg>Terminée</span></td>
                   </tr>
                   <tr>
                     <td>Étalonnage des visseuses</td>
@@ -588,7 +671,27 @@
             </div>
           </div>
         </div>
-        <p class="cap low" style="animation-delay:1.8s;">Turn decisions into actions.</p>
+        <p class="cap low" style="animation-delay:1.5s;">Turn decisions into actions.</p>
+      </div>
+      <!-- MACRO : la jauge d'avancement, la caméra suit la tête de jauge. -->
+      <div class="shot">
+        <div class="scrim"></div>
+        <div class="shot-cam">
+          <div class="macro macro-prog">
+            <div class="ph">
+              <h3>Avancement du plan d'action</h3>
+              <span class="macro-label">Temps réel</span>
+            </div>
+            <div class="gauge">
+              <i></i>
+              <span class="head" id="pbig">38 %</span>
+            </div>
+            <div class="pmeta">
+              <span><b>9</b> actions terminées</span>
+              <span>2 en cours · 0 en retard</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -624,9 +727,9 @@
                     <td>Étalonnage des visseuses</td>
                     <td><span class="av">ML</span>&nbsp; Marc</td>
                     <td>
-                      <span class="swap go">
-                        <span class="badge b-grey before" style="animation-delay:4.4s;">À faire</span>
-                        <span class="badge b-amber after" style="animation-delay:4.6s;">En cours</span>
+                      <span class="swap go" style="--swap-d:4.4s;">
+                        <span class="badge b-grey before">À faire</span>
+                        <span class="badge b-amber after">En cours</span>
                       </span>
                     </td>
                   </tr>
@@ -702,24 +805,26 @@
     glow.style.opacity = o;
   }
 
-  /* Compteurs animés de la scène 3. */
-  function countTo(el, target, suffix, dur) {
+  /* Compteur animé (linear = synchronisé avec une animation CSS linéaire). */
+  function countTo(el, from, target, suffix, dur, linear) {
     const t0 = performance.now();
     function tick(now) {
       const p = Math.min(1, (now - t0) / dur);
-      const eased = 1 - Math.pow(1 - p, 3);
-      el.textContent = Math.round(target * eased) + (suffix || '');
+      const eased = linear ? p : 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(from + (target - from) * eased) + (suffix || '');
       if (p < 1) requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
   }
   const HOOKS = {
     s3() {
-      timers.push(setTimeout(() => countTo(document.getElementById('n1'), 14, '', 1400), 850));
-      timers.push(setTimeout(() => countTo(document.getElementById('n2'), 72, ' %', 1600), 1050));
-      timers.push(setTimeout(() => countTo(document.getElementById('n3'), 3, '', 1200), 1250));
-      /* Battement « temps réel » : 14 → 15 actions. */
-      timers.push(setTimeout(() => { document.getElementById('n1').textContent = '15'; }, 5200));
+      timers.push(setTimeout(() => countTo(document.getElementById('n1'), 0, 14, '', 1300), 850));
+      timers.push(setTimeout(() => countTo(document.getElementById('n2'), 0, 72, ' %', 1500), 1050));
+      timers.push(setTimeout(() => countTo(document.getElementById('n3'), 0, 3, '', 1100), 1250));
+    },
+    s5() {
+      /* Le pourcentage voyage avec la tête de jauge (animation CSS linéaire). */
+      timers.push(setTimeout(() => countTo(document.getElementById('pbig'), 38, 82, ' %', 3200, true), 4200));
     },
   };
 
@@ -745,7 +850,6 @@
         if (HOOKS[id]) HOOKS[id]();
       }, Math.max(0, a - from) * 1000));
       if (id !== 's7') {
-        /* Sortie « zoom à travers » puis extinction. */
         timers.push(setTimeout(() => el.classList.add('out'), (b - from) * 1000 - 850));
         timers.push(setTimeout(() => el.classList.remove('on', 'out'), (b - from) * 1000 - 60));
       }
@@ -759,7 +863,6 @@
     if (e.key === ' ') { e.preventDefault(); play(0); }
   });
 
-  /* Aide discrète, disparaît après quelques secondes. */
   const hint = document.getElementById('hint');
   setTimeout(() => hint.classList.add('show'), 800);
   setTimeout(() => hint.classList.remove('show'), 5500);
