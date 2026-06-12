@@ -5,7 +5,7 @@ import { useWorkspace } from '@/lib/store';
 import { ProjectFormModal } from './ProjectFormModal';
 import { IconRaci, IconAmdec, IconActions, IconPlanning } from './icons';
 
-/** Ã‰cran d'accueil affichÃ© tant qu'aucun projet n'existe. */
+/** Écran d'accueil affiché tant qu'aucun projet n'existe. */
 export function Onboarding() {
   const { seedDemoProject, userEmail } = useWorkspace();
   const [creating, setCreating] = useState(false);
@@ -17,7 +17,7 @@ export function Onboarding() {
         <h1>Bienvenue dans Projet Entan</h1>
         <p>
           L'outil tout-en-un pour le pilotage technique de vos projets industriels.
-          Centralisez vos donnÃ©es pour une vision claire et une exÃ©cution sans faille.
+          Centralisez vos données pour une vision claire et une exécution sans faille.
         </p>
       </div>
 
@@ -25,17 +25,17 @@ export function Onboarding() {
         <div className="feature-card">
           <div className="feature-icon"><IconRaci /></div>
           <h3>RACI</h3>
-          <p>GÃ©rez votre Ã©quipe et les responsabilitÃ©s.</p>
+          <p>Gérez votre équipe et les responsabilités.</p>
         </div>
         <div className="feature-card">
           <div className="feature-icon"><IconAmdec /></div>
           <h3>AMDEC</h3>
-          <p>Anticipez et rÃ©duisez les risques techniques.</p>
+          <p>Anticipez et réduisez les risques techniques.</p>
         </div>
         <div className="feature-card">
           <div className="feature-icon"><IconActions /></div>
           <h3>Actions</h3>
-          <p>Pilotez le plan d'action en temps rÃ©el.</p>
+          <p>Pilotez le plan d'action en temps réel.</p>
         </div>
         <div className="feature-card">
           <div className="feature-icon"><IconPlanning /></div>
@@ -46,19 +46,19 @@ export function Onboarding() {
 
       <div className="onboarding-actions">
         <button className="btn btn-primary" onClick={() => setCreating(true)}>
-          CrÃ©er mon premier projet
+          Créer mon premier projet
         </button>
         <button className="btn" onClick={() => void seedDemoProject()}>
-          Explorer avec un projet de dÃ©mo
+          Explorer avec un projet de démo
         </button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
         <p className="muted" style={{ fontSize: 12 }}>
-          ConnectÃ© en tant que {userEmail}.
+          Connecté en tant que {userEmail}.
         </p>
         <p className="muted" style={{ fontSize: 11, maxWidth: 380 }}>
-          Pour rejoindre un projet existant, ouvrez le lien d&apos;invitation qu&apos;on vous a partagÃ©.
+          Pour rejoindre un projet existant, ouvrez le lien d&apos;invitation qu&apos;on vous a partagé.
         </p>
       </div>
 
@@ -66,3 +66,5 @@ export function Onboarding() {
     </div>
   );
 }
+
+
