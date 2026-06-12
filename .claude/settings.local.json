@@ -7,7 +7,18 @@
       "PowerShell(\\(Get-Content \"D:\\\\Projet entreprenariat\\\\Gestion de projet\\\\src\\\\styles\\\\global.css\" | Measure-Object -Line\\).Lines)",
       "PowerShell($p = \"D:\\\\Projet entreprenariat\\\\Gestion de projet\\\\src\\\\styles\\\\global.css\"; $lines = Get-Content $p -Encoding UTF8 -TotalCount 743; [System.IO.File]::WriteAllLines\\($p, $lines, \\(New-Object System.Text.UTF8Encoding\\($false\\)\\)\\); \\(Get-Content $p | Measure-Object -Line\\).Lines)",
       "WebFetch(domain:github.com)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(cd \"D:\\\\Projet entreprenariat\\\\pilotix\" && cat src/components/ProjectFormModal.tsx && echo \"===\" && cat src/components/Onboarding.tsx)",
+      "Bash(mkdir -p \"D:\\\\Projet entreprenariat\\\\pilotix\\\\src\\\\modules\\\\rdp\")",
+      "Bash(mkdir -p \"D:\\\\Projet entreprenariat\\\\pilotix\\\\src\\\\app\\\\\\(workspace\\)\\\\cinq-pourquoi\")",
+      "Bash(mkdir -p \"D:\\\\Projet entreprenariat\\\\pilotix\\\\src\\\\app\\\\\\(workspace\\)\\\\ishikawa\")",
+      "Bash(mkdir -p \"D:\\\\Projet entreprenariat\\\\pilotix\\\\src\\\\app\\\\\\(workspace\\)\\\\capa\")",
+      "Read(//c/Users/hadrc/Downloads/**)",
+      "PowerShell($word = New-Object -ComObject Word.Application; $word.Visible = $false; $doc = $word.Documents.Open\\(\"C:\\\\Users\\\\hadrc\\\\Downloads\\\\Méthodologie de résolution de problème.doc\", $false, $true\\); $txt = \"C:\\\\Users\\\\hadrc\\\\Downloads\\\\methodologie-rdp-extrait.txt\"; $doc.SaveAs\\([ref]$txt, [ref]7\\); $doc.Close\\($false\\); $word.Quit\\(\\); [System.Runtime.Interopservices.Marshal]::ReleaseComObject\\($word\\) | Out-Null; Get-Content $txt -Encoding UTF8 | Select-Object -First 200)",
+      "Bash(mkdir -p \"D:\\\\Projet entreprenariat\\\\pilotix\\\\src\\\\app\\\\\\(workspace\\)\\\\sujet\" \"D:\\\\Projet entreprenariat\\\\pilotix\\\\src\\\\app\\\\\\(workspace\\)\\\\probleme\" \"D:\\\\Projet entreprenariat\\\\pilotix\\\\src\\\\app\\\\\\(workspace\\)\\\\solutions\" \"D:\\\\Projet entreprenariat\\\\pilotix\\\\src\\\\app\\\\\\(workspace\\)\\\\standardisation\")",
+      "Bash(cat >> *)",
+      "Bash(grep -o \"password['\\\\\"]?[^,}]\\\\{0,40\\\\}\" \"C:\\\\Users\\\\hadrc\\\\.claude\\\\projects\\\\D--Projet-entreprenariat-Gestion-de-projet\\\\e8c58043-5c65-4dcb-9cc5-6e0252bf4c88.jsonl\")",
+      "Bash(grep -i -o \"password[^,}]\\\\{0,40\\\\}\")"
     ]
   }
 }

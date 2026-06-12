@@ -102,3 +102,31 @@ export const RACI_LABELS: Record<RaciRole, string> = {
   C: 'Consulted — consulté',
   I: 'Informed — informé',
 };
+
+export interface MemberInput {
+  name: string;
+  role: string;
+}
+
+export interface ActionInput {
+  title: string;
+  description: string;
+  responsibleId: Id;
+  accountableId?: Id;
+  consultedIds: Id[];
+  informedIds: Id[];
+  status: ActionStatus;
+  startDate?: string;
+  dueDate?: string;
+  amdecId?: Id;
+}
+
+export interface AmdecInput {
+  element: string;
+  failureMode: string;
+  cause: string;
+  effect?: string;
+  severity: number;
+  occurrence: number;
+  detection: number;
+}

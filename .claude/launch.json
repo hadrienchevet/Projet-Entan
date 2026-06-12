@@ -9,7 +9,7 @@
       "autoPort": true
     },
     {
-      "name": "pilotix",
+      "name": "projet-entan",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "../pilotix"],
       "port": 3000,

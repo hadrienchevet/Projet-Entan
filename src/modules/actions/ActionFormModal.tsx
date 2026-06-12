@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Modal } from '../../components/Modal';
-import { useStore, useProjectAmdecs, type ActionInput } from '../../store/useStore';
-import type { Action, ActionStatus, Id, Project } from '../../types';
+import { useStore, useProjectAmdecs } from '../../store/useStore';
+import type { Action, ActionStatus, Id, Project, ActionInput } from '../../types';
 import { STATUS_LABELS, criticality } from '../../types';
 
 interface Props {

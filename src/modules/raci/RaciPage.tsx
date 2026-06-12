@@ -23,14 +23,14 @@ export function RaciPage() {
 
   if (!project) return null;
 
-  const onCellChange = (actionId: Id, memberId: Id, value: string) => {
-    const result = setRaciRole(actionId, memberId, (value || null) as RaciRole | null);
+  const onCellChange = async (actionId: Id, memberId: Id, value: string) => {
+    const result = await setRaciRole(actionId, memberId, (value || null) as RaciRole | null);
     if (!result.ok) window.alert(result.error);
   };
 
-  const onRemoveMember = (member: Member) => {
+  const onRemoveMember = async (member: Member) => {
     if (!window.confirm(`Retirer ${member.name} de l'équipe ?`)) return;
-    const result = removeMember(project.id, member.id);
+    const result = await removeMember(project.id, member.id);
     if (!result.ok) window.alert(result.error);
   };
 

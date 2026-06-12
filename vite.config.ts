@@ -1,8 +1,11 @@
-import { defineConfig } from 'vite';
+/// <reference types="node" />
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
-  plugins: [react()],
-  // PORT est fourni par l'outil de preview ; 5173 sinon (npm run dev classique).
-  server: { port: Number(process.env.PORT) || 5173 },
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  return {
+    plugins: [react()],
+    server: { port: Number(env.PORT) || 5173 },
+  };
 });

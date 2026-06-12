@@ -4,9 +4,8 @@ import {
   useProjectActions,
   useProjectAmdecs,
   useStore,
-  type AmdecInput,
 } from '../../store/useStore';
-import type { AmdecEntry } from '../../types';
+import type { AmdecEntry, AmdecInput } from '../../types';
 import { AMDEC_SCALE_MAX, criticality } from '../../types';
 import { Modal } from '../../components/Modal';
 import { CriticalityBadge } from '../../components/Badges';

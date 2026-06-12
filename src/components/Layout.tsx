@@ -58,7 +58,26 @@ export function Layout() {
           ))}
         </nav>
 
-        <div className="sidebar-footer">V1 — données locales (navigateur)</div>
+        <div className="sidebar-footer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px' }}>
+          <div style={{ fontSize: '11px', opacity: 0.6 }}>V1 — Supabase</div>
+          <NavLink 
+            to="/help" 
+            className={({ isActive }) => `icon-btn${isActive ? ' active' : ''}`}
+            style={{ 
+              width: '24px', 
+              height: '24px', 
+              borderRadius: '50%', 
+              background: 'var(--accent-soft)',
+              color: 'var(--accent)',
+              display: 'grid',
+              placeItems: 'center',
+              textDecoration: 'none'
+            }}
+            title="Aide & Tutoriel"
+          >
+            <span style={{ fontWeight: '700', fontSize: '14px' }}>?</span>
+          </NavLink>
+        </div>
       </aside>
 
       <main className="main">
