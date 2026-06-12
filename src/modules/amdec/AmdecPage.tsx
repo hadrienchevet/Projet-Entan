@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { useCurrentProject, useProjectActions, useProjectAmdecs, useWorkspace } from '@/lib/store';
 import type { AmdecEntry, AmdecInput } from '@/lib/types';
-import { AMDEC_SCALE_MAX, criticality } from '@/lib/types';
+import { AMDEC_SCALE_MAX, criticality, residualCriticality } from '@/lib/types';
 import { Modal } from '@/components/Modal';
 import { CriticalityBadge } from '@/components/Badges';
 import { IconEdit, IconPlus, IconTrash } from '@/components/icons';
 import { ActionFormModal } from '@/modules/actions/ActionFormModal';
+import { RiskMatrixView } from './RiskMatrixView';
 
 export function AmdecPage() {
   const project = useCurrentProject();
@@ -19,6 +20,7 @@ export function AmdecPage() {
   const [creating, setCreating] = useState(false);
   /** Analyse pour laquelle on crée une action corrective. */
   const [actionFor, setActionFor] = useState<AmdecEntry | null>(null);
+  const [view, setView] = useState<'tableau' | 'matrice'>('tableau');
 
   if (!project) return null;
 
@@ -45,11 +47,28 @@ export function AmdecPage() {
             Chaque analyse peut générer des actions correctives.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setCreating(true)}>
-          <IconPlus /> Nouvelle analyse
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="segmented">
+            {(['tableau', 'matrice'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                className={view === v ? 'active' : ''}
+                onClick={() => setView(v)}
+              >
+                {v === 'tableau' ? 'Tableau' : 'Matrice de risque'}
+              </button>
+            ))}
+          </div>
+          <button className="btn btn-primary" onClick={() => setCreating(true)}>
+            <IconPlus /> Nouvelle analyse
+          </button>
+        </div>
       </div>
 
+      {view === 'matrice' ? (
+        <RiskMatrixView entries={sorted} />
+      ) : (
       <div className="card table-wrap">
         {sorted.length === 0 ? (
           <div className="empty">
@@ -87,6 +106,11 @@ export function AmdecPage() {
                   <td>{entry.detection}</td>
                   <td>
                     <CriticalityBadge score={criticality(entry)} />
+                    {residualCriticality(entry) !== null && (
+                      <div className="cell-sub" style={{ marginTop: 4 }}>
+                        après : <CriticalityBadge score={residualCriticality(entry)!} />
+                      </div>
+                    )}
                   </td>
                   <td>
                     {linkedActionsCount(entry.id)}{' '}
@@ -120,6 +144,7 @@ export function AmdecPage() {
           </table>
         )}
       </div>
+      )}
 
       {(creating || editing) && (
         <AmdecFormModal
@@ -167,13 +192,23 @@ function AmdecFormModal({
   const [severity, setSeverity] = useState(entry?.severity ?? 2);
   const [occurrence, setOccurrence] = useState(entry?.occurrence ?? 2);
   const [detection, setDetection] = useState(entry?.detection ?? 2);
+  // Cotation résiduelle (0 = non cotée) — soit les trois cotes, soit aucune.
+  const [severityAfter, setSeverityAfter] = useState(entry?.severityAfter ?? 0);
+  const [occurrenceAfter, setOccurrenceAfter] = useState(entry?.occurrenceAfter ?? 0);
+  const [detectionAfter, setDetectionAfter] = useState(entry?.detectionAfter ?? 0);
   const [error, setError] = useState('');
 
   const score = severity * occurrence * detection;
+  const afterCount = [severityAfter, occurrenceAfter, detectionAfter].filter(Boolean).length;
+  const scoreAfter = afterCount === 3 ? severityAfter * occurrenceAfter * detectionAfter : null;
 
   const submit = () => {
     if (!element.trim() || !failureMode.trim() || !cause.trim()) {
       setError('Élément, mode de défaillance et cause sont obligatoires.');
+      return;
+    }
+    if (afterCount !== 0 && afterCount !== 3) {
+      setError('Cotation après actions : renseignez les trois cotes (G, O, D) ou aucune.');
       return;
     }
     const input: AmdecInput = {
@@ -184,6 +219,9 @@ function AmdecFormModal({
       severity,
       occurrence,
       detection,
+      severityAfter: severityAfter || undefined,
+      occurrenceAfter: occurrenceAfter || undefined,
+      detectionAfter: detectionAfter || undefined,
     };
     if (entry) {
       void updateAmdec(entry.id, input);
@@ -204,6 +242,21 @@ function AmdecFormModal({
         {label} <span className="form-hint">({hint})</span>
       </label>
       <select value={value} onChange={(e) => setValue(Number(e.target.value))}>
+        {SCALE.map((n) => (
+          <option key={n} value={n}>
+            {n}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+
+  /** Sélecteur de cote résiduelle — 0 = non cotée. */
+  const afterScaleSelect = (label: string, value: number, setValue: (v: number) => void) => (
+    <div className="field">
+      <label>{label}</label>
+      <select value={value} onChange={(e) => setValue(Number(e.target.value))}>
+        <option value={0}>—</option>
         {SCALE.map((n) => (
           <option key={n} value={n}>
             {n}
@@ -282,6 +335,28 @@ function AmdecFormModal({
           <label>Criticité (G × O × D)</label>
           <div style={{ paddingTop: 6 }}>
             <CriticalityBadge score={score} />
+          </div>
+        </div>
+      </div>
+
+      <div className="form-section-title">
+        Après actions correctives
+        <span className="form-hint" style={{ fontWeight: 400 }}>
+          {' '}— réévaluation une fois les actions mises en œuvre (optionnel)
+        </span>
+      </div>
+      <div className="form-grid">
+        {afterScaleSelect('Gravité', severityAfter, setSeverityAfter)}
+        {afterScaleSelect('Occurrence', occurrenceAfter, setOccurrenceAfter)}
+        {afterScaleSelect('Détectabilité', detectionAfter, setDetectionAfter)}
+        <div className="field">
+          <label>Criticité résiduelle</label>
+          <div style={{ paddingTop: 6 }}>
+            {scoreAfter !== null ? (
+              <CriticalityBadge score={scoreAfter} />
+            ) : (
+              <span className="muted" style={{ fontSize: 12 }}>non réévaluée</span>
+            )}
           </div>
         </div>
       </div>

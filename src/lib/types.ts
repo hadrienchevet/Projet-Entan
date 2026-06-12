@@ -101,6 +101,10 @@ export interface AmdecEntry {
   occurrence: number;
   /** Détectabilité, 1 à 4. */
   detection: number;
+  /** Cotation après actions correctives (undefined = pas encore réévalué). */
+  severityAfter?: number;
+  occurrenceAfter?: number;
+  detectionAfter?: number;
   createdAt: string;
 }
 
@@ -116,6 +120,14 @@ export const AMDEC_SCALE_MAX = 4;
 /** Criticité AMDEC = gravité × occurrence × détectabilité (1 à 64). */
 export function criticality(entry: Pick<AmdecEntry, 'severity' | 'occurrence' | 'detection'>): number {
   return entry.severity * entry.occurrence * entry.detection;
+}
+
+/** Criticité résiduelle (après actions) — null tant que les 3 cotes ne sont pas saisies. */
+export function residualCriticality(
+  entry: Pick<AmdecEntry, 'severityAfter' | 'occurrenceAfter' | 'detectionAfter'>,
+): number | null {
+  if (!entry.severityAfter || !entry.occurrenceAfter || !entry.detectionAfter) return null;
+  return entry.severityAfter * entry.occurrenceAfter * entry.detectionAfter;
 }
 
 export type CriticalityLevel = 'low' | 'medium' | 'high';
@@ -169,6 +181,9 @@ export interface AmdecInput {
   severity: number;
   occurrence: number;
   detection: number;
+  severityAfter?: number;
+  occurrenceAfter?: number;
+  detectionAfter?: number;
 }
 
 /* --- Mappers lignes Supabase (snake_case) ↔ entités V1 (camelCase) --------- */
@@ -222,6 +237,9 @@ export interface AmdecRow {
   severity: number;
   occurrence: number;
   detection: number;
+  severity_after: number | null;
+  occurrence_after: number | null;
+  detection_after: number | null;
   created_at: string;
 }
 
@@ -291,6 +309,9 @@ export function amdecFromRow(r: AmdecRow): AmdecEntry {
     severity: r.severity,
     occurrence: r.occurrence,
     detection: r.detection,
+    severityAfter: r.severity_after ?? undefined,
+    occurrenceAfter: r.occurrence_after ?? undefined,
+    detectionAfter: r.detection_after ?? undefined,
     createdAt: r.created_at,
   };
 }
@@ -304,6 +325,9 @@ export function amdecInputToRow(input: Partial<AmdecInput>): Record<string, unkn
   if (input.severity !== undefined) row.severity = input.severity;
   if (input.occurrence !== undefined) row.occurrence = input.occurrence;
   if (input.detection !== undefined) row.detection = input.detection;
+  if ('severityAfter' in input) row.severity_after = input.severityAfter ?? null;
+  if ('occurrenceAfter' in input) row.occurrence_after = input.occurrenceAfter ?? null;
+  if ('detectionAfter' in input) row.detection_after = input.detectionAfter ?? null;
   return row;
 }
 

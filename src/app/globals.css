@@ -1231,3 +1231,181 @@ a.link:hover { text-decoration: underline; }
 @media (max-width: 700px) {
   .qqoqcp-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Schémas (fix Ishikawa SVG, matrice de risque, arbre des liens) ────────── */
+
+/* Diagramme Ishikawa (SVG pleine largeur, défilement horizontal si étroit). */
+.fishbone-wrap { overflow-x: auto; }
+.fishbone-wrap svg { display: block; min-width: 860px; width: 100%; height: auto; }
+
+/* Rangée de cartes statistiques (réutilisable). */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+/* Sous-titre de section dans les formulaires (modales). */
+.form-section-title {
+  margin: 18px 0 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Matrice de risque gravité × occurrence. */
+.risk-matrices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 28px;
+}
+.rm-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 10px;
+}
+.risk-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  padding-left: 18px;
+}
+.rm-row {
+  display: grid;
+  grid-template-columns: 22px repeat(4, 1fr);
+  gap: 4px;
+}
+.rm-head {
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.rm-cell {
+  min-height: 56px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  padding: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-content: flex-start;
+}
+.rm-cell.rm-low { background: var(--success-soft); }
+.rm-cell.rm-med { background: var(--warning-soft); }
+.rm-cell.rm-high { background: var(--danger-soft); }
+.rm-chip {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-grid;
+  place-items: center;
+  cursor: default;
+}
+.rm-axis-y {
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: rotate(180deg) translateX(50%);
+  writing-mode: vertical-rl;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.4px;
+}
+.rm-axis-x {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.4px;
+  margin-top: 2px;
+}
+.rm-delta-down { color: var(--success); font-weight: 600; font-size: 12px; }
+.rm-delta-up { color: var(--danger); font-weight: 600; font-size: 12px; }
+
+/* Arborescence des liens (arbre fonctionnel horizontal). */
+.tree-wrap { padding: 20px; overflow-x: auto; }
+.tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.tree > ul > li { padding-left: 0; }
+.tree > ul > li::before,
+.tree > ul > li::after { display: none; }
+.tree li {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding: 5px 0 5px 28px;
+}
+.tree li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 22px;
+  border-top: 1.5px solid var(--border-strong);
+}
+.tree li::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-left: 1.5px solid var(--border-strong);
+}
+.tree li:first-child::after { top: 50%; }
+.tree li:last-child::after { bottom: 50%; }
+.tree li:only-child::after { display: none; }
+.tree-card {
+  flex-shrink: 0;
+  max-width: 300px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  padding: 7px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tree-kind {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+.tree-label { font-size: 12.5px; font-weight: 500; color: var(--text); }
+.tree-sub { font-size: 11px; color: var(--text-secondary); }
+.tree-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+.tree-card[data-kind='project'] { border-left: 3px solid var(--accent); }
+.tree-card[data-kind='risk'] { border-left: 3px solid var(--danger); }
+.tree-card[data-kind='action'],
+.tree-card[data-kind='capa'] { border-left: 3px solid var(--success); }
+.tree-card[data-kind='subject'] { border-left: 3px solid var(--accent); }
+.tree-card[data-kind='problem'] { border-left: 3px solid var(--warning); }
+.tree-card[data-kind='ishikawa'],
+.tree-card[data-kind='cause'] { border-left: 3px solid var(--border-strong); }
+.tree-card[data-kind='solution'] { border-left: 3px solid var(--accent); }

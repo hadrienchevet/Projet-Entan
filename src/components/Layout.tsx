@@ -20,6 +20,7 @@ import {
   IconRaci,
   IconStar,
   IconTarget,
+  IconTree,
   IconUsers,
 } from './icons';
 
@@ -29,6 +30,7 @@ const NAV_GESTION = [
   { to: '/amdec', label: 'AMDEC', icon: <IconAmdec /> },
   { to: '/actions', label: 'Actions', icon: <IconActions /> },
   { to: '/planning', label: 'Planning', icon: <IconPlanning /> },
+  { to: '/liens', label: 'Liens', icon: <IconTree /> },
   { to: '/access', label: 'Accès', icon: <IconUsers /> },
 ];
 
@@ -40,6 +42,7 @@ const NAV_RDP = [
   { to: '/solutions', label: '3-4 · Solutions', icon: <IconBulb /> },
   { to: '/capa', label: '5 · Mise en œuvre', icon: <IconCapa /> },
   { to: '/standardisation', label: '6 · Standardiser', icon: <IconLayers /> },
+  { to: '/liens', label: 'Liens', icon: <IconTree /> },
   { to: '/access', label: 'Accès', icon: <IconUsers /> },
 ];
 

@@ -10,6 +10,7 @@ import type {
 } from '@/lib/types';
 import { ISHIKAWA_CATEGORIES } from '@/lib/types';
 import { Modal } from '@/components/Modal';
+import { IshikawaDiagram } from '@/components/IshikawaDiagram';
 import { IconChevronLeft, IconEdit, IconPlus, IconTrash } from '@/components/icons';
 
 export function IshikawaPage() {
@@ -52,7 +53,7 @@ export function IshikawaPage() {
       {analyses.length === 0 ? (
         <div className="card">
           <div className="empty">
-            <p>Aucun diagramme Ishikawa. Créez-en un pour analyser les causes par catégorie 6M.</p>
+            <p>Aucun diagramme Ishikawa. Créez-en un pour analyser les causes par catégorie 5M.</p>
             <button className="btn btn-primary" onClick={() => setCreating(true)}>
               <IconPlus /> Créer le premier diagramme
             </button>
@@ -116,7 +117,7 @@ export function IshikawaPage() {
   );
 }
 
-/* ── Détail d'un diagramme Ishikawa (grille 6M) ───────────────────────────── */
+/* ── Détail d'un diagramme Ishikawa (schéma SVG + grille 5M) ──────────────── */
 
 function IshikawaDetail({
   analysis,
@@ -129,6 +130,7 @@ function IshikawaDetail({
 }) {
   const { addIshikawaCause, deleteIshikawaCause } = useWorkspace();
   const [drafts, setDrafts] = useState<Partial<Record<IshikawaCategory, string>>>({});
+  const [view, setView] = useState<'schema' | 'grille'>('schema');
 
   const causesByCategory = (cat: IshikawaCategory) =>
     analysis.causes.filter((c) => c.category === cat);
@@ -154,9 +156,34 @@ function IshikawaDetail({
             </p>
           </div>
         </div>
-        <span className="badge source">{analysis.causes.length} cause{analysis.causes.length > 1 ? 's' : ''}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="segmented">
+            {(['schema', 'grille'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                className={view === v ? 'active' : ''}
+                onClick={() => setView(v)}
+              >
+                {v === 'schema' ? 'Schéma' : 'Grille'}
+              </button>
+            ))}
+          </div>
+          <span className="badge source">{analysis.causes.length} cause{analysis.causes.length > 1 ? 's' : ''}</span>
+        </div>
       </div>
 
+      {view === 'schema' && (
+        <div className="card" style={{ padding: 16, marginBottom: 16 }}>
+          <IshikawaDiagram analysis={analysis} />
+          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            Le schéma reflète les causes saisies dans la grille — passez en vue
+            « Grille » pour ajouter ou supprimer des causes.
+          </p>
+        </div>
+      )}
+
+      {view === 'grille' && (
       <div className="m6-grid">
         {ISHIKAWA_CATEGORIES.map((cat) => {
           const causes = causesByCategory(cat);
@@ -203,6 +230,7 @@ function IshikawaDetail({
           );
         })}
       </div>
+      )}
     </div>
   );
 }
