@@ -6,10 +6,14 @@
 <title>Projet Entan — In real time</title>
 <!--
   Film de lancement Projet Entan — 46 s, 7 scènes, 16:9, style keynote.
-  Lecture : la vidéo démarre seule. Clic = rejouer. Touches 1 à 7 = aller à la scène.
+  Langage caméra : dolly 3D avec parallaxe (scène 1), flip 3D + balayage
+  lumineux (logo), entrées de panneaux en perspective, zooms de focus pendant
+  chaque scène, orbite 3D (collaboration), sorties « zoom à travers » floutées,
+  halo lumineux qui glisse de scène en scène.
+  Lecture : démarre seule. Clic = rejouer. Touches 1 à 7 = aller à la scène.
   Enregistrement : plein écran (F11) puis Win+Alt+R (Game Bar) ou OBS.
-  Musique : ajouter au montage une piste minimaliste (piano/pulse), montée à 10 s
-  (scène 3), respiration à 25 s, résolution douce à 42 s.
+  Musique : piste minimaliste (piano/pulse), montée à 10 s, respiration à 25 s,
+  résolution douce à 42 s.
 -->
 <style>
   :root {
@@ -31,6 +35,7 @@
     --serif: Georgia, Cambria, 'Times New Roman', serif;
     --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --ease: cubic-bezier(.22, .61, .36, 1);
+    --ease-in: cubic-bezier(.55, 0, .85, .36);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; background: var(--bg); overflow: hidden; }
@@ -40,76 +45,135 @@
   #viewport { width: 1280px; height: 720px; position: relative; transform-origin: center; }
   #stage { position: absolute; inset: 0; background: var(--bg); overflow: hidden; }
 
-  .scene { position: absolute; inset: 0; opacity: 0; transition: opacity .7s var(--ease); pointer-events: none; }
+  /* Halo lumineux itinérant : il glisse d'une scène à l'autre (continuité). */
+  #glow {
+    position: absolute; left: -450px; top: -450px; width: 900px; height: 900px;
+    border-radius: 50%; pointer-events: none; z-index: 1;
+    background: radial-gradient(closest-side, rgb(217 119 87 / .13), transparent 70%);
+    filter: blur(30px);
+    transition: transform 1.8s var(--ease), opacity 1.2s var(--ease);
+    transform: translate(640px, 300px); opacity: .6;
+  }
+  /* Vignette cinéma. */
+  #stage::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 40;
+    background: radial-gradient(120% 95% at 50% 45%, transparent 58%, rgb(0 0 0 / .55) 100%);
+  }
+
+  .scene { position: absolute; inset: 0; z-index: 2; opacity: 0; transition: opacity .55s var(--ease); pointer-events: none; }
   .scene.on { opacity: 1; }
 
-  /* Légendes plein cadre (scènes 1, 2, 7) et basses (scènes UI). */
-  .cap {
-    position: absolute; left: 0; right: 0; text-align: center;
-    font-size: 40px; font-weight: 600; letter-spacing: -0.5px;
-    opacity: 0; transform: translateY(14px);
+  /* fx = entrée/sortie caméra de la scène · cam = mouvement continu (dolly, zoom, orbite). */
+  .fx, .cam { position: absolute; inset: 0; }
+  .cam { transform-origin: center 46%; }
+
+  /* Sortie commune : on traverse la scène (zoom avant + flou de mouvement). */
+  .scene.out .fx { animation: fxOut .85s var(--ease-in) forwards !important; }
+  @keyframes fxOut {
+    to { opacity: 0; transform: scale(1.16); filter: blur(18px); }
   }
-  .on .cap { animation: capIn 1.1s var(--ease) forwards; }
+
+  /* Légendes. */
+  .cap {
+    position: absolute; left: 0; right: 0; text-align: center; z-index: 10;
+    font-size: 40px; font-weight: 600; letter-spacing: -0.5px;
+    opacity: 0; transform: translateY(16px) scale(.985);
+  }
+  .on .cap { animation: capIn 1.2s var(--ease) forwards; }
   .cap.center { top: 50%; margin-top: -28px; }
   .cap.low { bottom: 54px; font-size: 30px; text-shadow: 0 2px 24px rgb(0 0 0 / .8); }
-  @keyframes capIn { to { opacity: 1; transform: translateY(0); } }
+  @keyframes capIn { to { opacity: 1; transform: translateY(0) scale(1); } }
 
-  /* ───────── Scène 1 — chaos ───────── */
-  #s1 { background: #0a0a0a; }
+  /* ───────── Scène 1 — chaos (parallaxe 3D, la caméra avance) ───────── */
+  #s1 { perspective: 1100px; }
+  #s1 .fx, #s1 .cam { transform-style: preserve-3d; }
+  .on#s1 .fx { animation: fxIn1 .9s var(--ease) both; }
+  @keyframes fxIn1 { from { opacity: 0; } to { opacity: 1; } }
+  .on#s1 .cam { animation: cam1 5.4s linear forwards; }
+  @keyframes cam1 {
+    from { transform: translateZ(0) rotateX(0deg); }
+    to { transform: translateZ(170px) rotateX(1.6deg); }
+  }
   .junk {
     position: absolute; border-radius: 10px; background: #161614; border: 1px solid #2c2b28;
     color: #7d7a70; font-size: 12px; padding: 12px 14px; line-height: 1.5;
     box-shadow: 0 12px 40px rgb(0 0 0 / .5); filter: saturate(.4);
-    opacity: 0;
+    opacity: 0; scale: .9; translate: 0 0 var(--z, 0px);
   }
-  .on .junk { animation: junkIn .9s var(--ease) forwards, drift 6s ease-in-out infinite alternate; }
-  @keyframes junkIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
-  @keyframes drift {
-    from { translate: 0 0; rotate: var(--r, 0deg); }
-    to { translate: var(--dx, 8px) var(--dy, -10px); rotate: calc(var(--r, 0deg) + 1.5deg); }
+  .on .junk {
+    animation:
+      junkIn .9s var(--ease) forwards,
+      driftJ 6s ease-in-out infinite alternate;
+  }
+  @keyframes junkIn { to { opacity: 1; scale: 1; } }
+  @keyframes driftJ {
+    from { translate: 0 0 var(--z, 0px); rotate: var(--r, 0deg); }
+    to { translate: var(--dx, 8px) var(--dy, -10px) var(--z, 0px); rotate: calc(var(--r, 0deg) + 1.5deg); }
   }
   .junk b { color: #a3a097; font-weight: 600; }
   .junk .row { display: flex; gap: 6px; margin-top: 6px; }
   .junk .cell { background: #1f1e1b; border: 1px solid #2c2b28; height: 12px; flex: 1; border-radius: 2px; }
   .junk.blur { filter: saturate(.3) blur(2.5px); }
   .junk .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #c2543e; margin-right: 5px; }
-  .sticky { background: #2e2a1c; border-color: #443e28; color: #b3a97e; transform: rotate(-3deg); }
-  #s1 .cap { color: var(--text); }
+  .sticky { background: #2e2a1c; border-color: #443e28; color: #b3a97e; }
+  #s1 .cap { color: var(--text); translate: 0 0 60px; }
 
-  /* ───────── Scène 2 — logo ───────── */
-  #s2 { background: var(--bg); display: grid; place-items: center; }
-  .brand { text-align: center; }
+  /* ───────── Scène 2 — logo (flip 3D + balayage lumineux) ───────── */
+  #s2 .cam { display: grid; place-items: center; }
+  .on#s2 .fx { animation: fxIn1 .8s var(--ease) both; }
+  .on#s2 .cam { animation: cam2 5s var(--ease) forwards; }
+  @keyframes cam2 { from { transform: scale(1); } to { transform: scale(1.07); } }
+  .brand { text-align: center; position: relative; }
+  .halo {
+    position: absolute; left: 50%; top: 30px; width: 420px; height: 420px;
+    margin-left: -210px; margin-top: -160px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(217 119 87 / .22), transparent 70%);
+    filter: blur(20px); opacity: 0; z-index: -1;
+  }
+  .on .halo { animation: haloIn 2.4s var(--ease) .3s forwards, breathe 3.2s ease-in-out 2.7s infinite alternate; }
+  @keyframes haloIn { to { opacity: 1; } }
+  @keyframes breathe { from { transform: scale(1); } to { transform: scale(1.12); } }
   .mark {
     width: 104px; height: 104px; border-radius: 26px; background: var(--accent);
     color: #fff; font-size: 44px; font-weight: 700; display: grid; place-items: center;
-    margin: 0 auto 28px; opacity: 0;
-    box-shadow: 0 0 0 rgb(217 119 87 / 0), 0 24px 80px rgb(217 119 87 / .25);
+    margin: 0 auto 28px; opacity: 0; position: relative; overflow: hidden;
+    box-shadow: 0 24px 80px rgb(217 119 87 / .3);
   }
-  .on .mark { animation: markIn 1.3s var(--ease) .2s forwards; }
+  .mark::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit;
+    background: linear-gradient(115deg, transparent 32%, rgb(255 255 255 / .38) 50%, transparent 68%);
+    background-size: 260% 100%; background-position: 220% 0;
+  }
+  .on .mark { animation: markIn 1.4s var(--ease) .2s forwards; }
+  .on#s2 .mark::after, .on#s7 .mark::after { animation: shine 1.1s ease 1.5s forwards; }
   @keyframes markIn {
-    from { opacity: 0; transform: scale(.7); }
-    60% { opacity: 1; transform: scale(1.04); }
-    to { opacity: 1; transform: scale(1); }
+    from { opacity: 0; transform: perspective(900px) rotateY(78deg) scale(.7); }
+    55% { opacity: 1; transform: perspective(900px) rotateY(-10deg) scale(1.05); }
+    78% { transform: perspective(900px) rotateY(4deg) scale(1); }
+    to { opacity: 1; transform: perspective(900px) rotateY(0deg) scale(1); }
   }
+  @keyframes shine { to { background-position: -90% 0; } }
   .wordmark { font-family: var(--serif); font-size: 58px; font-weight: 600; letter-spacing: -1px; opacity: 0; }
-  .on .wordmark { animation: capIn 1s var(--ease) .9s forwards; }
+  .on .wordmark { animation: wordIn 1.1s var(--ease) .95s forwards; }
+  @keyframes wordIn {
+    from { opacity: 0; transform: translateY(22px); letter-spacing: 6px; }
+    to { opacity: 1; transform: translateY(0); letter-spacing: -1px; }
+  }
   .tagline {
     margin-top: 14px; font-size: 15px; letter-spacing: 5px; color: var(--accent);
     text-transform: uppercase; opacity: 0;
   }
-  .on .tagline { animation: capIn 1s var(--ease) 1.6s forwards; }
-  #s2 .cap { color: var(--text-2); font-size: 24px; font-weight: 500; bottom: 70px; }
-  .on#s2 .cap { animation-delay: 2.3s; }
+  .on .tagline { animation: capIn 1s var(--ease) 1.7s forwards; }
+  #s2 .cap { color: var(--text-2); font-size: 24px; font-weight: 500; bottom: 70px; top: auto; }
+  .on#s2 .cap { animation-delay: 2.4s; }
 
   /* ───────── Panneau UI commun (scènes 3 à 6) ───────── */
   .panel {
     position: absolute; left: 90px; right: 90px; top: 56px; bottom: 128px;
     background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
-    display: flex; overflow: hidden; opacity: 0; transform: translateY(18px) scale(.985);
+    display: flex; overflow: hidden;
     box-shadow: 0 40px 120px rgb(0 0 0 / .6);
   }
-  .on .panel { animation: panelIn 1s var(--ease) .15s forwards; }
-  @keyframes panelIn { to { opacity: 1; transform: translateY(0) scale(1); } }
   .side {
     width: 200px; background: #171614; border-right: 1px solid var(--border);
     padding: 18px 12px; flex-shrink: 0;
@@ -123,10 +187,7 @@
     color: #fff; font-family: var(--sans); font-size: 11px; font-weight: 700;
     display: grid; place-items: center;
   }
-  .nav-i {
-    padding: 8px 10px; border-radius: 8px; font-size: 13px; color: var(--muted);
-    margin-bottom: 2px;
-  }
+  .nav-i { padding: 8px 10px; border-radius: 8px; font-size: 13px; color: var(--muted); margin-bottom: 2px; }
   .nav-i.act { background: var(--accent-soft); color: #e89b80; font-weight: 600; }
   .main { flex: 1; padding: 24px 28px; position: relative; }
   .ui-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
@@ -135,15 +196,9 @@
     display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600;
     color: var(--green); background: var(--green-soft); padding: 5px 12px; border-radius: 99px;
   }
-  .live i {
-    width: 7px; height: 7px; border-radius: 50%; background: var(--green);
-    animation: pulse 1.6s ease-in-out infinite;
-  }
+  .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1.6s ease-in-out infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.7); } }
-  .badge {
-    display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 99px;
-    font-size: 12px; font-weight: 600;
-  }
+  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; }
   .b-red { background: var(--red-soft); color: var(--red); }
   .b-amber { background: var(--amber-soft); color: var(--amber); }
   .b-green { background: var(--green-soft); color: var(--green); }
@@ -154,16 +209,28 @@
     border: 1.5px solid var(--panel);
   }
 
-  /* ───────── Scène 3 — dashboard ───────── */
+  /* ───────── Scène 3 — temps réel (bascule vers le haut, dolly vers le graphe) ── */
+  .on#s3 .fx { animation: fxIn3 1.15s var(--ease) both; }
+  @keyframes fxIn3 {
+    from { opacity: 0; transform: perspective(1300px) rotateX(12deg) translateY(90px) scale(.92); filter: blur(10px); }
+    to { opacity: 1; transform: none; filter: blur(0); }
+  }
+  .on#s3 .cam { animation: cam3 8s var(--ease) forwards; }
+  @keyframes cam3 {
+    0% { transform: scale(1) translate(0, 0); }
+    55% { transform: scale(1.05) translate(-12px, -6px); }
+    100% { transform: scale(1.1) translate(-28px, -16px); }
+  }
   .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 18px; }
   .stat {
     background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;
-    padding: 16px 18px; opacity: 0; transform: translateY(10px);
+    padding: 16px 18px; opacity: 0; transform: perspective(900px) rotateX(18deg) translateY(16px);
   }
-  .on .stat { animation: capIn .8s var(--ease) forwards; }
-  .on .stat:nth-child(1) { animation-delay: .7s; }
-  .on .stat:nth-child(2) { animation-delay: .9s; }
-  .on .stat:nth-child(3) { animation-delay: 1.1s; }
+  .on .stat { animation: statIn .9s var(--ease) forwards; }
+  .on .stat:nth-child(1) { animation-delay: .75s; }
+  .on .stat:nth-child(2) { animation-delay: .95s; }
+  .on .stat:nth-child(3) { animation-delay: 1.15s; }
+  @keyframes statIn { to { opacity: 1; transform: perspective(900px) rotateX(0deg) translateY(0); } }
   .stat .v { font-size: 32px; font-weight: 700; letter-spacing: -1px; }
   .stat .l { font-size: 12px; color: var(--muted); margin-top: 3px; }
   .chart {
@@ -175,23 +242,36 @@
     transform: scaleY(0); transform-origin: bottom; height: calc(var(--h) * 1%);
   }
   .bar.hot { background: var(--accent); }
-  .on .bar { animation: grow 1.1s var(--ease) forwards; }
-  .on .bar:nth-child(1) { animation-delay: 1.3s; } .on .bar:nth-child(2) { animation-delay: 1.42s; }
-  .on .bar:nth-child(3) { animation-delay: 1.54s; } .on .bar:nth-child(4) { animation-delay: 1.66s; }
-  .on .bar:nth-child(5) { animation-delay: 1.78s; } .on .bar:nth-child(6) { animation-delay: 1.9s; }
-  .on .bar:nth-child(7) { animation-delay: 2.02s; } .on .bar:nth-child(8) { animation-delay: 2.14s; }
-  @keyframes grow { to { transform: scaleY(1); } }
+  .on .bar { animation: growBar 1.2s var(--ease) forwards; }
+  .on .bar:nth-child(1) { animation-delay: 1.35s; } .on .bar:nth-child(2) { animation-delay: 1.47s; }
+  .on .bar:nth-child(3) { animation-delay: 1.59s; } .on .bar:nth-child(4) { animation-delay: 1.71s; }
+  .on .bar:nth-child(5) { animation-delay: 1.83s; } .on .bar:nth-child(6) { animation-delay: 1.95s; }
+  .on .bar:nth-child(7) { animation-delay: 2.07s; } .on .bar:nth-child(8) { animation-delay: 2.19s; }
+  @keyframes growBar { 0% { transform: scaleY(0); } 70% { transform: scaleY(1.06); } 100% { transform: scaleY(1); } }
   .toast {
     position: absolute; right: 26px; bottom: 24px; background: var(--panel-2);
     border: 1px solid var(--border); border-left: 3px solid var(--green);
     border-radius: 10px; padding: 11px 16px; font-size: 13px; color: var(--text-2);
-    box-shadow: 0 16px 50px rgb(0 0 0 / .5); opacity: 0; transform: translateX(24px);
+    box-shadow: 0 16px 50px rgb(0 0 0 / .5); opacity: 0; transform: translateX(40px) scale(.95);
   }
-  .on .toast { animation: toastIn .7s var(--ease) 4.4s forwards; }
-  @keyframes toastIn { to { opacity: 1; transform: translateX(0); } }
+  .on .toast { animation: toastIn .8s var(--ease) 4.4s forwards; }
+  @keyframes toastIn { 70% { transform: translateX(-4px) scale(1.01); } to { opacity: 1; transform: translateX(0) scale(1); } }
   .toast b { color: var(--text); }
 
-  /* ───────── Scènes 4-5 — tableaux ───────── */
+  /* ───────── Scène 4 — AMDEC (glissé caméra depuis la droite, zoom criticité) ── */
+  .on#s4 .fx { animation: fxIn4 1.1s var(--ease) both; }
+  @keyframes fxIn4 {
+    from { opacity: 0; transform: perspective(1300px) translateX(210px) rotateY(-11deg) scale(.96); filter: blur(8px); }
+    to { opacity: 1; transform: none; filter: blur(0); }
+  }
+  .on#s4 .cam { animation: cam4 7s var(--ease) forwards; }
+  @keyframes cam4 {
+    0% { transform: scale(1) translate(0, 0); }
+    30% { transform: scale(1.03) translate(-16px, -6px); }
+    58% { transform: scale(1.2) translate(-170px, -52px); }
+    82% { transform: scale(1.2) translate(-170px, -52px); }
+    100% { transform: scale(1.16) translate(-150px, -44px); }
+  }
   table.ui { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   table.ui th {
     text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .6px;
@@ -199,36 +279,60 @@
   }
   table.ui td { padding: 13px 12px; border-bottom: 1px solid #2c2b28; color: var(--text-2); }
   table.ui td:first-child { color: var(--text); font-weight: 500; }
-  table.ui tr { opacity: 0; }
-  .on table.ui tr { animation: capIn .7s var(--ease) forwards; }
-  .on table.ui tr:nth-child(1) { animation-delay: .7s; }
-  .on table.ui tr:nth-child(2) { animation-delay: .9s; }
-  .on table.ui tr:nth-child(3) { animation-delay: 1.1s; }
-  thead tr { animation-delay: .5s !important; }
+  table.ui tbody tr { opacity: 0; }
+  .on table.ui tbody tr { animation: rowIn .8s var(--ease) forwards; }
+  .on table.ui tbody tr:nth-child(1) { animation-delay: .75s; }
+  .on table.ui tbody tr:nth-child(2) { animation-delay: .95s; }
+  .on table.ui tbody tr:nth-child(3) { animation-delay: 1.15s; }
+  @keyframes rowIn { from { opacity: 0; transform: translateX(34px); } to { opacity: 1; transform: translateX(0); } }
 
-  /* Bascule de criticité (scène 4) : deux badges superposés. */
+  /* Bascule de criticité : deux badges superposés. */
   .swap { position: relative; display: inline-block; min-width: 96px; height: 24px; }
   .swap .badge { position: absolute; left: 0; top: 0; }
-  .swap .after { opacity: 0; transform: scale(.7); }
-  .on .swap.go .before { animation: swapOut .5s var(--ease) 3.6s forwards; }
-  .on .swap.go .after { animation: swapIn .6s var(--ease) 3.8s forwards; }
-  @keyframes swapOut { to { opacity: 0; transform: scale(.75); } }
-  @keyframes swapIn { 60% { transform: scale(1.12); } to { opacity: 1; transform: scale(1); } }
+  .swap .after { opacity: 0; transform: scale(.6) rotateX(70deg); }
+  .on .swap.go .before { animation: swapOut .45s var(--ease) 3.6s forwards; }
+  .on .swap.go .after { animation: swapIn .7s var(--ease) 3.85s forwards; }
+  @keyframes swapOut { to { opacity: 0; transform: scale(.7) rotateX(-60deg); } }
+  @keyframes swapIn { 55% { transform: scale(1.16) rotateX(0deg); } to { opacity: 1; transform: scale(1) rotateX(0deg); } }
   .chip-action {
     display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
     color: #e89b80; background: var(--accent-soft); border-radius: 99px; padding: 4px 11px;
-    opacity: 0; transform: translateY(6px);
+    opacity: 0; transform: translateY(8px) scale(.9);
   }
-  .on .chip-action { animation: capIn .6s var(--ease) 2.8s forwards; }
+  .on .chip-action { animation: chipIn .6s var(--ease) 2.8s forwards; }
+  @keyframes chipIn { 70% { transform: translateY(-2px) scale(1.04); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-  /* Progression (scène 5). */
+  /* ───────── Scène 5 — actions (glissé depuis la gauche, zoom statuts) ───────── */
+  .on#s5 .fx { animation: fxIn5 1.1s var(--ease) both; }
+  @keyframes fxIn5 {
+    from { opacity: 0; transform: perspective(1300px) translateX(-210px) rotateY(11deg) scale(.96); filter: blur(8px); }
+    to { opacity: 1; transform: none; filter: blur(0); }
+  }
+  .on#s5 .cam { animation: cam5 10s var(--ease) forwards; }
+  @keyframes cam5 {
+    0% { transform: scale(1) translate(0, 0); }
+    38% { transform: scale(1.15) translate(-140px, -30px); }
+    68% { transform: scale(1.15) translate(-140px, -30px); }
+    100% { transform: scale(1.05) translate(-50px, -10px); }
+  }
   .prog { height: 7px; background: #2c2b28; border-radius: 99px; overflow: hidden; flex: 1; max-width: 320px; }
   .prog i { display: block; height: 100%; width: 38%; background: var(--accent); border-radius: 99px; }
-  .on .prog i { animation: progGo 2.2s var(--ease) 3.2s forwards; }
+  .on .prog i { animation: progGo 2.4s var(--ease) 3.4s forwards; }
   @keyframes progGo { to { width: 82%; } }
   .check { stroke: var(--green); stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
-  /* ───────── Scène 6 — collaboration ───────── */
+  /* ───────── Scène 6 — collaboration (la caméra orbite doucement) ───────── */
+  .on#s6 .fx { animation: fxIn6 1.1s var(--ease) both; }
+  @keyframes fxIn6 {
+    from { opacity: 0; transform: scale(1.14); filter: blur(12px); }
+    to { opacity: 1; transform: scale(1); filter: blur(0); }
+  }
+  .on#s6 .cam { animation: cam6 7s ease-in-out forwards; }
+  @keyframes cam6 {
+    0% { transform: perspective(1300px) rotateY(-2.6deg) rotateX(.8deg) scale(1.04); }
+    50% { transform: perspective(1300px) rotateY(2.2deg) rotateX(-.5deg) scale(1.08) translate(-10px, -6px); }
+    100% { transform: perspective(1300px) rotateY(-1deg) rotateX(.3deg) scale(1.05); }
+  }
   .cursor { position: absolute; z-index: 6; opacity: 0; filter: drop-shadow(0 4px 14px rgb(0 0 0 / .5)); }
   .cursor .tag {
     position: absolute; left: 16px; top: 17px; white-space: nowrap; font-size: 11px;
@@ -253,33 +357,33 @@
   .type-cell { display: inline-block; max-width: 0; overflow: hidden; white-space: nowrap; color: var(--text); vertical-align: bottom; }
   .on .type-cell { animation: typing 1.6s steps(26) 2.6s forwards; }
   @keyframes typing { to { max-width: 240px; } }
-  .caret {
-    display: inline-block; width: 2px; height: 15px; background: var(--accent);
-    vertical-align: -2px; opacity: 0;
-  }
+  .caret { display: inline-block; width: 2px; height: 15px; background: var(--accent); vertical-align: -2px; opacity: 0; }
   .on .caret { animation: blink 0.9s steps(1) 2.6s 5; }
   @keyframes blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0; } }
   .presence { display: flex; align-items: center; }
-  .presence .av { margin-left: -7px; opacity: 0; transform: scale(.5); }
-  .on .presence .av { animation: popIn .5s var(--ease) forwards; }
+  .presence .av { margin-left: -7px; opacity: 0; transform: scale(.4) translateY(8px); }
+  .on .presence .av { animation: popIn .55s var(--ease) forwards; }
   .on .presence .av:nth-child(1) { animation-delay: 1s; }
   .on .presence .av:nth-child(2) { animation-delay: 1.2s; }
   .on .presence .av:nth-child(3) { animation-delay: 1.4s; }
-  @keyframes popIn { to { opacity: 1; transform: scale(1); } }
-  .sync-flash { transition: background .4s; }
+  @keyframes popIn { 70% { transform: scale(1.12) translateY(0); } to { opacity: 1; transform: scale(1) translateY(0); } }
   .on .sync-flash { animation: flash 1.2s var(--ease) 4.4s; }
   @keyframes flash { 30% { background: var(--accent-soft); } }
 
-  /* ───────── Scène 7 — final ───────── */
-  #s7 { background: var(--bg); display: grid; place-items: center; }
+  /* ───────── Scène 7 — final (lent retrait de caméra, logo flottant) ───────── */
+  #s7 .cam { display: grid; place-items: center; }
+  .on#s7 .fx { animation: fxIn7 1.2s var(--ease) both; }
+  @keyframes fxIn7 { from { opacity: 0; transform: scale(.9); filter: blur(10px); } to { opacity: 1; transform: scale(1); filter: blur(0); } }
+  .on#s7 .cam { animation: cam7 4.2s var(--ease) forwards; }
+  @keyframes cam7 { from { transform: scale(1.06); } to { transform: scale(1); } }
+  .on#s7 .brand { animation: floaty 3.4s ease-in-out 1.4s infinite alternate; }
+  @keyframes floaty { from { transform: translateY(0); } to { transform: translateY(-8px); } }
   #s7 .wordmark { font-size: 64px; }
-  #s7 .final-tag {
-    margin-top: 18px; font-size: 22px; color: var(--accent); font-weight: 500;
-    letter-spacing: .5px; opacity: 0;
-  }
-  .on#s7 .final-tag { animation: capIn 1.1s var(--ease) 1.4s forwards; }
+  #s7 .final-tag { margin-top: 18px; font-size: 22px; color: var(--accent); font-weight: 500; letter-spacing: .5px; opacity: 0; }
+  .on#s7 .final-tag { animation: capIn 1.1s var(--ease) 1.5s forwards; }
   .on#s7 .mark { animation-delay: .1s; }
-  .on#s7 .wordmark { animation-delay: .7s; }
+  .on#s7 .wordmark { animation-delay: .75s; }
+  .on#s7 .mark::after { animation-delay: 1.2s; }
 
   /* Barre de progression discrète + aide. */
   #prog-line { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--accent); opacity: .35; width: 0; z-index: 50; }
@@ -293,241 +397,272 @@
 <body>
 <div id="viewport">
   <div id="stage">
+    <div id="glow"></div>
     <div id="prog-line"></div>
 
     <!-- SCÈNE 1 — chaos -->
     <section class="scene" id="s1">
-      <div class="junk" style="left:120px; top:90px; width:300px; --r:-2deg; --dx:10px; --dy:-8px;">
-        <b>RE: RE: RE: planning ligne A3 ???</b><br />
-        marc@… — il manque la dernière version, qui a le fichier&nbsp;?
+      <div class="fx">
+        <div class="cam">
+          <div class="junk" style="left:120px; top:90px; width:300px; --r:-2deg; --dx:10px; --dy:-8px; --z:-70px;">
+            <b>RE: RE: RE: planning ligne A3 ???</b><br />
+            marc@… — il manque la dernière version, qui a le fichier&nbsp;?
+          </div>
+          <div class="junk blur" style="left:480px; top:60px; width:330px; --r:1.5deg; --dx:-12px; --dy:10px; --z:-130px; animation-delay:.15s;">
+            <b>suivi_projet_VERSION_FINALE_v7 (3).xlsx</b>
+            <div class="row"><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span></div>
+            <div class="row"><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span></div>
+            <div class="row"><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span></div>
+          </div>
+          <div class="junk sticky" style="left:900px; top:120px; width:200px; --r:3deg; --dx:8px; --dy:12px; --z:40px; animation-delay:.3s;">
+            ⚠ relancer fournisseur<br />avant vendredi (urgent !!)
+          </div>
+          <div class="junk" style="left:220px; top:420px; width:280px; --r:2deg; --dx:-9px; --dy:-11px; --z:80px; animation-delay:.45s;">
+            <span class="dot"></span><b>14 messages non lus</b><br />
+            « c'est qui le responsable sur cette action ? »
+          </div>
+          <div class="junk blur" style="left:640px; top:380px; width:300px; --r:-1.5deg; --dx:11px; --dy:9px; --z:-40px; animation-delay:.6s;">
+            <b>notes_reunion_du_12.docx</b><br />
+            décisions : à confirmer… actions : voir avec l'équipe…
+          </div>
+          <div class="junk sticky" style="left:1010px; top:430px; width:190px; --r:-4deg; --dx:-7px; --dy:-9px; --z:110px; animation-delay:.75s;">
+            risque convoyeur<br />→ vu avec personne
+          </div>
+          <p class="cap center" style="animation-delay:1.4s;">Projects feel out of control.</p>
+        </div>
       </div>
-      <div class="junk blur" style="left:480px; top:60px; width:330px; --r:1.5deg; --dx:-12px; --dy:10px; animation-delay:.15s;">
-        <b>suivi_projet_VERSION_FINALE_v7 (3).xlsx</b>
-        <div class="row"><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span></div>
-        <div class="row"><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span></div>
-        <div class="row"><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span></div>
-      </div>
-      <div class="junk sticky" style="left:900px; top:120px; width:200px; --r:3deg; --dx:8px; --dy:12px; animation-delay:.3s;">
-        ⚠ relancer fournisseur<br />avant vendredi (urgent !!)
-      </div>
-      <div class="junk" style="left:220px; top:420px; width:280px; --r:2deg; --dx:-9px; --dy:-11px; animation-delay:.45s;">
-        <span class="dot"></span><b>14 messages non lus</b><br />
-        « c'est qui le responsable sur cette action ? »
-      </div>
-      <div class="junk blur" style="left:640px; top:380px; width:300px; --r:-1.5deg; --dx:11px; --dy:9px; animation-delay:.6s;">
-        <b>notes_reunion_du_12.docx</b><br />
-        décisions : à confirmer… actions : voir avec l'équipe…
-      </div>
-      <div class="junk sticky" style="left:1010px; top:430px; width:190px; --r:-4deg; --dx:-7px; --dy:-9px; animation-delay:.75s;">
-        risque convoyeur<br />→ vu avec personne
-      </div>
-      <p class="cap center" style="animation-delay:1.4s;">Projects feel out of control.</p>
     </section>
 
     <!-- SCÈNE 2 — logo -->
     <section class="scene" id="s2">
-      <div class="brand">
-        <div class="mark">PE</div>
-        <div class="wordmark">Projet Entan</div>
-        <div class="tagline">En temps réel</div>
+      <div class="fx">
+        <div class="cam">
+          <div class="brand">
+            <div class="halo"></div>
+            <div class="mark">PE</div>
+            <div class="wordmark">Projet Entan</div>
+            <div class="tagline">En temps réel</div>
+          </div>
+        </div>
+        <p class="cap">Meet Projet Entan.</p>
       </div>
-      <p class="cap">Meet Projet Entan.</p>
     </section>
 
     <!-- SCÈNE 3 — temps réel -->
     <section class="scene" id="s3">
-      <div class="panel">
-        <div class="side">
-          <div class="mini-mark"><span>PE</span>Projet Entan</div>
-          <div class="nav-i act">Dashboard</div>
-          <div class="nav-i">RACI</div>
-          <div class="nav-i">AMDEC</div>
-          <div class="nav-i">Actions</div>
-          <div class="nav-i">Planning</div>
+      <div class="fx">
+        <div class="cam">
+          <div class="panel">
+            <div class="side">
+              <div class="mini-mark"><span>PE</span>Projet Entan</div>
+              <div class="nav-i act">Dashboard</div>
+              <div class="nav-i">RACI</div>
+              <div class="nav-i">AMDEC</div>
+              <div class="nav-i">Actions</div>
+              <div class="nav-i">Planning</div>
+            </div>
+            <div class="main">
+              <div class="ui-h">
+                <h2>Ligne d'assemblage A3</h2>
+                <span class="live"><i></i>Temps réel</span>
+              </div>
+              <div class="stats">
+                <div class="stat"><div class="v" id="n1">0</div><div class="l">Actions en cours</div></div>
+                <div class="stat"><div class="v" id="n2">0&nbsp;%</div><div class="l">Avancement</div></div>
+                <div class="stat"><div class="v" id="n3" style="color:var(--red)">0</div><div class="l">Risques critiques</div></div>
+              </div>
+              <div class="chart">
+                <div class="bar" style="--h:34"></div><div class="bar" style="--h:48"></div>
+                <div class="bar" style="--h:42"></div><div class="bar hot" style="--h:64"></div>
+                <div class="bar" style="--h:56"></div><div class="bar hot" style="--h:78"></div>
+                <div class="bar" style="--h:70"></div><div class="bar hot" style="--h:88"></div>
+              </div>
+              <div class="toast">✓ <b>Claire</b> vient de terminer « Audit 5S »</div>
+            </div>
+          </div>
         </div>
-        <div class="main">
-          <div class="ui-h">
-            <h2>Ligne d'assemblage A3</h2>
-            <span class="live"><i></i>Temps réel</span>
-          </div>
-          <div class="stats">
-            <div class="stat"><div class="v" id="n1">0</div><div class="l">Actions en cours</div></div>
-            <div class="stat"><div class="v" id="n2">0&nbsp;%</div><div class="l">Avancement</div></div>
-            <div class="stat"><div class="v" id="n3" style="color:var(--red)">0</div><div class="l">Risques critiques</div></div>
-          </div>
-          <div class="chart">
-            <div class="bar" style="--h:34"></div><div class="bar" style="--h:48"></div>
-            <div class="bar" style="--h:42"></div><div class="bar hot" style="--h:64"></div>
-            <div class="bar" style="--h:56"></div><div class="bar hot" style="--h:78"></div>
-            <div class="bar" style="--h:70"></div><div class="bar hot" style="--h:88"></div>
-          </div>
-          <div class="toast">✓ <b>Claire</b> vient de terminer « Audit 5S »</div>
-        </div>
+        <p class="cap low" style="animation-delay:1.8s;">See your projects in real time.</p>
       </div>
-      <p class="cap low" style="animation-delay:1.8s;">See your projects in real time.</p>
     </section>
 
     <!-- SCÈNE 4 — AMDEC -->
     <section class="scene" id="s4">
-      <div class="panel">
-        <div class="side">
-          <div class="mini-mark"><span>PE</span>Projet Entan</div>
-          <div class="nav-i">Dashboard</div>
-          <div class="nav-i">RACI</div>
-          <div class="nav-i act">AMDEC</div>
-          <div class="nav-i">Actions</div>
-          <div class="nav-i">Planning</div>
-        </div>
-        <div class="main">
-          <div class="ui-h">
-            <h2>Analyse des risques</h2>
-            <span class="live"><i></i>Temps réel</span>
+      <div class="fx">
+        <div class="cam">
+          <div class="panel">
+            <div class="side">
+              <div class="mini-mark"><span>PE</span>Projet Entan</div>
+              <div class="nav-i">Dashboard</div>
+              <div class="nav-i">RACI</div>
+              <div class="nav-i act">AMDEC</div>
+              <div class="nav-i">Actions</div>
+              <div class="nav-i">Planning</div>
+            </div>
+            <div class="main">
+              <div class="ui-h">
+                <h2>Analyse des risques</h2>
+                <span class="live"><i></i>Temps réel</span>
+              </div>
+              <table class="ui">
+                <thead><tr><th>Élément</th><th>Mode de défaillance</th><th>Action</th><th>Criticité</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td>Convoyeur principal</td><td>Arrêt inopiné</td>
+                    <td><span class="chip-action">+ Plan de maintenance</span></td>
+                    <td>
+                      <span class="swap go">
+                        <span class="badge b-red before">36 · Critique</span>
+                        <span class="badge b-amber after">12 · Maîtrisé</span>
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Poste de vissage</td><td>Couple hors tolérance</td><td></td>
+                    <td><span class="badge b-red">24 · Critique</span></td>
+                  </tr>
+                  <tr>
+                    <td>Bord de ligne</td><td>Rupture de composants</td><td></td>
+                    <td><span class="badge b-amber">12 · À surveiller</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-          <table class="ui">
-            <thead><tr><th>Élément</th><th>Mode de défaillance</th><th>Action</th><th>Criticité</th></tr></thead>
-            <tbody>
-              <tr>
-                <td>Convoyeur principal</td><td>Arrêt inopiné</td>
-                <td><span class="chip-action">+ Plan de maintenance</span></td>
-                <td>
-                  <span class="swap go">
-                    <span class="badge b-red before">36 · Critique</span>
-                    <span class="badge b-amber after">12 · Maîtrisé</span>
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td>Poste de vissage</td><td>Couple hors tolérance</td><td></td>
-                <td><span class="badge b-red">24 · Critique</span></td>
-              </tr>
-              <tr>
-                <td>Bord de ligne</td><td>Rupture de composants</td><td></td>
-                <td><span class="badge b-amber">12 · À surveiller</span></td>
-              </tr>
-            </tbody>
-          </table>
         </div>
+        <p class="cap low" style="animation-delay:1.8s;">Anticipate what matters.</p>
       </div>
-      <p class="cap low" style="animation-delay:1.8s;">Anticipate what matters.</p>
     </section>
 
     <!-- SCÈNE 5 — actions & RACI -->
     <section class="scene" id="s5">
-      <div class="panel">
-        <div class="side">
-          <div class="mini-mark"><span>PE</span>Projet Entan</div>
-          <div class="nav-i">Dashboard</div>
-          <div class="nav-i">RACI</div>
-          <div class="nav-i">AMDEC</div>
-          <div class="nav-i act">Actions</div>
-          <div class="nav-i">Planning</div>
-        </div>
-        <div class="main">
-          <div class="ui-h">
-            <h2>Plan d'action</h2>
-            <div style="display:flex; align-items:center; gap:14px; flex:1; justify-content:flex-end;">
-              <span style="font-size:12px; color:var(--muted);">Avancement</span>
-              <span class="prog"><i></i></span>
+      <div class="fx">
+        <div class="cam">
+          <div class="panel">
+            <div class="side">
+              <div class="mini-mark"><span>PE</span>Projet Entan</div>
+              <div class="nav-i">Dashboard</div>
+              <div class="nav-i">RACI</div>
+              <div class="nav-i">AMDEC</div>
+              <div class="nav-i act">Actions</div>
+              <div class="nav-i">Planning</div>
+            </div>
+            <div class="main">
+              <div class="ui-h">
+                <h2>Plan d'action</h2>
+                <div style="display:flex; align-items:center; gap:14px; flex:1; justify-content:flex-end;">
+                  <span style="font-size:12px; color:var(--muted);">Avancement</span>
+                  <span class="prog"><i></i></span>
+                </div>
+              </div>
+              <table class="ui">
+                <thead><tr><th>Action</th><th>Responsable</th><th>Échéance</th><th>Statut</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td>Plan de maintenance des roulements</td>
+                    <td><span class="av">ML</span>&nbsp; Marc <span class="badge b-grey" style="margin-left:6px;">R</span></td>
+                    <td>18 juin</td>
+                    <td>
+                      <span class="swap go">
+                        <span class="badge b-grey before">À faire</span>
+                        <span class="badge b-green after">
+                          <svg width="12" height="12" viewBox="0 0 24 24" style="margin-right:5px;"><path class="check" d="M4 12.5 9.5 18 20 6" /></svg>
+                          Terminée
+                        </span>
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Étalonnage des visseuses</td>
+                    <td><span class="av">SB</span>&nbsp; Sonia <span class="badge b-grey" style="margin-left:6px;">R</span></td>
+                    <td>21 juin</td>
+                    <td><span class="badge b-amber">En cours</span></td>
+                  </tr>
+                  <tr>
+                    <td>Audit 5S bord de ligne</td>
+                    <td><span class="av">CD</span>&nbsp; Claire <span class="badge b-grey" style="margin-left:6px;">A</span></td>
+                    <td>25 juin</td>
+                    <td><span class="badge b-green">Terminée</span></td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
-          <table class="ui">
-            <thead><tr><th>Action</th><th>Responsable</th><th>Échéance</th><th>Statut</th></tr></thead>
-            <tbody>
-              <tr>
-                <td>Plan de maintenance des roulements</td>
-                <td><span class="av">ML</span>&nbsp; Marc <span class="badge b-grey" style="margin-left:6px;">R</span></td>
-                <td>18 juin</td>
-                <td>
-                  <span class="swap go">
-                    <span class="badge b-grey before">À faire</span>
-                    <span class="badge b-green after">
-                      <svg width="12" height="12" viewBox="0 0 24 24" style="margin-right:5px;"><path class="check" d="M4 12.5 9.5 18 20 6" /></svg>
-                      Terminée
-                    </span>
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td>Étalonnage des visseuses</td>
-                <td><span class="av">SB</span>&nbsp; Sonia <span class="badge b-grey" style="margin-left:6px;">R</span></td>
-                <td>21 juin</td>
-                <td><span class="badge b-amber">En cours</span></td>
-              </tr>
-              <tr>
-                <td>Audit 5S bord de ligne</td>
-                <td><span class="av">CD</span>&nbsp; Claire <span class="badge b-grey" style="margin-left:6px;">A</span></td>
-                <td>25 juin</td>
-                <td><span class="badge b-green">Terminée</span></td>
-              </tr>
-            </tbody>
-          </table>
         </div>
+        <p class="cap low" style="animation-delay:1.8s;">Turn decisions into actions.</p>
       </div>
-      <p class="cap low" style="animation-delay:1.8s;">Turn decisions into actions.</p>
     </section>
 
     <!-- SCÈNE 6 — collaboration -->
     <section class="scene" id="s6">
-      <div class="panel">
-        <div class="side">
-          <div class="mini-mark"><span>PE</span>Projet Entan</div>
-          <div class="nav-i act">Dashboard</div>
-          <div class="nav-i">RACI</div>
-          <div class="nav-i">AMDEC</div>
-          <div class="nav-i">Actions</div>
-          <div class="nav-i">Planning</div>
-        </div>
-        <div class="main">
-          <div class="ui-h">
-            <h2>Ligne d'assemblage A3</h2>
-            <div class="presence">
-              <span class="av">CD</span><span class="av" style="background:#3a4a3e; color:#a9cdb2;">ML</span><span class="av" style="background:#46414f; color:#beb3d4;">SB</span>
+      <div class="fx">
+        <div class="cam">
+          <div class="panel">
+            <div class="side">
+              <div class="mini-mark"><span>PE</span>Projet Entan</div>
+              <div class="nav-i act">Dashboard</div>
+              <div class="nav-i">RACI</div>
+              <div class="nav-i">AMDEC</div>
+              <div class="nav-i">Actions</div>
+              <div class="nav-i">Planning</div>
+            </div>
+            <div class="main">
+              <div class="ui-h">
+                <h2>Ligne d'assemblage A3</h2>
+                <div class="presence">
+                  <span class="av">CD</span><span class="av" style="background:#3a4a3e; color:#a9cdb2;">ML</span><span class="av" style="background:#46414f; color:#beb3d4;">SB</span>
+                </div>
+              </div>
+              <table class="ui">
+                <thead><tr><th>Action</th><th>Responsable</th><th>Statut</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><span class="type-cell">Réception fournisseur validée</span><span class="caret"></span></td>
+                    <td><span class="av">CD</span>&nbsp; Claire</td>
+                    <td><span class="badge b-amber">En cours</span></td>
+                  </tr>
+                  <tr class="sync-flash">
+                    <td>Étalonnage des visseuses</td>
+                    <td><span class="av">ML</span>&nbsp; Marc</td>
+                    <td>
+                      <span class="swap go">
+                        <span class="badge b-grey before" style="animation-delay:4.4s;">À faire</span>
+                        <span class="badge b-amber after" style="animation-delay:4.6s;">En cours</span>
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Audit 5S bord de ligne</td>
+                    <td><span class="av">SB</span>&nbsp; Sonia</td>
+                    <td><span class="badge b-green">Terminée</span></td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
-          <table class="ui">
-            <thead><tr><th>Action</th><th>Responsable</th><th>Statut</th></tr></thead>
-            <tbody>
-              <tr>
-                <td><span class="type-cell">Réception fournisseur validée</span><span class="caret"></span></td>
-                <td><span class="av">CD</span>&nbsp; Claire</td>
-                <td><span class="badge b-amber">En cours</span></td>
-              </tr>
-              <tr class="sync-flash">
-                <td>Étalonnage des visseuses</td>
-                <td><span class="av">ML</span>&nbsp; Marc</td>
-                <td>
-                  <span class="swap go">
-                    <span class="badge b-grey before" style="animation-delay:4.4s;">À faire</span>
-                    <span class="badge b-amber after" style="animation-delay:4.6s;">En cours</span>
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td>Audit 5S bord de ligne</td>
-                <td><span class="av">SB</span>&nbsp; Sonia</td>
-                <td><span class="badge b-green">Terminée</span></td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="cursor c1">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 2l16 7.5-7 1.8-3.2 6.7z" fill="#d97757" /></svg>
+            <span class="tag" style="background:#d97757;">Claire</span>
+          </div>
+          <div class="cursor c2">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 2l16 7.5-7 1.8-3.2 6.7z" fill="#85b894" /></svg>
+            <span class="tag" style="background:#3a4a3e;">Marc</span>
+          </div>
         </div>
+        <p class="cap low" style="animation-delay:1.8s;">Work together in real time.</p>
       </div>
-      <div class="cursor c1">
-        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 2l16 7.5-7 1.8-3.2 6.7z" fill="#d97757" /></svg>
-        <span class="tag" style="background:#d97757;">Claire</span>
-      </div>
-      <div class="cursor c2">
-        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 2l16 7.5-7 1.8-3.2 6.7z" fill="#85b894" /></svg>
-        <span class="tag" style="background:#3a4a3e;">Marc</span>
-      </div>
-      <p class="cap low" style="animation-delay:1.8s;">Work together in real time.</p>
     </section>
 
     <!-- SCÈNE 7 — final -->
     <section class="scene" id="s7">
-      <div class="brand">
-        <div class="mark">PE</div>
-        <div class="wordmark">Projet Entan</div>
-        <div class="final-tag">In real time.</div>
+      <div class="fx">
+        <div class="cam">
+          <div class="brand">
+            <div class="halo"></div>
+            <div class="mark">PE</div>
+            <div class="wordmark">Projet Entan</div>
+            <div class="final-tag">In real time.</div>
+          </div>
+        </div>
       </div>
     </section>
   </div>
@@ -555,6 +690,18 @@
 
   function clearTimers() { timers.forEach(clearTimeout); timers = []; }
 
+  /* Le halo lumineux glisse vers un point différent à chaque scène. */
+  const glow = document.getElementById('glow');
+  const GLOW = {
+    s1: [640, 180, .45], s2: [640, 310, 1], s3: [950, 540, .7], s4: [1020, 220, .75],
+    s5: [340, 280, .7], s6: [640, 170, .85], s7: [640, 320, 1],
+  };
+  function glowTo(id) {
+    const [x, y, o] = GLOW[id];
+    glow.style.transform = `translate(${x}px, ${y}px)`;
+    glow.style.opacity = o;
+  }
+
   /* Compteurs animés de la scène 3. */
   function countTo(el, target, suffix, dur) {
     const t0 = performance.now();
@@ -568,9 +715,9 @@
   }
   const HOOKS = {
     s3() {
-      timers.push(setTimeout(() => countTo(document.getElementById('n1'), 14, '', 1400), 800));
-      timers.push(setTimeout(() => countTo(document.getElementById('n2'), 72, ' %', 1600), 1000));
-      timers.push(setTimeout(() => countTo(document.getElementById('n3'), 3, '', 1200), 1200));
+      timers.push(setTimeout(() => countTo(document.getElementById('n1'), 14, '', 1400), 850));
+      timers.push(setTimeout(() => countTo(document.getElementById('n2'), 72, ' %', 1600), 1050));
+      timers.push(setTimeout(() => countTo(document.getElementById('n3'), 3, '', 1200), 1250));
       /* Battement « temps réel » : 14 → 15 actions. */
       timers.push(setTimeout(() => { document.getElementById('n1').textContent = '15'; }, 5200));
     },
@@ -580,7 +727,7 @@
 
   function play(from = 0) {
     clearTimers();
-    document.querySelectorAll('.scene').forEach((s) => s.classList.remove('on'));
+    document.querySelectorAll('.scene').forEach((s) => s.classList.remove('on', 'out'));
     progLine.style.transition = 'none';
     progLine.style.width = (from / TOTAL) * 100 + '%';
     requestAnimationFrame(() => {
@@ -591,15 +738,18 @@
       if (from >= b) return;
       const el = document.getElementById(id);
       timers.push(setTimeout(() => {
-        el.classList.remove('on');
+        el.classList.remove('on', 'out');
         void el.offsetWidth; /* relance les animations CSS */
         el.classList.add('on');
+        glowTo(id);
         if (HOOKS[id]) HOOKS[id]();
       }, Math.max(0, a - from) * 1000));
-      timers.push(setTimeout(() => el.classList.remove('on'), (b - from) * 1000 - 600));
+      if (id !== 's7') {
+        /* Sortie « zoom à travers » puis extinction. */
+        timers.push(setTimeout(() => el.classList.add('out'), (b - from) * 1000 - 850));
+        timers.push(setTimeout(() => el.classList.remove('on', 'out'), (b - from) * 1000 - 60));
+      }
     });
-    /* La scène finale reste affichée. */
-    timers.push(setTimeout(() => document.getElementById('s7').classList.add('on'), (TOTAL - from) * 1000 - 500));
   }
 
   document.getElementById('stage').addEventListener('click', () => play(0));
@@ -609,7 +759,7 @@
     if (e.key === ' ') { e.preventDefault(); play(0); }
   });
 
-  /* Aide discrète, disparaît après 4 s. */
+  /* Aide discrète, disparaît après quelques secondes. */
   const hint = document.getElementById('hint');
   setTimeout(() => hint.classList.add('show'), 800);
   setTimeout(() => hint.classList.remove('show'), 5500);
