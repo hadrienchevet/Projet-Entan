@@ -54,6 +54,7 @@ import type {
   MemberInput,
   MemberRow,
   Project,
+  ProjectStatus,
   ProjectType,
   ActionStatus,
   RaciRole,
@@ -99,6 +100,7 @@ interface ProjectMeta {
   description?: string;
   ownerId: string;
   projectType: ProjectType;
+  status: ProjectStatus;
   rdpCurrentPhase: number;
   project_members?: ProjectMember[];
   createdAt: string;
@@ -107,6 +109,7 @@ interface ProjectMeta {
 interface WorkspaceState {
   loading: boolean;
   userEmail: string | null;
+  userId: string | null;
   metas: ProjectMeta[];
   projects: Project[];
   members: Member[];
@@ -124,7 +127,8 @@ interface WorkspaceState {
 
   setCurrentProject: (id: Id) => void;
   createProject: (name: string, description?: string, projectType?: ProjectType) => Promise<void>;
-  updateProject: (id: Id, patch: { name?: string; description?: string }) => Promise<void>;
+  updateProject: (id: Id, patch: { name?: string; description?: string; status?: ProjectStatus }) => Promise<void>;
+  deleteProject: (id: Id) => Promise<void>;
   seedDemoProject: () => Promise<void>;
 
   addMember: (projectId: Id, input: MemberInput) => Promise<void>;
@@ -206,6 +210,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [metas, setMetas] = useState<ProjectMeta[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [actions, setActions] = useState<Action[]>([]);
@@ -232,7 +237,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const fetchProjects = useCallback(async (): Promise<ProjectMeta[]> => {
     const { data, error } = await supabase
       .from('projects')
-      .select('id, name, description, project_type, rdp_current_phase, created_at, owner_id, project_members(project_id, user_id, role, joined_at, profiles(id, email, display_name))')
+      // `*` plutôt qu'une liste : tolère une colonne pas encore migrée (status → 'active').
+      .select('*, project_members(project_id, user_id, role, joined_at, profiles(id, email, display_name))')
       .order('created_at');
     if (error) {
       console.error('[entan] fetchProjects:', error.message);
@@ -245,6 +251,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       createdAt: r.created_at as string,
       ownerId: r.owner_id as string,
       projectType: (r.project_type as ProjectType) ?? 'gestion',
+      status: (r.status as ProjectStatus) ?? 'active',
       rdpCurrentPhase: (r.rdp_current_phase as number | null) ?? 0,
       project_members: (r.project_members || []).map(projectMemberFromRow),
     }));
@@ -312,6 +319,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       } = await supabase.auth.getSession();
       if (cancelled) return;
       setUserEmail(session?.user.email ?? null);
+      setUserId(session?.user.id ?? null);
 
       const list = await fetchProjects();
       if (cancelled) return;
@@ -415,18 +423,58 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const updateProject = useCallback(
-    async (id: Id, patch: { name?: string; description?: string }) => {
+    async (id: Id, patch: { name?: string; description?: string; status?: ProjectStatus }) => {
       setMetas((s) => s.map((p) => (p.id === id ? { ...p, ...patch } : p)));
-      const { error } = await supabase
-        .from('projects')
-        .update({ name: patch.name, description: patch.description ?? null })
-        .eq('id', id);
+      // Seuls les champs présents dans le patch sont envoyés.
+      const row: Record<string, unknown> = {};
+      if (patch.name !== undefined) row.name = patch.name;
+      if ('description' in patch) row.description = patch.description ?? null;
+      if (patch.status !== undefined) row.status = patch.status;
+      const { error } = await supabase.from('projects').update(row).eq('id', id);
       if (error) {
         onError('Modification du projet impossible', error.message);
         await fetchProjects();
       }
     },
     [supabase, fetchProjects],
+  );
+
+  const deleteProject = useCallback(
+    async (id: Id) => {
+      // Seul l'owner y est autorisé (policy RLS) ; les données filles suivent
+      // par ON DELETE CASCADE. Le .select() permet de détecter un DELETE
+      // silencieusement bloqué par RLS (0 ligne supprimée, sans erreur).
+      const { data, error } = await supabase.from('projects').delete().eq('id', id).select('id');
+      if (error) return onError('Suppression du projet impossible', error.message);
+      if (!data || data.length === 0) {
+        return onError(
+          'Suppression du projet impossible',
+          "vous n'êtes pas propriétaire du projet, ou la migration fix-06 n'a pas été appliquée.",
+        );
+      }
+      const list = await fetchProjects();
+      if (currentProjectId === id) {
+        const next = list.find((p) => p.id !== id);
+        if (next) {
+          setCurrentProject(next.id);
+        } else {
+          localStorage.removeItem(CURRENT_KEY);
+          setCurrentProjectId(null);
+          setMembers([]);
+          setActions([]);
+          setAmdecs([]);
+          setInvitations([]);
+          setFiveWhyAnalyses([]);
+          setIshikawaAnalyses([]);
+          setCapaActions([]);
+          setRdpSubjects([]);
+          setRdpProblem(null);
+          setRdpIndicators([]);
+          setRdpSolutions([]);
+        }
+      }
+    },
+    [supabase, fetchProjects, setCurrentProject, currentProjectId],
   );
 
   /* --- Équipe -------------------------------------------------------------- */
@@ -1292,6 +1340,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const value: WorkspaceState = {
     loading,
     userEmail,
+    userId,
     metas,
     projects,
     members,
@@ -1309,6 +1358,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setCurrentProject,
     createProject,
     updateProject,
+    deleteProject,
     seedDemoProject,
     addMember,
     updateMember,

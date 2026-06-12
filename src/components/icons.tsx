@@ -168,3 +168,9 @@ export const IconTree = () => (
     <path d="M8.5 18h4a3 3 0 0 0 3-3v-0.5" />
   </svg>
 );
+
+export const IconFolder = () => (
+  <svg {...base}>
+    <path d="M3 7.5V18a1.5 1.5 0 0 0 1.5 1.5h15A1.5 1.5 0 0 0 21 18V9a1.5 1.5 0 0 0-1.5-1.5h-8L9.5 5h-5A1.5 1.5 0 0 0 3 6.5v1z" />
+  </svg>
+);

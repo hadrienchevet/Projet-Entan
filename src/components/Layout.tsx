@@ -12,6 +12,7 @@ import {
   IconBulb,
   IconCapa,
   IconDashboard,
+  IconFolder,
   IconIshikawa,
   IconLayers,
   IconLogout,
@@ -77,6 +78,12 @@ export function Layout({ children }: { children: ReactNode }) {
           <button className="btn btn-ghost btn-sm" onClick={() => setCreating(true)}>
             <IconPlus /> Nouveau projet
           </button>
+          <Link
+            href="/projets"
+            className={`btn btn-ghost btn-sm${pathname === '/projets' ? ' active' : ''}`}
+          >
+            <IconFolder /> Tous les projets
+          </Link>
         </div>
 
         <nav className="nav">

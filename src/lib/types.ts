@@ -16,6 +16,18 @@ export type Id = string;
 
 export type ProjectType = 'gestion' | 'rdp';
 
+export type ProjectStatus = 'active' | 'completed';
+
+export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  active: 'En cours',
+  completed: 'Terminé',
+};
+
+export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
+  gestion: 'Gestion de projet',
+  rdp: 'Résolution de problèmes',
+};
+
 export type ActionStatus = 'todo' | 'in_progress' | 'done';
 
 export type RaciRole = 'R' | 'A' | 'C' | 'I';
@@ -51,6 +63,7 @@ export interface ProjectMeta {
   createdAt: string;
   ownerId: string;
   projectType: ProjectType;
+  status: ProjectStatus;
   /** Phase courante de la démarche RDP (0 = sujet … 6 = standardiser). */
   rdpCurrentPhase: number;
   project_members?: ProjectMember[];
@@ -62,6 +75,7 @@ export interface Project {
   description?: string;
   ownerId: string;
   projectType: ProjectType;
+  status: ProjectStatus;
   rdpCurrentPhase: number;
   /** L'équipe appartient au projet : seule source de membres pour le RACI. */
   members: Member[];
