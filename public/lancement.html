@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Projet Entan — In real time</title>
+<!--
+  Film de lancement Projet Entan — 46 s, 7 scènes, 16:9, style keynote.
+
+  RACCORDS : chaque sortie de scène épouse l'entrée de la suivante.
+    s1 → s2 : la caméra accélère DANS le chaos → le logo arrive en profondeur
+    s2 → s3 : on traverse le logo (push avant) → le dashboard surgit du fond
+    s3 → s4 : fouetté caméra vers la gauche → l'AMDEC entre par la droite
+    s4 → s5 : fouetté vers la droite → le plan d'action entre par la gauche
+    s5 → s6 : la course sur la jauge continue vers la gauche → la collab
+              entre par la droite, dans le même sens
+    s6 → s7 : la caméra s'élève au-dessus du tableau → le logo descend
+              et se pose
+
+  SCÈNE 5 — plan drone : descente piquée sur la jauge « Avancement »
+  (la route), course en rase-motte avec roulis en suivant la tête de jauge
+  pendant le remplissage 38 → 82 %, décélération et remontée à l'arrivée.
+
+  Lecture : démarre seule. Clic = rejouer. Touches 1 à 7 = aller à la scène.
+  Enregistrement : plein écran (F11) puis Win+Alt+R (Game Bar) ou OBS.
+  Musique : minimaliste (piano/pulse), montée à 10 s, accélération à 29 s
+  (la course), résolution douce à 42 s.
+-->
+<style>
+  :root {
+    --bg: #050505;
+    --panel: #1c1b19;
+    --panel-2: #262624;
+    --border: #3a3835;
+    --text: #f0eee6;
+    --text-2: #c4c1b5;
+    --muted: #8e8b80;
+    --accent: #d97757;
+    --accent-soft: #453228;
+    --green: #85b894;
+    --green-soft: #2d3c31;
+    --amber: #d9a766;
+    --amber-soft: #443721;
+    --red: #e2766a;
+    --red-soft: #472d29;
+    --serif: Georgia, Cambria, 'Times New Roman', serif;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --ease: cubic-bezier(.22, .61, .36, 1);
+    --ease-in: cubic-bezier(.55, 0, .85, .36);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: var(--bg); overflow: hidden; }
+  body { display: grid; place-items: center; font-family: var(--sans); color: var(--text); }
+
+  #viewport { width: 1280px; height: 720px; position: relative; transform-origin: center; }
+  #stage { position: absolute; inset: 0; background: var(--bg); overflow: hidden; }
+
+  #glow {
+    position: absolute; left: -450px; top: -450px; width: 900px; height: 900px;
+    border-radius: 50%; pointer-events: none; z-index: 1;
+    background: radial-gradient(closest-side, rgb(217 119 87 / .13), transparent 70%);
+    filter: blur(30px);
+    transition: transform 1.8s var(--ease), opacity 1.2s var(--ease);
+    transform: translate(640px, 300px); opacity: .6;
+  }
+  #stage::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 40;
+    background: radial-gradient(120% 95% at 50% 45%, transparent 58%, rgb(0 0 0 / .55) 100%);
+  }
+
+  .scene { position: absolute; inset: 0; z-index: 2; opacity: 0; transition: opacity .5s var(--ease); pointer-events: none; }
+  .scene.on { opacity: 1; }
+
+  .fx, .cam, .shot { position: absolute; inset: 0; }
+  .cam { transform-origin: center 46%; }
+
+  /* ── Sorties raccordées à l'entrée suivante ───────────────────────────── */
+  /* s1 : la caméra accélère vers l'avant dans le chaos. */
+  #s1.out .fx { animation: outFwd .8s var(--ease-in) forwards !important; }
+  @keyframes outFwd { to { opacity: 0; transform: scale(1.45); filter: blur(18px); } }
+  /* s2 : on traverse le logo. */
+  #s2.out .fx { animation: outFwd2 .8s var(--ease-in) forwards !important; }
+  @keyframes outFwd2 { to { opacity: 0; transform: scale(2.1); filter: blur(22px); } }
+  /* s3 : fouetté vers la gauche → s4 arrive de la droite. */
+  #s3.out .fx, #s3.out .shot { animation: outWhipL .75s var(--ease-in) forwards !important; }
+  @keyframes outWhipL { to { opacity: 0; transform: translateX(-560px) scale(1.04); filter: blur(16px); } }
+  /* s4 : fouetté vers la droite → s5 arrive de la gauche. */
+  #s4.out .fx, #s4.out .shot { animation: outWhipR .75s var(--ease-in) forwards !important; }
+  @keyframes outWhipR { to { opacity: 0; transform: translateX(560px) scale(1.04); filter: blur(16px); } }
+  /* s5 : la course continue vers la gauche → s6 arrive de la droite. */
+  #s5.out .fx, #s5.out .shot { animation: outWhipL .8s var(--ease-in) forwards !important; }
+  /* s6 : la caméra s'élève au-dessus du tableau → s7 descend du haut. */
+  #s6.out .fx { animation: outRise .8s var(--ease-in) forwards !important; }
+  @keyframes outRise { to { opacity: 0; transform: translateY(150px) scale(.94); filter: blur(14px); } }
+
+  /* Légendes. */
+  .cap {
+    position: absolute; left: 0; right: 0; text-align: center; z-index: 12;
+    font-size: 40px; font-weight: 600; letter-spacing: -0.5px;
+    opacity: 0; transform: translateY(16px) scale(.985);
+  }
+  .on .cap { animation: capIn 1.2s var(--ease) forwards; }
+  .cap.center { top: 50%; margin-top: -28px; }
+  .cap.low { bottom: 54px; font-size: 30px; text-shadow: 0 2px 24px rgb(0 0 0 / .8); }
+  @keyframes capIn { to { opacity: 1; transform: translateY(0) scale(1); } }
+
+  /* ── Plans macro : scrim de profondeur de champ + carte 3D ── */
+  .shot { z-index: 8; opacity: 0; }
+  .on .shot { animation: shotIn .85s var(--ease) both; }
+  @keyframes shotIn {
+    from { opacity: 0; transform: scale(1.28); filter: blur(10px); }
+    to { opacity: 1; transform: scale(1); filter: blur(0); }
+  }
+  .scrim {
+    position: absolute; inset: 0;
+    background: rgb(5 5 5 / .5);
+    backdrop-filter: blur(14px) brightness(.5) saturate(.7);
+  }
+  .shot-cam { position: absolute; inset: 0; display: grid; place-items: center; }
+  .macro {
+    background: var(--panel-2); border: 1px solid #45433e; border-radius: 18px;
+    box-shadow: 0 60px 140px rgb(0 0 0 / .8), 0 0 0 1px rgb(255 255 255 / .03) inset;
+  }
+  .macro-label {
+    font-size: 15px; text-transform: uppercase; letter-spacing: 2.5px;
+    color: var(--muted); font-weight: 600;
+  }
+
+  /* ───────── Scène 1 — chaos (dolly 3D, parallaxe) ───────── */
+  #s1 { perspective: 1100px; }
+  #s1 .fx, #s1 .cam { transform-style: preserve-3d; }
+  .on#s1 .fx { animation: fxIn1 .9s var(--ease) both; }
+  @keyframes fxIn1 { from { opacity: 0; } to { opacity: 1; } }
+  .on#s1 .cam { animation: cam1 5.4s linear forwards; }
+  @keyframes cam1 {
+    from { transform: translateZ(0) rotateX(0deg); }
+    to { transform: translateZ(190px) rotateX(1.6deg); }
+  }
+  .junk {
+    position: absolute; border-radius: 10px; background: #161614; border: 1px solid #2c2b28;
+    color: #7d7a70; font-size: 12px; padding: 12px 14px; line-height: 1.5;
+    box-shadow: 0 12px 40px rgb(0 0 0 / .5); filter: saturate(.4);
+    opacity: 0; scale: .9; translate: 0 0 var(--z, 0px);
+  }
+  .on .junk { animation: junkIn .9s var(--ease) forwards, driftJ 6s ease-in-out infinite alternate; }
+  @keyframes junkIn { to { opacity: 1; scale: 1; } }
+  @keyframes driftJ {
+    from { translate: 0 0 var(--z, 0px); rotate: var(--r, 0deg); }
+    to { translate: var(--dx, 8px) var(--dy, -10px) var(--z, 0px); rotate: calc(var(--r, 0deg) + 1.5deg); }
+  }
+  .junk b { color: #a3a097; font-weight: 600; }
+  .junk .row { display: flex; gap: 6px; margin-top: 6px; }
+  .junk .cell { background: #1f1e1b; border: 1px solid #2c2b28; height: 12px; flex: 1; border-radius: 2px; }
+  .junk.blur { filter: saturate(.3) blur(2.5px); }
+  .junk .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #c2543e; margin-right: 5px; }
+  .sticky { background: #2e2a1c; border-color: #443e28; color: #b3a97e; }
+  #s1 .cap { color: var(--text); translate: 0 0 60px; }
+
+  /* ───────── Scène 2 — logo : il arrive en profondeur (raccord du push s1) ── */
+  #s2 .cam { display: grid; place-items: center; }
+  .on#s2 .fx { animation: fxIn2 1s var(--ease) both; }
+  @keyframes fxIn2 {
+    from { opacity: 0; transform: scale(.82); filter: blur(10px); }
+    to { opacity: 1; transform: scale(1); filter: blur(0); }
+  }
+  .on#s2 .cam { animation: cam2 5s var(--ease) forwards; }
+  @keyframes cam2 { from { transform: scale(1); } to { transform: scale(1.08); } }
+  .brand { text-align: center; position: relative; }
+  .halo {
+    position: absolute; left: 50%; top: 30px; width: 420px; height: 420px;
+    margin-left: -210px; margin-top: -160px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(217 119 87 / .22), transparent 70%);
+    filter: blur(20px); opacity: 0; z-index: -1;
+  }
+  .on .halo { animation: haloIn 2.4s var(--ease) .3s forwards, breathe 3.2s ease-in-out 2.7s infinite alternate; }
+  @keyframes haloIn { to { opacity: 1; } }
+  @keyframes breathe { from { transform: scale(1); } to { transform: scale(1.12); } }
+  .mark {
+    width: 104px; height: 104px; border-radius: 26px; background: var(--accent);
+    color: #fff; font-size: 44px; font-weight: 700; display: grid; place-items: center;
+    margin: 0 auto 28px; opacity: 0; position: relative; overflow: hidden;
+    box-shadow: 0 24px 80px rgb(217 119 87 / .3);
+  }
+  .mark::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit;
+    background: linear-gradient(115deg, transparent 32%, rgb(255 255 255 / .38) 50%, transparent 68%);
+    background-size: 260% 100%; background-position: 220% 0;
+  }
+  .on .mark { animation: markIn 1.4s var(--ease) .2s forwards; }
+  .on#s2 .mark::after, .on#s7 .mark::after { animation: shine 1.1s ease 1.5s forwards; }
+  @keyframes markIn {
+    from { opacity: 0; transform: perspective(900px) rotateY(78deg) scale(.7); }
+    55% { opacity: 1; transform: perspective(900px) rotateY(-10deg) scale(1.05); }
+    78% { transform: perspective(900px) rotateY(4deg) scale(1); }
+    to { opacity: 1; transform: perspective(900px) rotateY(0deg) scale(1); }
+  }
+  @keyframes shine { to { background-position: -90% 0; } }
+  .wordmark { font-family: var(--serif); font-size: 58px; font-weight: 600; letter-spacing: -1px; opacity: 0; }
+  .on .wordmark { animation: wordIn 1.1s var(--ease) .95s forwards; }
+  @keyframes wordIn {
+    from { opacity: 0; transform: translateY(22px); letter-spacing: 6px; }
+    to { opacity: 1; transform: translateY(0); letter-spacing: -1px; }
+  }
+  .tagline { margin-top: 14px; font-size: 15px; letter-spacing: 5px; color: var(--accent); text-transform: uppercase; opacity: 0; }
+  .on .tagline { animation: capIn 1s var(--ease) 1.7s forwards; }
+  #s2 .cap { color: var(--text-2); font-size: 24px; font-weight: 500; bottom: 70px; top: auto; }
+  .on#s2 .cap { animation-delay: 2.4s; }
+
+  /* ───────── Panneau UI commun ───────── */
+  .panel {
+    position: absolute; left: 90px; right: 90px; top: 56px; bottom: 128px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+    display: flex; overflow: hidden;
+    box-shadow: 0 40px 120px rgb(0 0 0 / .6);
+  }
+  .side { width: 200px; background: #171614; border-right: 1px solid var(--border); padding: 18px 12px; flex-shrink: 0; }
+  .side .mini-mark {
+    display: flex; align-items: center; gap: 9px; font-family: var(--serif);
+    font-weight: 600; font-size: 15px; margin-bottom: 22px; padding-left: 6px;
+  }
+  .side .mini-mark span {
+    width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
+    color: #fff; font-family: var(--sans); font-size: 11px; font-weight: 700;
+    display: grid; place-items: center;
+  }
+  .nav-i { padding: 8px 10px; border-radius: 8px; font-size: 13px; color: var(--muted); margin-bottom: 2px; }
+  .nav-i.act { background: var(--accent-soft); color: #e89b80; font-weight: 600; }
+  .main { flex: 1; padding: 24px 28px; position: relative; }
+  .ui-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .ui-h h2 { font-family: var(--serif); font-size: 23px; font-weight: 600; }
+  .live {
+    display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600;
+    color: var(--green); background: var(--green-soft); padding: 5px 12px; border-radius: 99px;
+  }
+  .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.7); } }
+  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; }
+  .b-red { background: var(--red-soft); color: var(--red); }
+  .b-amber { background: var(--amber-soft); color: var(--amber); }
+  .b-green { background: var(--green-soft); color: var(--green); }
+  .b-grey { background: #34332f; color: var(--text-2); }
+  .av {
+    width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft);
+    color: #e89b80; font-size: 10px; font-weight: 700; display: inline-grid; place-items: center;
+    border: 1.5px solid var(--panel);
+  }
+
+  /* ───────── Scène 3 — temps réel : surgit du fond (raccord du push s2) ── */
+  .on#s3 .fx { animation: fxIn3 1.15s var(--ease) both; }
+  @keyframes fxIn3 {
+    from { opacity: 0; transform: perspective(1300px) scale(.78) translateY(40px) rotateX(9deg); filter: blur(12px); }
+    to { opacity: 1; transform: none; filter: blur(0); }
+  }
+  .on#s3 .cam { animation: cam3 8s var(--ease) forwards; }
+  @keyframes cam3 { from { transform: scale(1); } to { transform: scale(1.05); } }
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+  .stat {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; opacity: 0; transform: perspective(900px) rotateX(18deg) translateY(16px);
+  }
+  .on .stat { animation: statIn .9s var(--ease) forwards; }
+  .on .stat:nth-child(1) { animation-delay: .75s; }
+  .on .stat:nth-child(2) { animation-delay: .95s; }
+  .on .stat:nth-child(3) { animation-delay: 1.15s; }
+  @keyframes statIn { to { opacity: 1; transform: perspective(900px) rotateX(0deg) translateY(0); } }
+  .stat .v { font-size: 32px; font-weight: 700; letter-spacing: -1px; }
+  .stat .l { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .chart {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px; height: 240px; display: flex; align-items: flex-end; gap: 18px;
+  }
+  .bar { flex: 1; border-radius: 6px 6px 2px 2px; background: var(--accent-soft); transform: scaleY(0); transform-origin: bottom; height: calc(var(--h) * 1%); }
+  .bar.hot { background: var(--accent); }
+  .on .bar { animation: growBar 1.2s var(--ease) forwards; }
+  .on .bar:nth-child(1) { animation-delay: 1.2s; } .on .bar:nth-child(2) { animation-delay: 1.32s; }
+  .on .bar:nth-child(3) { animation-delay: 1.44s; } .on .bar:nth-child(4) { animation-delay: 1.56s; }
+  .on .bar:nth-child(5) { animation-delay: 1.68s; } .on .bar:nth-child(6) { animation-delay: 1.8s; }
+  .on .bar:nth-child(7) { animation-delay: 1.92s; } .on .bar:nth-child(8) { animation-delay: 2.04s; }
+  @keyframes growBar { 0% { transform: scaleY(0); } 70% { transform: scaleY(1.06); } 100% { transform: scaleY(1); } }
+
+  .on#s3 .shot { animation-delay: 3.4s; }
+  .on#s3 .shot .shot-cam { animation: shotCam3 4s var(--ease) 3.4s both; }
+  @keyframes shotCam3 {
+    from { transform: perspective(1400px) rotateY(-22deg) rotateX(7deg) scale(.96); }
+    to { transform: perspective(1400px) rotateY(-9deg) rotateX(3deg) scale(1.1); }
+  }
+  .macro-stat { width: 560px; padding: 44px 52px; position: relative; }
+  .macro-stat .num { font-size: 130px; font-weight: 700; letter-spacing: -5px; line-height: 1.05; position: relative; height: 140px; }
+  .macro-stat .num span { position: absolute; left: 0; top: 0; }
+  .macro-stat .n-old { opacity: 1; }
+  .macro-stat .n-new { opacity: 0; transform: translateY(46px); color: var(--accent); }
+  .on#s3 .n-old { animation: numOut .5s var(--ease) 5.5s forwards; }
+  .on#s3 .n-new { animation: numIn .65s var(--ease) 5.6s forwards; }
+  @keyframes numOut { to { opacity: 0; transform: translateY(-42px); filter: blur(4px); } }
+  @keyframes numIn { to { opacity: 1; transform: translateY(0); } }
+  .macro-stat .plus-chip {
+    position: absolute; right: 40px; top: 48px;
+    background: var(--green-soft); color: var(--green); font-size: 15px; font-weight: 600;
+    border-radius: 99px; padding: 8px 16px; opacity: 0; transform: translateY(12px) scale(.9);
+  }
+  .on#s3 .plus-chip { animation: chipIn .6s var(--ease) 5.7s forwards; }
+  .macro-stat .live { position: absolute; right: 44px; bottom: 46px; }
+
+  /* ───────── Scène 4 — AMDEC : entre par la droite (raccord du fouetté s3) ── */
+  .on#s4 .fx { animation: fxIn4 1.05s var(--ease) both; }
+  @keyframes fxIn4 {
+    from { opacity: 0; transform: perspective(1300px) translateX(300px) rotateY(-10deg) scale(.98); filter: blur(14px); }
+    to { opacity: 1; transform: none; filter: blur(0); }
+  }
+  .on#s4 .cam { animation: cam4 7s var(--ease) forwards; }
+  @keyframes cam4 { from { transform: scale(1); } to { transform: scale(1.04); } }
+  table.ui { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.ui th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .6px;
+    color: var(--muted); padding: 9px 12px; border-bottom: 1px solid var(--border);
+  }
+  table.ui td { padding: 13px 12px; border-bottom: 1px solid #2c2b28; color: var(--text-2); }
+  table.ui td:first-child { color: var(--text); font-weight: 500; }
+  table.ui tbody tr { opacity: 0; }
+  .on table.ui tbody tr { animation: rowIn .8s var(--ease) forwards; }
+  .on table.ui tbody tr:nth-child(1) { animation-delay: .7s; }
+  .on table.ui tbody tr:nth-child(2) { animation-delay: .9s; }
+  .on table.ui tbody tr:nth-child(3) { animation-delay: 1.1s; }
+  @keyframes rowIn { from { opacity: 0; transform: translateX(34px); } to { opacity: 1; transform: translateX(0); } }
+
+  .on#s4 .shot { animation-delay: 2.6s; }
+  .on#s4 .shot .shot-cam { animation: shotCam4 4.2s var(--ease) 2.6s both; }
+  @keyframes shotCam4 {
+    from { transform: perspective(1400px) rotateY(16deg) rotateX(4deg) translateX(70px) scale(.98); }
+    to { transform: perspective(1400px) rotateY(8deg) rotateX(2deg) translateX(-46px) scale(1.12); }
+  }
+  .macro-risk { width: 780px; padding: 36px 44px; }
+  .macro-risk .risk-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+  .macro-risk h3 { font-family: var(--serif); font-size: 30px; font-weight: 600; }
+  .macro-risk .sub { color: var(--muted); font-size: 15px; margin-bottom: 26px; }
+  .macro-risk .risk-line { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+  .chip-action {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 600;
+    color: #e89b80; background: var(--accent-soft); border-radius: 99px; padding: 9px 18px;
+    opacity: 0; transform: translateY(10px) scale(.9);
+  }
+  .on#s4 .macro-risk .chip-action { animation: chipIn .65s var(--ease) 4s forwards; }
+  @keyframes chipIn { 70% { transform: translateY(-2px) scale(1.05); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .swap-big { position: relative; width: 230px; height: 44px; }
+  .swap-big .badge { position: absolute; right: 0; top: 0; font-size: 19px; padding: 9px 20px; }
+  .swap-big .after { opacity: 0; transform: scale(.6) rotateX(70deg); }
+  .on#s4 .swap-big .before { animation: swapOut .45s var(--ease) 5.2s forwards; }
+  .on#s4 .swap-big .after { animation: swapIn .7s var(--ease) 5.45s forwards; }
+  @keyframes swapOut { to { opacity: 0; transform: scale(.7) rotateX(-60deg); } }
+  @keyframes swapIn { 55% { transform: scale(1.16) rotateX(0deg); } to { opacity: 1; transform: scale(1) rotateX(0deg); } }
+
+  .swap { position: relative; display: inline-block; min-width: 96px; height: 24px; }
+  .swap .badge { position: absolute; left: 0; top: 0; }
+  .swap .after { opacity: 0; transform: scale(.6) rotateX(70deg); }
+  .on .swap.go .before { animation: swapOut .45s var(--ease) var(--swap-d, 3.6s) forwards; }
+  .on .swap.go .after { animation: swapIn .7s var(--ease) calc(var(--swap-d, 3.6s) + .25s) forwards; }
+
+  /* ───────── Scène 5 — actions : entre par la gauche (raccord du fouetté s4),
+     puis PLAN DRONE sur la jauge d'avancement ───────── */
+  .on#s5 .fx { animation: fxIn5 1.05s var(--ease) both; }
+  @keyframes fxIn5 {
+    from { opacity: 0; transform: perspective(1300px) translateX(-300px) rotateY(10deg) scale(.98); filter: blur(14px); }
+    to { opacity: 1; transform: none; filter: blur(0); }
+  }
+  .on#s5 .cam { animation: cam5 10s var(--ease) forwards; }
+  @keyframes cam5 { from { transform: scale(1); } to { transform: scale(1.04); } }
+  .prog { height: 7px; background: #2c2b28; border-radius: 99px; overflow: hidden; flex: 1; max-width: 320px; }
+  .prog i { display: block; height: 100%; width: 38%; background: var(--accent); border-radius: 99px; }
+  .check { stroke: var(--green); stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  .on#s5 .shot { animation-delay: 2.8s; }
+  /* Phase A (2,8 → 4,3 s) : descente piquée du drone sur la route. */
+  .on#s5 .shot .shot-cam { animation: shotCam5a 1.5s var(--ease) 2.8s both; }
+  @keyframes shotCam5a {
+    from { transform: perspective(1600px) translateX(0) translateY(150px) rotateX(44deg) rotateY(12deg) scale(.58); }
+    60% { transform: perspective(1600px) translateX(15px) translateY(70px) rotateX(28deg) rotateY(10deg) scale(1.15); }
+    to { transform: perspective(1600px) translateX(55px) translateY(26px) rotateX(16deg) rotateY(8deg) scale(1.7); }
+  }
+  /* Phase B (4,3 → 8 s) : rase-motte le long de la jauge — roulis à l'attaque,
+     vitesse constante, remontée et mise à niveau à l'arrivée. */
+  .on#s5 .run-cam { animation: runCam 3.7s linear 4.3s forwards; }
+  .run-cam { position: relative; }
+  @keyframes runCam {
+    0% { transform: translateX(0) translateY(0) rotateZ(0deg) scale(1); }
+    18% { transform: translateX(-114px) translateY(2px) rotateZ(-1.9deg) scale(1.025); }
+    75% { transform: translateX(-476px) translateY(2px) rotateZ(-1.3deg) scale(1.035); }
+    100% { transform: translateX(-635px) translateY(14px) rotateZ(0deg) scale(1); }
+  }
+  .macro-prog { width: 1560px; padding: 70px 64px 78px; position: relative; }
+  .macro-prog .ph { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 64px; }
+  .macro-prog h3 { font-family: var(--serif); font-size: 38px; font-weight: 600; }
+  /* La jauge-route : marquage central type voie, bornes aux 25/50/75 %. */
+  .gauge { position: relative; height: 44px; background: #161513; border: 1px solid #34332f; border-radius: 99px; }
+  .gauge::after {
+    content: ''; position: absolute; left: 18px; right: 18px; top: 50%; height: 2px; margin-top: -1px;
+    background: repeating-linear-gradient(90deg, #3b3934 0 26px, transparent 26px 54px);
+  }
+  .gauge i {
+    position: absolute; left: 4px; top: 4px; bottom: 4px; width: 38%; z-index: 2;
+    background: linear-gradient(90deg, #a85a3e, var(--accent));
+    border-radius: 99px; overflow: hidden;
+    box-shadow: 0 0 34px rgb(217 119 87 / .5);
+  }
+  /* Filet de lumière qui court sur l'asphalte pendant le rase-motte. */
+  .gauge i::after {
+    content: ''; position: absolute; top: 0; bottom: 0; left: -120px; width: 110px;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / .35), transparent);
+  }
+  .on#s5 .gauge i { animation: fillBig 3.7s linear 4.3s forwards; }
+  @keyframes fillBig { to { width: 82%; } }
+  .on#s5 .gauge i::after { animation: roadShine 1.25s linear 4.4s 3; }
+  @keyframes roadShine { to { transform: translateX(1400px); } }
+  .gauge .tick { position: absolute; top: -12px; bottom: -12px; width: 1px; background: #34332f; z-index: 1; }
+  .gauge .tick i { position: absolute; top: 100%; left: -18px; margin-top: 12px; font-size: 14px; color: var(--muted); font-style: normal; letter-spacing: .5px; }
+  /* La bulle voyage avec la tête de jauge, et marque l'arrivée. */
+  .gauge .head {
+    position: absolute; left: 38%; top: -78px; translate: -50% 0; z-index: 3;
+    background: var(--accent); color: #fff; font-size: 26px; font-weight: 700;
+    border-radius: 12px; padding: 10px 18px; white-space: nowrap;
+    box-shadow: 0 14px 40px rgb(217 119 87 / .35);
+  }
+  .gauge .head::after {
+    content: ''; position: absolute; left: 50%; bottom: -7px; translate: -50% 0;
+    border: 8px solid transparent; border-top-color: var(--accent); border-bottom: 0;
+  }
+  .on#s5 .gauge .head { animation: headTravel 3.7s linear 4.3s forwards, headPop .5s var(--ease) 8.05s; }
+  @keyframes headTravel { to { left: 82%; } }
+  @keyframes headPop { 45% { scale: 1.18; } 100% { scale: 1; } }
+  .macro-prog .pmeta { display: flex; justify-content: space-between; margin-top: 46px; font-size: 17px; color: var(--muted); }
+  .macro-prog .pmeta b { color: var(--green); font-weight: 600; }
+
+  /* ───────── Scène 6 — collaboration : entre par la droite (raccord de la
+     course s5), puis orbite 3D ───────── */
+  .on#s6 .fx { animation: fxIn6 1.05s var(--ease) both; }
+  @keyframes fxIn6 {
+    from { opacity: 0; transform: perspective(1300px) translateX(280px) rotateY(-8deg) scale(1.02); filter: blur(14px); }
+    to { opacity: 1; transform: none; filter: blur(0); }
+  }
+  .on#s6 .cam { animation: cam6 7s ease-in-out forwards; }
+  @keyframes cam6 {
+    0% { transform: perspective(1300px) rotateY(-2.6deg) rotateX(.8deg) scale(1.04); }
+    50% { transform: perspective(1300px) rotateY(2.2deg) rotateX(-.5deg) scale(1.08) translate(-10px, -6px); }
+    100% { transform: perspective(1300px) rotateY(-1deg) rotateX(.3deg) scale(1.05); }
+  }
+  .cursor { position: absolute; z-index: 6; opacity: 0; filter: drop-shadow(0 4px 14px rgb(0 0 0 / .5)); }
+  .cursor .tag {
+    position: absolute; left: 16px; top: 17px; white-space: nowrap; font-size: 11px;
+    font-weight: 600; color: #fff; padding: 3px 9px; border-radius: 99px;
+  }
+  .on .cursor.c1 { animation: cur1 5.2s var(--ease) .9s forwards; }
+  .on .cursor.c2 { animation: cur2 5.2s var(--ease) 1.3s forwards; }
+  @keyframes cur1 {
+    0% { opacity: 0; translate: 880px 470px; }
+    10% { opacity: 1; }
+    38% { translate: 700px 282px; }
+    58% { translate: 712px 286px; }
+    100% { opacity: 1; translate: 905px 196px; }
+  }
+  @keyframes cur2 {
+    0% { opacity: 0; translate: 260px 120px; }
+    12% { opacity: 1; }
+    45% { translate: 420px 330px; }
+    70% { translate: 408px 336px; }
+    100% { opacity: 1; translate: 555px 430px; }
+  }
+  .type-cell { display: inline-block; max-width: 0; overflow: hidden; white-space: nowrap; color: var(--text); vertical-align: bottom; }
+  .on .type-cell { animation: typing 1.6s steps(26) 2.6s forwards; }
+  @keyframes typing { to { max-width: 240px; } }
+  .caret { display: inline-block; width: 2px; height: 15px; background: var(--accent); vertical-align: -2px; opacity: 0; }
+  .on .caret { animation: blink 0.9s steps(1) 2.6s 5; }
+  @keyframes blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0; } }
+  .presence { display: flex; align-items: center; }
+  .presence .av { margin-left: -7px; opacity: 0; transform: scale(.4) translateY(8px); }
+  .on .presence .av { animation: popIn .55s var(--ease) forwards; }
+  .on .presence .av:nth-child(1) { animation-delay: 1s; }
+  .on .presence .av:nth-child(2) { animation-delay: 1.2s; }
+  .on .presence .av:nth-child(3) { animation-delay: 1.4s; }
+  @keyframes popIn { 70% { transform: scale(1.12) translateY(0); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  .on .sync-flash { animation: flash 1.2s var(--ease) 4.4s; }
+  @keyframes flash { 30% { background: var(--accent-soft); } }
+
+  /* ───────── Scène 7 — final : descend du haut et se pose (raccord de
+     l'élévation s6) ───────── */
+  #s7 .cam { display: grid; place-items: center; }
+  .on#s7 .fx { animation: fxIn7 1.3s var(--ease) both; }
+  @keyframes fxIn7 {
+    from { opacity: 0; transform: translateY(-90px) scale(1.08); filter: blur(10px); }
+    to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  }
+  .on#s7 .cam { animation: cam7 4.2s var(--ease) forwards; }
+  @keyframes cam7 { from { transform: scale(1.05); } to { transform: scale(1); } }
+  .on#s7 .brand { animation: floaty 3.4s ease-in-out 1.4s infinite alternate; }
+  @keyframes floaty { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+  #s7 .wordmark { font-size: 64px; }
+  #s7 .final-tag { margin-top: 18px; font-size: 22px; color: var(--accent); font-weight: 500; letter-spacing: .5px; opacity: 0; }
+  .on#s7 .final-tag { animation: capIn 1.1s var(--ease) 1.5s forwards; }
+  .on#s7 .mark { animation-delay: .1s; }
+  .on#s7 .wordmark { animation-delay: .75s; }
+  .on#s7 .mark::after { animation-delay: 1.2s; }
+
+  #prog-line { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--accent); opacity: .35; width: 0; z-index: 50; }
+  #hint { position: fixed; right: 18px; bottom: 14px; font-size: 12px; color: #6b6960; opacity: 0; transition: opacity .6s; z-index: 60; }
+  #hint.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+    <div id="glow"></div>
+    <div id="prog-line"></div>
+
+    <!-- SCÈNE 1 — chaos -->
+    <section class="scene" id="s1">
+      <div class="fx">
+        <div class="cam">
+          <div class="junk" style="left:120px; top:90px; width:300px; --r:-2deg; --dx:10px; --dy:-8px; --z:-70px;">
+            <b>RE: RE: RE: planning ligne A3 ???</b><br />
+            marc@… — il manque la dernière version, qui a le fichier&nbsp;?
+          </div>
+          <div class="junk blur" style="left:480px; top:60px; width:330px; --r:1.5deg; --dx:-12px; --dy:10px; --z:-130px; animation-delay:.15s;">
+            <b>suivi_projet_VERSION_FINALE_v7 (3).xlsx</b>
+            <div class="row"><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span></div>
+            <div class="row"><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span></div>
+            <div class="row"><span class="cell"></span><span class="cell"></span><span class="cell"></span><span class="cell"></span></div>
+          </div>
+          <div class="junk sticky" style="left:900px; top:120px; width:200px; --r:3deg; --dx:8px; --dy:12px; --z:40px; animation-delay:.3s;">
+            ⚠ relancer fournisseur<br />avant vendredi (urgent !!)
+          </div>
+          <div class="junk" style="left:220px; top:420px; width:280px; --r:2deg; --dx:-9px; --dy:-11px; --z:80px; animation-delay:.45s;">
+            <span class="dot"></span><b>14 messages non lus</b><br />
+            « c'est qui le responsable sur cette action ? »
+          </div>
+          <div class="junk blur" style="left:640px; top:380px; width:300px; --r:-1.5deg; --dx:11px; --dy:9px; --z:-40px; animation-delay:.6s;">
+            <b>notes_reunion_du_12.docx</b><br />
+            décisions : à confirmer… actions : voir avec l'équipe…
+          </div>
+          <div class="junk sticky" style="left:1010px; top:430px; width:190px; --r:-4deg; --dx:-7px; --dy:-9px; --z:110px; animation-delay:.75s;">
+            risque convoyeur<br />→ vu avec personne
+          </div>
+          <p class="cap center" style="animation-delay:1.4s;">Projects feel out of control.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCÈNE 2 — logo -->
+    <section class="scene" id="s2">
+      <div class="fx">
+        <div class="cam">
+          <div class="brand">
+            <div class="halo"></div>
+            <div class="mark">PE</div>
+            <div class="wordmark">Projet Entan</div>
+            <div class="tagline">En temps réel</div>
+          </div>
+        </div>
+        <p class="cap">Meet Projet Entan.</p>
+      </div>
+    </section>
+
+    <!-- SCÈNE 3 — temps réel -->
+    <section class="scene" id="s3">
+      <div class="fx">
+        <div class="cam">
+          <div class="panel">
+            <div class="side">
+              <div class="mini-mark"><span>PE</span>Projet Entan</div>
+              <div class="nav-i act">Dashboard</div>
+              <div class="nav-i">RACI</div>
+              <div class="nav-i">AMDEC</div>
+              <div class="nav-i">Actions</div>
+              <div class="nav-i">Planning</div>
+            </div>
+            <div class="main">
+              <div class="ui-h">
+                <h2>Ligne d'assemblage A3</h2>
+                <span class="live"><i></i>Temps réel</span>
+              </div>
+              <div class="stats">
+                <div class="stat"><div class="v" id="n1">0</div><div class="l">Actions en cours</div></div>
+                <div class="stat"><div class="v" id="n2">0&nbsp;%</div><div class="l">Avancement</div></div>
+                <div class="stat"><div class="v" id="n3" style="color:var(--red)">0</div><div class="l">Risques critiques</div></div>
+              </div>
+              <div class="chart">
+                <div class="bar" style="--h:34"></div><div class="bar" style="--h:48"></div>
+                <div class="bar" style="--h:42"></div><div class="bar hot" style="--h:64"></div>
+                <div class="bar" style="--h:56"></div><div class="bar hot" style="--h:78"></div>
+                <div class="bar" style="--h:70"></div><div class="bar hot" style="--h:88"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="cap low" style="animation-delay:1.6s;">See your projects in real time.</p>
+      </div>
+      <div class="shot">
+        <div class="scrim"></div>
+        <div class="shot-cam">
+          <div class="macro macro-stat">
+            <div class="macro-label">Actions en cours</div>
+            <div class="num">
+              <span class="n-old">14</span>
+              <span class="n-new">15</span>
+            </div>
+            <div class="plus-chip">+1 · ajoutée par Claire</div>
+            <span class="live"><i></i>Temps réel</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCÈNE 4 — AMDEC -->
+    <section class="scene" id="s4">
+      <div class="fx">
+        <div class="cam">
+          <div class="panel">
+            <div class="side">
+              <div class="mini-mark"><span>PE</span>Projet Entan</div>
+              <div class="nav-i">Dashboard</div>
+              <div class="nav-i">RACI</div>
+              <div class="nav-i act">AMDEC</div>
+              <div class="nav-i">Actions</div>
+              <div class="nav-i">Planning</div>
+            </div>
+            <div class="main">
+              <div class="ui-h">
+                <h2>Analyse des risques</h2>
+                <span class="live"><i></i>Temps réel</span>
+              </div>
+              <table class="ui">
+                <thead><tr><th>Élément</th><th>Mode de défaillance</th><th>Criticité</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td>Convoyeur principal</td><td>Arrêt inopiné</td>
+                    <td><span class="badge b-red">36 · Critique</span></td>
+                  </tr>
+                  <tr>
+                    <td>Poste de vissage</td><td>Couple hors tolérance</td>
+                    <td><span class="badge b-red">24 · Critique</span></td>
+                  </tr>
+                  <tr>
+                    <td>Bord de ligne</td><td>Rupture de composants</td>
+                    <td><span class="badge b-amber">12 · À surveiller</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <p class="cap low" style="animation-delay:1.5s;">Anticipate what matters.</p>
+      </div>
+      <div class="shot">
+        <div class="scrim"></div>
+        <div class="shot-cam">
+          <div class="macro macro-risk">
+            <div class="risk-head">
+              <h3>Convoyeur principal</h3>
+              <span class="macro-label">Risque n°1</span>
+            </div>
+            <div class="sub">Arrêt inopiné — usure prématurée des roulements</div>
+            <div class="risk-line">
+              <span class="chip-action">+ Plan de maintenance préventive</span>
+              <span class="swap-big">
+                <span class="badge b-red before">36 · Critique</span>
+                <span class="badge b-amber after">12 · Maîtrisé</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCÈNE 5 — actions & plan drone sur l'avancement -->
+    <section class="scene" id="s5">
+      <div class="fx">
+        <div class="cam">
+          <div class="panel">
+            <div class="side">
+              <div class="mini-mark"><span>PE</span>Projet Entan</div>
+              <div class="nav-i">Dashboard</div>
+              <div class="nav-i">RACI</div>
+              <div class="nav-i">AMDEC</div>
+              <div class="nav-i act">Actions</div>
+              <div class="nav-i">Planning</div>
+            </div>
+            <div class="main">
+              <div class="ui-h">
+                <h2>Plan d'action</h2>
+                <div style="display:flex; align-items:center; gap:14px; flex:1; justify-content:flex-end;">
+                  <span style="font-size:12px; color:var(--muted);">Avancement</span>
+                  <span class="prog"><i></i></span>
+                </div>
+              </div>
+              <table class="ui">
+                <thead><tr><th>Action</th><th>Responsable</th><th>Échéance</th><th>Statut</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td>Plan de maintenance des roulements</td>
+                    <td><span class="av">ML</span>&nbsp; Marc <span class="badge b-grey" style="margin-left:6px;">R</span></td>
+                    <td>18 juin</td>
+                    <td><span class="badge b-green"><svg width="12" height="12" viewBox="0 0 24 24" style="margin-right:5px;"><path class="check" d="M4 12.5 9.5 18 20 6" /></svg>Terminée</span></td>
+                  </tr>
+                  <tr>
+                    <td>Étalonnage des visseuses</td>
+                    <td><span class="av">SB</span>&nbsp; Sonia <span class="badge b-grey" style="margin-left:6px;">R</span></td>
+                    <td>21 juin</td>
+                    <td><span class="badge b-amber">En cours</span></td>
+                  </tr>
+                  <tr>
+                    <td>Audit 5S bord de ligne</td>
+                    <td><span class="av">CD</span>&nbsp; Claire <span class="badge b-grey" style="margin-left:6px;">A</span></td>
+                    <td>25 juin</td>
+                    <td><span class="badge b-green">Terminée</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <p class="cap low" style="animation-delay:1.5s;">Turn decisions into actions.</p>
+      </div>
+      <!-- PLAN DRONE : descente piquée puis rase-motte le long de la jauge. -->
+      <div class="shot">
+        <div class="scrim"></div>
+        <div class="shot-cam">
+          <div class="run-cam">
+            <div class="macro macro-prog">
+              <div class="ph">
+                <h3>Avancement du plan d'action</h3>
+                <span class="macro-label">Temps réel</span>
+              </div>
+              <div class="gauge">
+                <span class="tick" style="left:25%;"><i>25 %</i></span>
+                <span class="tick" style="left:50%;"><i>50 %</i></span>
+                <span class="tick" style="left:75%;"><i>75 %</i></span>
+                <i></i>
+                <span class="head" id="pbig">38 %</span>
+              </div>
+              <div class="pmeta">
+                <span><b>9</b> actions terminées</span>
+                <span>2 en cours · 0 en retard</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCÈNE 6 — collaboration -->
+    <section class="scene" id="s6">
+      <div class="fx">
+        <div class="cam">
+          <div class="panel">
+            <div class="side">
+              <div class="mini-mark"><span>PE</span>Projet Entan</div>
+              <div class="nav-i act">Dashboard</div>
+              <div class="nav-i">RACI</div>
+              <div class="nav-i">AMDEC</div>
+              <div class="nav-i">Actions</div>
+              <div class="nav-i">Planning</div>
+            </div>
+            <div class="main">
+              <div class="ui-h">
+                <h2>Ligne d'assemblage A3</h2>
+                <div class="presence">
+                  <span class="av">CD</span><span class="av" style="background:#3a4a3e; color:#a9cdb2;">ML</span><span class="av" style="background:#46414f; color:#beb3d4;">SB</span>
+                </div>
+              </div>
+              <table class="ui">
+                <thead><tr><th>Action</th><th>Responsable</th><th>Statut</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><span class="type-cell">Réception fournisseur validée</span><span class="caret"></span></td>
+                    <td><span class="av">CD</span>&nbsp; Claire</td>
+                    <td><span class="badge b-amber">En cours</span></td>
+                  </tr>
+                  <tr class="sync-flash">
+                    <td>Étalonnage des visseuses</td>
+                    <td><span class="av">ML</span>&nbsp; Marc</td>
+                    <td>
+                      <span class="swap go" style="--swap-d:4.4s;">
+                        <span class="badge b-grey before">À faire</span>
+                        <span class="badge b-amber after">En cours</span>
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Audit 5S bord de ligne</td>
+                    <td><span class="av">SB</span>&nbsp; Sonia</td>
+                    <td><span class="badge b-green">Terminée</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="cursor c1">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 2l16 7.5-7 1.8-3.2 6.7z" fill="#d97757" /></svg>
+            <span class="tag" style="background:#d97757;">Claire</span>
+          </div>
+          <div class="cursor c2">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 2l16 7.5-7 1.8-3.2 6.7z" fill="#85b894" /></svg>
+            <span class="tag" style="background:#3a4a3e;">Marc</span>
+          </div>
+        </div>
+        <p class="cap low" style="animation-delay:1.8s;">Work together in real time.</p>
+      </div>
+    </section>
+
+    <!-- SCÈNE 7 — final -->
+    <section class="scene" id="s7">
+      <div class="fx">
+        <div class="cam">
+          <div class="brand">
+            <div class="halo"></div>
+            <div class="mark">PE</div>
+            <div class="wordmark">Projet Entan</div>
+            <div class="final-tag">In real time.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="hint">Clic : rejouer &nbsp;·&nbsp; Touches 1–7 : scènes &nbsp;·&nbsp; F11 : plein écran</div>
+
+<script>
+  /* Échelle : la scène 1280×720 remplit l'écran en conservant le 16:9. */
+  const vp = document.getElementById('viewport');
+  function fit() {
+    const s = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    vp.style.transform = `scale(${s})`;
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  /* Timeline — [id, début s, fin s]. Total : 46 s. */
+  const SCENES = [
+    ['s1', 0, 5], ['s2', 5, 10], ['s3', 10, 18], ['s4', 18, 25],
+    ['s5', 25, 35], ['s6', 35, 42], ['s7', 42, 46],
+  ];
+  const TOTAL = 46;
+  let timers = [];
+
+  function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+  const glow = document.getElementById('glow');
+  const GLOW = {
+    s1: [640, 180, .45], s2: [640, 310, 1], s3: [950, 540, .7], s4: [1020, 220, .75],
+    s5: [340, 280, .7], s6: [640, 170, .85], s7: [640, 320, 1],
+  };
+  function glowTo(id) {
+    const [x, y, o] = GLOW[id];
+    glow.style.transform = `translate(${x}px, ${y}px)`;
+    glow.style.opacity = o;
+  }
+
+  /* Compteur animé (linear = synchronisé avec une animation CSS linéaire). */
+  function countTo(el, from, target, suffix, dur, linear) {
+    const t0 = performance.now();
+    function tick(now) {
+      const p = Math.min(1, (now - t0) / dur);
+      const eased = linear ? p : 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(from + (target - from) * eased) + (suffix || '');
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  const HOOKS = {
+    s3() {
+      timers.push(setTimeout(() => countTo(document.getElementById('n1'), 0, 14, '', 1300), 850));
+      timers.push(setTimeout(() => countTo(document.getElementById('n2'), 0, 72, ' %', 1500), 1050));
+      timers.push(setTimeout(() => countTo(document.getElementById('n3'), 0, 3, '', 1100), 1250));
+    },
+    s5() {
+      /* Le pourcentage voyage avec la tête de jauge (remplissage linéaire). */
+      timers.push(setTimeout(() => countTo(document.getElementById('pbig'), 38, 82, ' %', 3700, true), 4300));
+    },
+  };
+
+  const progLine = document.getElementById('prog-line');
+
+  function play(from = 0) {
+    clearTimers();
+    document.querySelectorAll('.scene').forEach((s) => s.classList.remove('on', 'out'));
+    progLine.style.transition = 'none';
+    progLine.style.width = (from / TOTAL) * 100 + '%';
+    requestAnimationFrame(() => {
+      progLine.style.transition = `width ${TOTAL - from}s linear`;
+      progLine.style.width = '100%';
+    });
+    SCENES.forEach(([id, a, b]) => {
+      if (from >= b) return;
+      const el = document.getElementById(id);
+      timers.push(setTimeout(() => {
+        el.classList.remove('on', 'out');
+        void el.offsetWidth; /* relance les animations CSS */
+        el.classList.add('on');
+        glowTo(id);
+        if (HOOKS[id]) HOOKS[id]();
+      }, Math.max(0, a - from) * 1000));
+      if (id !== 's7') {
+        /* La sortie commence avant la fin et chevauche l'entrée suivante :
+           les deux mouvements vont dans le même sens (raccord). */
+        timers.push(setTimeout(() => el.classList.add('out'), (b - from) * 1000 - 750));
+        timers.push(setTimeout(() => el.classList.remove('on', 'out'), (b - from) * 1000 + 300));
+      }
+    });
+  }
+
+  document.getElementById('stage').addEventListener('click', () => play(0));
+  window.addEventListener('keydown', (e) => {
+    const n = Number(e.key);
+    if (n >= 1 && n <= 7) play(SCENES[n - 1][1]);
+    if (e.key === ' ') { e.preventDefault(); play(0); }
+  });
+
+  const hint = document.getElementById('hint');
+  setTimeout(() => hint.classList.add('show'), 800);
+  setTimeout(() => hint.classList.remove('show'), 5500);
+
+  window.play = play;
+  play(0);
+</script>
+</body>
+</html>

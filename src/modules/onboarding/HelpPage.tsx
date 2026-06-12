@@ -24,21 +24,33 @@ export function HelpPage() {
               aspectRatio: '16/9', 
               background: '#000', 
               borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
               overflow: 'hidden',
               position: 'relative',
-              boxShadow: 'var(--shadow-modal)'
+              boxShadow: 'var(--shadow-modal)',
+              border: '1px solid var(--border)'
             }}>
-              <div style={{ textAlign: 'center', padding: '20px' }}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📺</div>
-                <h3 style={{ margin: 0 }}>Vidéo de présentation</h3>
-                <p style={{ fontSize: '14px', opacity: 0.7, marginTop: '8px' }}>
-                  Intégrez votre lien YouTube, Vimeo ou Loom ici.
-                </p>
-              </div>
+              <iframe 
+                src="/lancement.html" 
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  border: 'none',
+                  display: 'block'
+                }}
+                title="Animation de présentation"
+                allowFullScreen
+              />
+            </div>
+
+            <div style={{ marginTop: '12px', textAlign: 'center' }}>
+              <a 
+                href="/lancement.html" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="btn btn-ghost btn-sm"
+              >
+                Ouvrir l'animation en plein écran ↗
+              </a>
             </div>
 
             <div style={{ marginTop: '40px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px' }}>
