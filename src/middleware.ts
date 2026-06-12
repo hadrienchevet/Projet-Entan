@@ -49,6 +49,7 @@ export default async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Tout sauf les assets statiques.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  // Tout sauf les assets statiques (dont les pages HTML autonomes de public/,
+  // comme /lancement.html — partageables sans compte).
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|html|mp4)$).*)'],
 };
