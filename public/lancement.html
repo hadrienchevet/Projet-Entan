@@ -17,9 +17,11 @@
     s6 → s7 : la caméra s'élève au-dessus du tableau → le logo descend
               et se pose
 
-  SCÈNE 5 — plan drone : descente piquée sur la jauge « Avancement »
-  (la route), course en rase-motte avec roulis en suivant la tête de jauge
-  pendant le remplissage 38 → 82 %, décélération et remontée à l'arrivée.
+  SCÈNE 5 — plan macro simple : la jauge « Avancement » se remplit
+  38 → 82 %, la bulle de pourcentage voyage avec la tête de jauge.
+
+  FLUIDITÉ : uniquement opacité + transform (composités GPU) — aucun
+  filter animé ni backdrop-filter (sources de saccades).
 
   Lecture : démarre seule. Clic = rejouer. Touches 1 à 7 = aller à la scène.
   Enregistrement : plein écran (F11) puis Win+Alt+R (Game Bar) ou OBS.
@@ -77,21 +79,21 @@
   /* ── Sorties raccordées à l'entrée suivante ───────────────────────────── */
   /* s1 : la caméra accélère vers l'avant dans le chaos. */
   #s1.out .fx { animation: outFwd .8s var(--ease-in) forwards !important; }
-  @keyframes outFwd { to { opacity: 0; transform: scale(1.45); filter: blur(18px); } }
+  @keyframes outFwd { to { opacity: 0; transform: scale(1.3); } }
   /* s2 : on traverse le logo. */
   #s2.out .fx { animation: outFwd2 .8s var(--ease-in) forwards !important; }
-  @keyframes outFwd2 { to { opacity: 0; transform: scale(2.1); filter: blur(22px); } }
+  @keyframes outFwd2 { to { opacity: 0; transform: scale(1.8); } }
   /* s3 : fouetté vers la gauche → s4 arrive de la droite. */
   #s3.out .fx, #s3.out .shot { animation: outWhipL .75s var(--ease-in) forwards !important; }
-  @keyframes outWhipL { to { opacity: 0; transform: translateX(-560px) scale(1.04); filter: blur(16px); } }
+  @keyframes outWhipL { to { opacity: 0; transform: translateX(-420px) scale(1.03); } }
   /* s4 : fouetté vers la droite → s5 arrive de la gauche. */
   #s4.out .fx, #s4.out .shot { animation: outWhipR .75s var(--ease-in) forwards !important; }
-  @keyframes outWhipR { to { opacity: 0; transform: translateX(560px) scale(1.04); filter: blur(16px); } }
+  @keyframes outWhipR { to { opacity: 0; transform: translateX(420px) scale(1.03); } }
   /* s5 : la course continue vers la gauche → s6 arrive de la droite. */
   #s5.out .fx, #s5.out .shot { animation: outWhipL .8s var(--ease-in) forwards !important; }
   /* s6 : la caméra s'élève au-dessus du tableau → s7 descend du haut. */
   #s6.out .fx { animation: outRise .8s var(--ease-in) forwards !important; }
-  @keyframes outRise { to { opacity: 0; transform: translateY(150px) scale(.94); filter: blur(14px); } }
+  @keyframes outRise { to { opacity: 0; transform: translateY(130px) scale(.95); } }
 
   /* Légendes. */
   .cap {
@@ -108,14 +110,11 @@
   .shot { z-index: 8; opacity: 0; }
   .on .shot { animation: shotIn .85s var(--ease) both; }
   @keyframes shotIn {
-    from { opacity: 0; transform: scale(1.28); filter: blur(10px); }
-    to { opacity: 1; transform: scale(1); filter: blur(0); }
+    from { opacity: 0; transform: scale(1.18); }
+    to { opacity: 1; transform: scale(1); }
   }
-  .scrim {
-    position: absolute; inset: 0;
-    background: rgb(5 5 5 / .5);
-    backdrop-filter: blur(14px) brightness(.5) saturate(.7);
-  }
+  /* Fond simple (pas de backdrop-filter : trop coûteux, saccade l'animation). */
+  .scrim { position: absolute; inset: 0; background: rgb(5 5 5 / .84); }
   .shot-cam { position: absolute; inset: 0; display: grid; place-items: center; }
   .macro {
     background: var(--panel-2); border: 1px solid #45433e; border-radius: 18px;
@@ -160,8 +159,8 @@
   #s2 .cam { display: grid; place-items: center; }
   .on#s2 .fx { animation: fxIn2 1s var(--ease) both; }
   @keyframes fxIn2 {
-    from { opacity: 0; transform: scale(.82); filter: blur(10px); }
-    to { opacity: 1; transform: scale(1); filter: blur(0); }
+    from { opacity: 0; transform: scale(.86); }
+    to { opacity: 1; transform: scale(1); }
   }
   .on#s2 .cam { animation: cam2 5s var(--ease) forwards; }
   @keyframes cam2 { from { transform: scale(1); } to { transform: scale(1.08); } }
@@ -248,8 +247,8 @@
   /* ───────── Scène 3 — temps réel : surgit du fond (raccord du push s2) ── */
   .on#s3 .fx { animation: fxIn3 1.15s var(--ease) both; }
   @keyframes fxIn3 {
-    from { opacity: 0; transform: perspective(1300px) scale(.78) translateY(40px) rotateX(9deg); filter: blur(12px); }
-    to { opacity: 1; transform: none; filter: blur(0); }
+    from { opacity: 0; transform: perspective(1300px) scale(.82) translateY(34px) rotateX(7deg); }
+    to { opacity: 1; transform: none; }
   }
   .on#s3 .cam { animation: cam3 8s var(--ease) forwards; }
   @keyframes cam3 { from { transform: scale(1); } to { transform: scale(1.05); } }
@@ -291,7 +290,7 @@
   .macro-stat .n-new { opacity: 0; transform: translateY(46px); color: var(--accent); }
   .on#s3 .n-old { animation: numOut .5s var(--ease) 5.5s forwards; }
   .on#s3 .n-new { animation: numIn .65s var(--ease) 5.6s forwards; }
-  @keyframes numOut { to { opacity: 0; transform: translateY(-42px); filter: blur(4px); } }
+  @keyframes numOut { to { opacity: 0; transform: translateY(-42px); } }
   @keyframes numIn { to { opacity: 1; transform: translateY(0); } }
   .macro-stat .plus-chip {
     position: absolute; right: 40px; top: 48px;
@@ -304,8 +303,8 @@
   /* ───────── Scène 4 — AMDEC : entre par la droite (raccord du fouetté s3) ── */
   .on#s4 .fx { animation: fxIn4 1.05s var(--ease) both; }
   @keyframes fxIn4 {
-    from { opacity: 0; transform: perspective(1300px) translateX(300px) rotateY(-10deg) scale(.98); filter: blur(14px); }
-    to { opacity: 1; transform: none; filter: blur(0); }
+    from { opacity: 0; transform: perspective(1300px) translateX(260px) rotateY(-8deg) scale(.99); }
+    to { opacity: 1; transform: none; }
   }
   .on#s4 .cam { animation: cam4 7s var(--ease) forwards; }
   @keyframes cam4 { from { transform: scale(1); } to { transform: scale(1.04); } }
@@ -359,8 +358,8 @@
      puis PLAN DRONE sur la jauge d'avancement ───────── */
   .on#s5 .fx { animation: fxIn5 1.05s var(--ease) both; }
   @keyframes fxIn5 {
-    from { opacity: 0; transform: perspective(1300px) translateX(-300px) rotateY(10deg) scale(.98); filter: blur(14px); }
-    to { opacity: 1; transform: none; filter: blur(0); }
+    from { opacity: 0; transform: perspective(1300px) translateX(-260px) rotateY(8deg) scale(.99); }
+    to { opacity: 1; transform: none; }
   }
   .on#s5 .cam { animation: cam5 10s var(--ease) forwards; }
   @keyframes cam5 { from { transform: scale(1); } to { transform: scale(1.04); } }
@@ -368,73 +367,50 @@
   .prog i { display: block; height: 100%; width: 38%; background: var(--accent); border-radius: 99px; }
   .check { stroke: var(--green); stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
-  .on#s5 .shot { animation-delay: 2.8s; }
-  /* Phase A (2,8 → 4,3 s) : descente piquée du drone sur la route. */
-  .on#s5 .shot .shot-cam { animation: shotCam5a 1.5s var(--ease) 2.8s both; }
-  @keyframes shotCam5a {
-    from { transform: perspective(1600px) translateX(0) translateY(150px) rotateX(44deg) rotateY(12deg) scale(.58); }
-    60% { transform: perspective(1600px) translateX(15px) translateY(70px) rotateX(28deg) rotateY(10deg) scale(1.15); }
-    to { transform: perspective(1600px) translateX(55px) translateY(26px) rotateX(16deg) rotateY(8deg) scale(1.7); }
+  .on#s5 .shot { animation-delay: 3s; }
+  /* Zoom doux unique pendant tout le plan — simple et fluide. */
+  .on#s5 .shot .shot-cam { animation: shotCam5 5.6s var(--ease) 3s both; }
+  @keyframes shotCam5 {
+    from { transform: scale(.96); }
+    to { transform: scale(1.04); }
   }
-  /* Phase B (4,3 → 8 s) : rase-motte le long de la jauge — roulis à l'attaque,
-     vitesse constante, remontée et mise à niveau à l'arrivée. */
-  .on#s5 .run-cam { animation: runCam 3.7s linear 4.3s forwards; }
-  .run-cam { position: relative; }
-  @keyframes runCam {
-    0% { transform: translateX(0) translateY(0) rotateZ(0deg) scale(1); }
-    18% { transform: translateX(-114px) translateY(2px) rotateZ(-1.9deg) scale(1.025); }
-    75% { transform: translateX(-476px) translateY(2px) rotateZ(-1.3deg) scale(1.035); }
-    100% { transform: translateX(-635px) translateY(14px) rotateZ(0deg) scale(1); }
-  }
-  .macro-prog { width: 1560px; padding: 70px 64px 78px; position: relative; }
-  .macro-prog .ph { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 64px; }
-  .macro-prog h3 { font-family: var(--serif); font-size: 38px; font-weight: 600; }
-  /* La jauge-route : marquage central type voie, bornes aux 25/50/75 %. */
-  .gauge { position: relative; height: 44px; background: #161513; border: 1px solid #34332f; border-radius: 99px; }
-  .gauge::after {
-    content: ''; position: absolute; left: 18px; right: 18px; top: 50%; height: 2px; margin-top: -1px;
-    background: repeating-linear-gradient(90deg, #3b3934 0 26px, transparent 26px 54px);
-  }
+  .macro-prog { width: 920px; padding: 48px 56px 60px; position: relative; }
+  .macro-prog .ph { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 44px; }
+  .macro-prog h3 { font-family: var(--serif); font-size: 30px; font-weight: 600; }
+  .gauge { position: relative; height: 32px; background: #161513; border: 1px solid #34332f; border-radius: 99px; }
   .gauge i {
-    position: absolute; left: 4px; top: 4px; bottom: 4px; width: 38%; z-index: 2;
+    position: absolute; left: 3px; top: 3px; bottom: 3px; width: 38%; z-index: 2;
     background: linear-gradient(90deg, #a85a3e, var(--accent));
-    border-radius: 99px; overflow: hidden;
-    box-shadow: 0 0 34px rgb(217 119 87 / .5);
+    border-radius: 99px;
+    box-shadow: 0 0 26px rgb(217 119 87 / .4);
   }
-  /* Filet de lumière qui court sur l'asphalte pendant le rase-motte. */
-  .gauge i::after {
-    content: ''; position: absolute; top: 0; bottom: 0; left: -120px; width: 110px;
-    background: linear-gradient(90deg, transparent, rgb(255 255 255 / .35), transparent);
-  }
-  .on#s5 .gauge i { animation: fillBig 3.7s linear 4.3s forwards; }
+  .on#s5 .gauge i { animation: fillBig 2.6s linear 4s forwards; }
   @keyframes fillBig { to { width: 82%; } }
-  .on#s5 .gauge i::after { animation: roadShine 1.25s linear 4.4s 3; }
-  @keyframes roadShine { to { transform: translateX(1400px); } }
-  .gauge .tick { position: absolute; top: -12px; bottom: -12px; width: 1px; background: #34332f; z-index: 1; }
-  .gauge .tick i { position: absolute; top: 100%; left: -18px; margin-top: 12px; font-size: 14px; color: var(--muted); font-style: normal; letter-spacing: .5px; }
-  /* La bulle voyage avec la tête de jauge, et marque l'arrivée. */
+  .gauge .tick { position: absolute; top: -10px; bottom: -10px; width: 1px; background: #34332f; z-index: 1; }
+  .gauge .tick i { position: absolute; top: 100%; left: -16px; margin-top: 10px; font-size: 12.5px; color: var(--muted); font-style: normal; letter-spacing: .5px; white-space: nowrap; }
+  /* La bulle de pourcentage voyage avec la tête de jauge. */
   .gauge .head {
-    position: absolute; left: 38%; top: -78px; translate: -50% 0; z-index: 3;
-    background: var(--accent); color: #fff; font-size: 26px; font-weight: 700;
-    border-radius: 12px; padding: 10px 18px; white-space: nowrap;
-    box-shadow: 0 14px 40px rgb(217 119 87 / .35);
+    position: absolute; left: 38%; top: -60px; translate: -50% 0; z-index: 3;
+    background: var(--accent); color: #fff; font-size: 21px; font-weight: 700;
+    border-radius: 10px; padding: 8px 15px; white-space: nowrap;
+    box-shadow: 0 12px 32px rgb(217 119 87 / .3);
   }
   .gauge .head::after {
-    content: ''; position: absolute; left: 50%; bottom: -7px; translate: -50% 0;
-    border: 8px solid transparent; border-top-color: var(--accent); border-bottom: 0;
+    content: ''; position: absolute; left: 50%; bottom: -6px; translate: -50% 0;
+    border: 7px solid transparent; border-top-color: var(--accent); border-bottom: 0;
   }
-  .on#s5 .gauge .head { animation: headTravel 3.7s linear 4.3s forwards, headPop .5s var(--ease) 8.05s; }
+  .on#s5 .gauge .head { animation: headTravel 2.6s linear 4s forwards, headPop .5s var(--ease) 6.7s; }
   @keyframes headTravel { to { left: 82%; } }
-  @keyframes headPop { 45% { scale: 1.18; } 100% { scale: 1; } }
-  .macro-prog .pmeta { display: flex; justify-content: space-between; margin-top: 46px; font-size: 17px; color: var(--muted); }
+  @keyframes headPop { 45% { scale: 1.15; } 100% { scale: 1; } }
+  .macro-prog .pmeta { display: flex; justify-content: space-between; margin-top: 34px; font-size: 14.5px; color: var(--muted); }
   .macro-prog .pmeta b { color: var(--green); font-weight: 600; }
 
   /* ───────── Scène 6 — collaboration : entre par la droite (raccord de la
      course s5), puis orbite 3D ───────── */
   .on#s6 .fx { animation: fxIn6 1.05s var(--ease) both; }
   @keyframes fxIn6 {
-    from { opacity: 0; transform: perspective(1300px) translateX(280px) rotateY(-8deg) scale(1.02); filter: blur(14px); }
-    to { opacity: 1; transform: none; filter: blur(0); }
+    from { opacity: 0; transform: perspective(1300px) translateX(240px) rotateY(-6deg) scale(1.01); }
+    to { opacity: 1; transform: none; }
   }
   .on#s6 .cam { animation: cam6 7s ease-in-out forwards; }
   @keyframes cam6 {
@@ -484,8 +460,8 @@
   #s7 .cam { display: grid; place-items: center; }
   .on#s7 .fx { animation: fxIn7 1.3s var(--ease) both; }
   @keyframes fxIn7 {
-    from { opacity: 0; transform: translateY(-90px) scale(1.08); filter: blur(10px); }
-    to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+    from { opacity: 0; transform: translateY(-70px) scale(1.06); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   .on#s7 .cam { animation: cam7 4.2s var(--ease) forwards; }
   @keyframes cam7 { from { transform: scale(1.05); } to { transform: scale(1); } }
@@ -717,27 +693,25 @@
         </div>
         <p class="cap low" style="animation-delay:1.5s;">Turn decisions into actions.</p>
       </div>
-      <!-- PLAN DRONE : descente piquée puis rase-motte le long de la jauge. -->
+      <!-- MACRO : la jauge d'avancement se remplit, la bulle de % l'accompagne. -->
       <div class="shot">
         <div class="scrim"></div>
         <div class="shot-cam">
-          <div class="run-cam">
-            <div class="macro macro-prog">
-              <div class="ph">
-                <h3>Avancement du plan d'action</h3>
-                <span class="macro-label">Temps réel</span>
-              </div>
-              <div class="gauge">
-                <span class="tick" style="left:25%;"><i>25 %</i></span>
-                <span class="tick" style="left:50%;"><i>50 %</i></span>
-                <span class="tick" style="left:75%;"><i>75 %</i></span>
-                <i></i>
-                <span class="head" id="pbig">38 %</span>
-              </div>
-              <div class="pmeta">
-                <span><b>9</b> actions terminées</span>
-                <span>2 en cours · 0 en retard</span>
-              </div>
+          <div class="macro macro-prog">
+            <div class="ph">
+              <h3>Avancement du plan d'action</h3>
+              <span class="macro-label">Temps réel</span>
+            </div>
+            <div class="gauge">
+              <span class="tick" style="left:25%;"><i>25 %</i></span>
+              <span class="tick" style="left:50%;"><i>50 %</i></span>
+              <span class="tick" style="left:75%;"><i>75 %</i></span>
+              <i></i>
+              <span class="head" id="pbig">38 %</span>
+            </div>
+            <div class="pmeta">
+              <span><b>9</b> actions terminées</span>
+              <span>2 en cours · 0 en retard</span>
             </div>
           </div>
         </div>
@@ -872,7 +846,7 @@
     },
     s5() {
       /* Le pourcentage voyage avec la tête de jauge (remplissage linéaire). */
-      timers.push(setTimeout(() => countTo(document.getElementById('pbig'), 38, 82, ' %', 3700, true), 4300));
+      timers.push(setTimeout(() => countTo(document.getElementById('pbig'), 38, 82, ' %', 2600, true), 4000));
     },
   };
 
