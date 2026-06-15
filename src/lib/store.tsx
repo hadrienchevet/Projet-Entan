@@ -26,6 +26,7 @@ import {
 import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import { daysFromToday } from '@/lib/date';
+import type { WidgetInstance } from '@/lib/widgets';
 import type {
   Action,
   ActionInput,
@@ -131,6 +132,10 @@ interface WorkspaceState {
   deleteProject: (id: Id) => Promise<void>;
   seedDemoProject: () => Promise<void>;
 
+  /** Tableau de bord modulable (disposition personnelle du projet courant). */
+  dashboardWidgets: WidgetInstance[];
+  setDashboardWidgets: (projectId: Id, widgets: WidgetInstance[]) => Promise<void>;
+
   addMember: (projectId: Id, input: MemberInput) => Promise<void>;
   updateMember: (projectId: Id, memberId: Id, patch: Partial<MemberInput>) => Promise<void>;
   removeMember: (projectId: Id, memberId: Id) => Result;
@@ -223,6 +228,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [rdpProblem, setRdpProblem] = useState<RdpProblem | null>(null);
   const [rdpIndicators, setRdpIndicators] = useState<RdpIndicator[]>([]);
   const [rdpSolutions, setRdpSolutions] = useState<RdpSolution[]>([]);
+  const [dashboardWidgets, setDashboardWidgetsState] = useState<WidgetInstance[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<Id | null>(null);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -306,6 +312,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (!prob.error) setRdpProblem(prob.data ? rdpProblemFromRow(prob.data as RdpProblemRow) : null);
       if (!ind.error) setRdpIndicators(((ind.data ?? []) as RdpIndicatorRow[]).map(rdpIndicatorFromRow));
       if (!sol.error) setRdpSolutions(((sol.data ?? []) as RdpSolutionRow[]).map(rdpSolutionFromRow));
+
+      // Disposition perso du tableau de bord (RLS = uniquement notre ligne).
+      // Tolérant : si la table fix-07 n'existe pas encore, on retombe sur [].
+      const dl = await supabase
+        .from('dashboard_layouts')
+        .select('widgets')
+        .eq('project_id', projectId)
+        .maybeSingle();
+      setDashboardWidgetsState(
+        !dl.error && dl.data ? ((dl.data.widgets as WidgetInstance[]) ?? []) : [],
+      );
     },
     [supabase],
   );
@@ -363,7 +380,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       const filter = `project_id=eq.${currentProjectId}`;
       let ch = supabase.channel(`project-${currentProjectId}`);
-      for (const table of ['members', 'actions', 'amdec_items', 'five_why_analyses', 'five_why_levels', 'ishikawa_analyses', 'ishikawa_causes', 'capa_actions', 'rdp_subjects', 'rdp_problem', 'rdp_indicators', 'rdp_solutions']) {
+      for (const table of ['members', 'actions', 'amdec_items', 'five_why_analyses', 'five_why_levels', 'ishikawa_analyses', 'ishikawa_causes', 'capa_actions', 'rdp_subjects', 'rdp_problem', 'rdp_indicators', 'rdp_solutions', 'dashboard_layouts']) {
         ch = ch.on(
           'postgres_changes',
           { event: '*', schema: 'public', table, filter },
@@ -399,6 +416,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setRdpProblem(null);
       setRdpIndicators([]);
       setRdpSolutions([]);
+      setDashboardWidgetsState([]);
       void fetchProjectData(id);
     },
     [fetchProjectData],
@@ -1337,6 +1355,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [metas, members, currentProjectId],
   );
 
+  const setDashboardWidgets = useCallback(
+    async (projectId: Id, widgets: WidgetInstance[]) => {
+      setDashboardWidgetsState(widgets); // optimiste
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { error } = await supabase.from('dashboard_layouts').upsert(
+        { project_id: projectId, user_id: user.id, widgets, updated_at: new Date().toISOString() },
+        { onConflict: 'project_id,user_id' },
+      );
+      // Tolérant : si fix-07 n'est pas appliqué, on n'alerte pas (juste un log).
+      if (error) console.warn('[entan] tableau de bord non persisté :', error.message);
+    },
+    [supabase],
+  );
+
   const value: WorkspaceState = {
     loading,
     userEmail,
@@ -1360,6 +1395,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     updateProject,
     deleteProject,
     seedDemoProject,
+    dashboardWidgets,
+    setDashboardWidgets,
     addMember,
     updateMember,
     removeMember,
@@ -1431,6 +1468,11 @@ export function useProjectActions(projectId: Id | undefined): Action[] {
   const { actions } = useWorkspace();
   if (!projectId) return [];
   return actions.filter((a) => a.projectId === projectId);
+}
+
+/** Disposition modulable du tableau de bord (widgets perso du projet courant). */
+export function useDashboardLayout(): WidgetInstance[] {
+  return useWorkspace().dashboardWidgets;
 }
 
 export function useProjectAmdecs(projectId: Id | undefined): AmdecEntry[] {

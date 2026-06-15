@@ -1,11 +1,11 @@
 'use client';
 
-import { useCurrentProject } from '@/lib/store';
-import { DashboardPage } from './DashboardPage';
-import { DashboardRdpPage } from '@/modules/rdp/DashboardRdpPage';
+import { DashboardGrid } from './DashboardGrid';
 
+/**
+ * Le tableau de bord est désormais une grille modulable unique : elle gère
+ * les deux types de projet (gestion / RDP) via le catalogue de widgets.
+ */
 export function SmartDashboard() {
-  const project = useCurrentProject();
-  if (project?.projectType === 'rdp') return <DashboardRdpPage />;
-  return <DashboardPage />;
+  return <DashboardGrid />;
 }
