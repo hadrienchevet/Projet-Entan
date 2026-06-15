@@ -29,27 +29,25 @@ export default function HelpPage() {
               boxShadow: 'var(--shadow-modal)',
               border: '1px solid var(--border)'
             }}>
-              <iframe
-                src="/lancement.html"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  border: 'none',
-                  display: 'block'
-                }}
-                title="Animation de présentation"
-                allowFullScreen
+              <video
+                src="/projet-entan.mp4"
+                style={{ width: '100%', height: '100%', display: 'block' }}
+                controls
+                autoPlay
+                muted
+                loop
+                playsInline
               />
             </div>
 
             <div style={{ marginTop: '12px', textAlign: 'center' }}>
               <a
-                href="/lancement.html"
+                href="/projet-entan.mp4"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-ghost btn-sm"
               >
-                Ouvrir l&apos;animation en plein écran →
+                Ouvrir la vidéo en plein écran →
               </a>
             </div>
 
