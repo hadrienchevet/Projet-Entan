@@ -7,11 +7,13 @@ import { useCurrentProject, useWorkspace } from '@/lib/store';
 import { ProjectFormModal } from './ProjectFormModal';
 import { ThemeToggle } from './ThemeToggle';
 import {
+  IconA3,
   IconActions,
   IconAmdec,
   IconBulb,
   IconCapa,
   IconCost,
+  IconSwot,
   IconDashboard,
   IconFolder,
   IconHelp,
@@ -38,6 +40,8 @@ const TOOL_ICON: Record<ToolId, ReactElement> = {
   planning: <IconPlanning />,
   liens: <IconTree />,
   couts: <IconCost />,
+  a3: <IconA3 />,
+  swot: <IconSwot />,
 };
 
 /** Nav gestion = Dashboard + outils activés + Outils + Accès. */

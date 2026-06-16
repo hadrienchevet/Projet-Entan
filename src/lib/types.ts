@@ -878,3 +878,78 @@ export function costItemInputToRow(input: Partial<CostItemInput>): Record<string
 export function costVariance(c: Pick<CostItem, 'planned' | 'actual'>): number {
   return c.actual - c.planned;
 }
+
+/* --- SWOT ------------------------------------------------------------------- */
+
+export type SwotQuadrant = 'forces' | 'faiblesses' | 'opportunites' | 'menaces';
+
+export const SWOT_QUADRANTS: { id: SwotQuadrant; label: string; hint: string; tone: string }[] = [
+  { id: 'forces', label: 'Forces', hint: 'Atouts internes', tone: 'green' },
+  { id: 'faiblesses', label: 'Faiblesses', hint: 'Limites internes', tone: 'red' },
+  { id: 'opportunites', label: 'Opportunités', hint: 'Leviers externes', tone: 'accent' },
+  { id: 'menaces', label: 'Menaces', hint: 'Risques externes', tone: 'amber' },
+];
+
+export interface SwotItem {
+  id: Id;
+  projectId: Id;
+  quadrant: SwotQuadrant;
+  text: string;
+  createdAt: string;
+}
+
+export interface SwotItemRow {
+  id: string;
+  project_id: string;
+  quadrant: SwotQuadrant;
+  text: string;
+  created_at: string;
+}
+
+export function swotItemFromRow(r: SwotItemRow): SwotItem {
+  return { id: r.id, projectId: r.project_id, quadrant: r.quadrant, text: r.text, createdAt: r.created_at };
+}
+
+/* --- Charte A3 (fiche singleton par projet) -------------------------------- */
+
+export interface A3Report {
+  projectId: Id;
+  contexte: string;
+  situation: string;
+  objectifs: string;
+  analyse: string;
+  plan: string;
+  suivi: string;
+}
+
+export type A3ReportInput = Omit<A3Report, 'projectId'>;
+
+export interface A3ReportRow {
+  project_id: string;
+  contexte: string;
+  situation: string;
+  objectifs: string;
+  analyse: string;
+  plan: string;
+  suivi: string;
+}
+
+export function a3ReportFromRow(r: A3ReportRow): A3Report {
+  return {
+    projectId: r.project_id,
+    contexte: r.contexte,
+    situation: r.situation,
+    objectifs: r.objectifs,
+    analyse: r.analyse,
+    plan: r.plan,
+    suivi: r.suivi,
+  };
+}
+
+export function a3ReportInputToRow(input: Partial<A3ReportInput>): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  for (const k of ['contexte', 'situation', 'objectifs', 'analyse', 'plan', 'suivi'] as const) {
+    if (input[k] !== undefined) row[k] = input[k];
+  }
+  return row;
+}

@@ -29,12 +29,17 @@ import { daysFromToday } from '@/lib/date';
 import type { WidgetInstance } from '@/lib/widgets';
 import type { ToolId } from '@/lib/tools';
 import type {
+  A3Report,
+  A3ReportInput,
+  A3ReportRow,
   Action,
   ActionInput,
   ActionRow,
   CostItem,
   CostItemInput,
   CostItemRow,
+  SwotItem,
+  SwotItemRow,
   AmdecEntry,
   AmdecInput,
   AmdecRow,
@@ -83,9 +88,12 @@ import {
   actionInputToRow,
   amdecFromRow,
   amdecInputToRow,
+  a3ReportFromRow,
+  a3ReportInputToRow,
   capaActionFromRow,
   costItemFromRow,
   costItemInputToRow,
+  swotItemFromRow,
   fiveWhyAnalysisFromRow,
   fiveWhyLevelFromRow,
   ishikawaAnalysisFromRow,
@@ -151,6 +159,15 @@ interface WorkspaceState {
   addCostItem: (projectId: Id, input: CostItemInput) => Promise<void>;
   updateCostItem: (id: Id, patch: Partial<CostItemInput>) => Promise<void>;
   deleteCostItem: (id: Id) => Promise<void>;
+
+  /** SWOT. */
+  swotItems: SwotItem[];
+  addSwotItem: (projectId: Id, quadrant: SwotItem['quadrant'], text: string) => Promise<void>;
+  deleteSwotItem: (id: Id) => Promise<void>;
+
+  /** Charte A3 (fiche singleton du projet courant). */
+  a3Report: A3Report | null;
+  saveA3Report: (projectId: Id, patch: Partial<A3ReportInput>) => Promise<void>;
 
   addMember: (projectId: Id, input: MemberInput) => Promise<void>;
   updateMember: (projectId: Id, memberId: Id, patch: Partial<MemberInput>) => Promise<void>;
@@ -246,6 +263,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [rdpSolutions, setRdpSolutions] = useState<RdpSolution[]>([]);
   const [dashboardWidgets, setDashboardWidgetsState] = useState<WidgetInstance[]>([]);
   const [costItems, setCostItems] = useState<CostItem[]>([]);
+  const [swotItems, setSwotItems] = useState<SwotItem[]>([]);
+  const [a3Report, setA3Report] = useState<A3Report | null>(null);
   const [currentProjectId, setCurrentProjectId] = useState<Id | null>(null);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -345,6 +364,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       // Suivi des coûts (tolérant : table cost_items absente = liste vide).
       const ci = await supabase.from('cost_items').select('*').eq('project_id', projectId).order('created_at');
       setCostItems(!ci.error ? ((ci.data ?? []) as CostItemRow[]).map(costItemFromRow) : []);
+
+      // SWOT + Charte A3 (tolérants si fix-09 non appliqué).
+      const sw = await supabase.from('swot_items').select('*').eq('project_id', projectId).order('created_at');
+      setSwotItems(!sw.error ? ((sw.data ?? []) as SwotItemRow[]).map(swotItemFromRow) : []);
+      const a3 = await supabase.from('a3_reports').select('*').eq('project_id', projectId).maybeSingle();
+      setA3Report(!a3.error && a3.data ? a3ReportFromRow(a3.data as A3ReportRow) : null);
     },
     [supabase],
   );
@@ -402,7 +427,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       const filter = `project_id=eq.${currentProjectId}`;
       let ch = supabase.channel(`project-${currentProjectId}`);
-      for (const table of ['members', 'actions', 'amdec_items', 'five_why_analyses', 'five_why_levels', 'ishikawa_analyses', 'ishikawa_causes', 'capa_actions', 'rdp_subjects', 'rdp_problem', 'rdp_indicators', 'rdp_solutions', 'dashboard_layouts', 'cost_items']) {
+      for (const table of ['members', 'actions', 'amdec_items', 'five_why_analyses', 'five_why_levels', 'ishikawa_analyses', 'ishikawa_causes', 'capa_actions', 'rdp_subjects', 'rdp_problem', 'rdp_indicators', 'rdp_solutions', 'dashboard_layouts', 'cost_items', 'swot_items', 'a3_reports']) {
         ch = ch.on(
           'postgres_changes',
           { event: '*', schema: 'public', table, filter },
@@ -440,6 +465,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setRdpSolutions([]);
       setDashboardWidgetsState([]);
       setCostItems([]);
+      setSwotItems([]);
+      setA3Report(null);
       void fetchProjectData(id);
     },
     [fetchProjectData],
@@ -1439,6 +1466,42 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [supabase],
   );
 
+  const addSwotItem = useCallback(
+    async (projectId: Id, quadrant: SwotItem['quadrant'], text: string) => {
+      const id = uid();
+      const createdAt = new Date().toISOString();
+      setSwotItems((s) => [...s, { id, projectId, quadrant, text, createdAt }]);
+      const { error } = await supabase.from('swot_items').insert({ id, project_id: projectId, quadrant, text });
+      if (error) console.warn('[entan] élément SWOT non enregistré :', error.message);
+    },
+    [supabase],
+  );
+
+  const deleteSwotItem = useCallback(
+    async (id: Id) => {
+      setSwotItems((s) => s.filter((i) => i.id !== id));
+      const { error } = await supabase.from('swot_items').delete().eq('id', id);
+      if (error) console.warn('[entan] élément SWOT non supprimé :', error.message);
+    },
+    [supabase],
+  );
+
+  const saveA3Report = useCallback(
+    async (projectId: Id, patch: Partial<A3ReportInput>) => {
+      setA3Report((prev) => ({
+        projectId,
+        contexte: '', situation: '', objectifs: '', analyse: '', plan: '', suivi: '',
+        ...prev,
+        ...patch,
+      }));
+      const { error } = await supabase
+        .from('a3_reports')
+        .upsert({ project_id: projectId, ...a3ReportInputToRow(patch) }, { onConflict: 'project_id' });
+      if (error) console.warn('[entan] charte A3 non enregistrée :', error.message);
+    },
+    [supabase],
+  );
+
   const value: WorkspaceState = {
     loading,
     userEmail,
@@ -1469,6 +1532,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     addCostItem,
     updateCostItem,
     deleteCostItem,
+    swotItems,
+    addSwotItem,
+    deleteSwotItem,
+    a3Report,
+    saveA3Report,
     addMember,
     updateMember,
     removeMember,
@@ -1552,6 +1620,13 @@ export function useProjectCostItems(projectId: Id | undefined): CostItem[] {
   const { costItems } = useWorkspace();
   if (!projectId) return [];
   return costItems.filter((c) => c.projectId === projectId);
+}
+
+/** Éléments SWOT du projet courant. */
+export function useProjectSwot(projectId: Id | undefined): SwotItem[] {
+  const { swotItems } = useWorkspace();
+  if (!projectId) return [];
+  return swotItems.filter((i) => i.projectId === projectId);
 }
 
 export function useProjectAmdecs(projectId: Id | undefined): AmdecEntry[] {
