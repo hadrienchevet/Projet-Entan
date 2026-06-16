@@ -1,6 +1,6 @@
 -- =============================================================================
 -- PROJET ENTAN — Migration fix-08 : outils modulables + suivi des coûts
--- À exécuter dans le SQL Editor du dashboard Supabase.
+-- À exécuter dans le SQL Editor du dashboard Supabase. Ré-exécutable sans erreur.
 -- Prérequis : fix-02 (is_project_member) déjà appliqué.
 -- =============================================================================
 
@@ -21,9 +21,19 @@ CREATE TABLE IF NOT EXISTS cost_items (
 
 ALTER TABLE cost_items ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "cost_items_all" ON cost_items;
 CREATE POLICY "cost_items_all" ON cost_items
   FOR ALL
   USING (is_project_member(project_id))
   WITH CHECK (is_project_member(project_id));
 
-ALTER PUBLICATION supabase_realtime ADD TABLE cost_items;
+-- Ajout à la publication Realtime, seulement si pas déjà présent.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'cost_items'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE cost_items;
+  END IF;
+END $$;

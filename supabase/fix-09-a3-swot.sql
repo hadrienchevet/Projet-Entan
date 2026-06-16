@@ -1,6 +1,6 @@
 -- =============================================================================
 -- PROJET ENTAN — Migration fix-09 : outils Charte A3 + SWOT
--- À exécuter dans le SQL Editor du dashboard Supabase.
+-- À exécuter dans le SQL Editor du dashboard Supabase. Ré-exécutable sans erreur.
 -- Prérequis : fix-02 (is_project_member) déjà appliqué.
 -- =============================================================================
 
@@ -34,14 +34,23 @@ CREATE TABLE IF NOT EXISTS swot_items (
 ALTER TABLE a3_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE swot_items ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "a3_reports_all" ON a3_reports;
 CREATE POLICY "a3_reports_all" ON a3_reports
   FOR ALL USING (is_project_member(project_id)) WITH CHECK (is_project_member(project_id));
 
+DROP POLICY IF EXISTS "swot_items_all" ON swot_items;
 CREATE POLICY "swot_items_all" ON swot_items
   FOR ALL USING (is_project_member(project_id)) WITH CHECK (is_project_member(project_id));
 
 -- -----------------------------------------------------------------------------
--- Realtime
+-- Realtime (ajout idempotent)
 -- -----------------------------------------------------------------------------
-ALTER PUBLICATION supabase_realtime ADD TABLE a3_reports;
-ALTER PUBLICATION supabase_realtime ADD TABLE swot_items;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname='supabase_realtime' AND schemaname='public' AND tablename='a3_reports') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE a3_reports;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname='supabase_realtime' AND schemaname='public' AND tablename='swot_items') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE swot_items;
+  END IF;
+END $$;
