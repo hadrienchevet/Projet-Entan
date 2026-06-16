@@ -7,12 +7,14 @@
 -- -----------------------------------------------------------------------------
 -- Charte A3 : une fiche structurée par projet (sections lean).
 -- -----------------------------------------------------------------------------
+-- NB : "analyse" est un mot réservé PostgreSQL (commande ANALYSE/ANALYZE),
+-- d'où les guillemets. Le nom de colonne reste « analyse » côté API.
 CREATE TABLE IF NOT EXISTS a3_reports (
   project_id UUID PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
   contexte   TEXT NOT NULL DEFAULT '',
   situation  TEXT NOT NULL DEFAULT '',
   objectifs  TEXT NOT NULL DEFAULT '',
-  analyse    TEXT NOT NULL DEFAULT '',
+  "analyse"  TEXT NOT NULL DEFAULT '',
   plan       TEXT NOT NULL DEFAULT '',
   suivi      TEXT NOT NULL DEFAULT ''
 );
