@@ -11,6 +11,7 @@ import {
   IconAmdec,
   IconBulb,
   IconCapa,
+  IconCost,
   IconDashboard,
   IconFolder,
   IconHelp,
@@ -22,19 +23,32 @@ import {
   IconRaci,
   IconStar,
   IconTarget,
+  IconTools,
   IconTree,
   IconUsers,
 } from './icons';
+import { enabledTools, TOOLS, type ToolId } from '@/lib/tools';
+import type { ReactElement } from 'react';
 
-const NAV_GESTION = [
-  { to: '/', label: 'Dashboard', icon: <IconDashboard /> },
-  { to: '/raci', label: 'RACI', icon: <IconRaci /> },
-  { to: '/amdec', label: 'AMDEC', icon: <IconAmdec /> },
-  { to: '/actions', label: 'Actions', icon: <IconActions /> },
-  { to: '/planning', label: 'Planning', icon: <IconPlanning /> },
-  { to: '/liens', label: 'Liens', icon: <IconTree /> },
-  { to: '/access', label: 'Accès', icon: <IconUsers /> },
-];
+/** Icône par outil de gestion (le catalogue tools.ts ne porte pas de JSX). */
+const TOOL_ICON: Record<ToolId, ReactElement> = {
+  raci: <IconRaci />,
+  amdec: <IconAmdec />,
+  actions: <IconActions />,
+  planning: <IconPlanning />,
+  liens: <IconTree />,
+  couts: <IconCost />,
+};
+
+/** Nav gestion = Dashboard + outils activés + Outils + Accès. */
+function navGestion(tools: ToolId[] | null | undefined) {
+  return [
+    { to: '/', label: 'Dashboard', icon: <IconDashboard /> },
+    ...enabledTools(tools).map((id) => ({ to: TOOLS[id].href, label: TOOLS[id].label, icon: TOOL_ICON[id] })),
+    { to: '/outils', label: 'Outils', icon: <IconTools /> },
+    { to: '/access', label: 'Accès', icon: <IconUsers /> },
+  ];
+}
 
 const NAV_RDP = [
   { to: '/', label: 'Tableau de bord', icon: <IconDashboard /> },
@@ -53,7 +67,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const { projects, currentProjectId, setCurrentProject, userEmail } = useWorkspace();
   const currentProject = useCurrentProject();
   const [creating, setCreating] = useState(false);
-  const nav = currentProject?.projectType === 'rdp' ? NAV_RDP : NAV_GESTION;
+  const nav = currentProject?.projectType === 'rdp' ? NAV_RDP : navGestion(currentProject?.tools);
 
   return (
     <div className="app">

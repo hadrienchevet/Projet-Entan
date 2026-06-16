@@ -7,6 +7,7 @@ import { UpcomingWidget } from './UpcomingWidget';
 import { RisksWidget } from './RisksWidget';
 import { TeamLoadWidget } from './TeamLoadWidget';
 import { StatusBreakdownWidget } from './StatusBreakdownWidget';
+import { CostsWidget } from './CostsWidget';
 import { RdpPhaseWidget } from './RdpPhaseWidget';
 import { RdpSubjectWidget } from './RdpSubjectWidget';
 import { RdpStatsWidget } from './RdpStatsWidget';
@@ -26,6 +27,7 @@ export const WIDGET_COMPONENTS: Record<WidgetId, FC<WidgetProps>> = {
   risks: RisksWidget,
   'team-load': TeamLoadWidget,
   'status-breakdown': StatusBreakdownWidget,
+  costs: CostsWidget,
   'rdp-phase': RdpPhaseWidget,
   'rdp-subject': RdpSubjectWidget,
   'rdp-stats': RdpStatsWidget,

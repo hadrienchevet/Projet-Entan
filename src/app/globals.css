@@ -1696,3 +1696,37 @@ a.link:hover { text-decoration: underline; }
 .breakdown-fill.in_progress { background: var(--accent); }
 .breakdown-fill.done { background: var(--success); }
 .breakdown-val { width: 28px; text-align: right; font-size: 13px; font-weight: 600; color: var(--text); }
+
+/* ── Outils du projet (interrupteurs) ──────────────────────────────────────── */
+.tool-list { display: flex; flex-direction: column; }
+.tool-row {
+  display: flex; align-items: center; gap: 16px;
+  padding: 16px 4px; border-bottom: 1px solid var(--border); cursor: pointer;
+}
+.tool-row:last-child { border-bottom: none; }
+.tool-row-main { flex: 1; }
+.tool-row-title { font-size: 15px; font-weight: 600; color: var(--text); }
+.tool-row-desc { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.toggle { position: relative; flex-shrink: 0; display: inline-flex; }
+.toggle input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.toggle-track {
+  width: 44px; height: 26px; border-radius: 99px; background: var(--border-strong);
+  display: inline-flex; align-items: center; padding: 3px; transition: background .18s ease;
+}
+.toggle-thumb {
+  width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / .3); transition: transform .18s ease;
+}
+.toggle.on .toggle-track { background: var(--accent); }
+.toggle.on .toggle-thumb { transform: translateX(18px); }
+
+/* ── Suivi des coûts ───────────────────────────────────────────────────────── */
+.cost-bar { height: 12px; background: var(--stripe); border-radius: 99px; overflow: hidden; }
+.cost-bar-fill { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .3s ease; }
+.cost-bar-fill.over { background: var(--danger); }
+.cost-bar-meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+
+.cost-summary { display: flex; justify-content: space-between; margin-top: 14px; }
+.cost-summary > div { display: flex; flex-direction: column; gap: 2px; }
+.cost-summary-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); }
+.cost-summary-val { font-size: 17px; font-weight: 700; color: var(--text); }

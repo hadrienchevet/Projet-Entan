@@ -11,6 +11,7 @@ import {
   type WidgetInstance,
   type WidgetScope,
 } from '@/lib/widgets';
+import { enabledTools } from '@/lib/tools';
 import { IconPlus } from '@/components/icons';
 import { ActionFormModal } from '@/modules/actions/ActionFormModal';
 import { WIDGET_COMPONENTS } from './widgets';
@@ -50,7 +51,11 @@ export function DashboardGrid() {
     save(layout.map((w, k) => (k === i ? { ...w, settings: { ...w.settings, [key]: val } } : w)));
   const reset = () => save(defaultLayout(scope));
 
-  const available = widgetsForScope(scope).filter((id) => !layout.some((w) => w.id === id));
+  // Le widget « coûts » n'est proposé que si l'outil Suivi des coûts est activé.
+  const coutsOn = enabledTools(project.tools).includes('couts');
+  const available = widgetsForScope(scope).filter(
+    (id) => !layout.some((w) => w.id === id) && (id !== 'costs' || coutsOn),
+  );
 
   return (
     <div className="page">

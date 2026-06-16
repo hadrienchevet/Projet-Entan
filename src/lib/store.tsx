@@ -27,10 +27,14 @@ import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import { daysFromToday } from '@/lib/date';
 import type { WidgetInstance } from '@/lib/widgets';
+import type { ToolId } from '@/lib/tools';
 import type {
   Action,
   ActionInput,
   ActionRow,
+  CostItem,
+  CostItemInput,
+  CostItemRow,
   AmdecEntry,
   AmdecInput,
   AmdecRow,
@@ -80,6 +84,8 @@ import {
   amdecFromRow,
   amdecInputToRow,
   capaActionFromRow,
+  costItemFromRow,
+  costItemInputToRow,
   fiveWhyAnalysisFromRow,
   fiveWhyLevelFromRow,
   ishikawaAnalysisFromRow,
@@ -102,6 +108,7 @@ interface ProjectMeta {
   ownerId: string;
   projectType: ProjectType;
   status: ProjectStatus;
+  tools?: ToolId[] | null;
   rdpCurrentPhase: number;
   project_members?: ProjectMember[];
   createdAt: string;
@@ -135,6 +142,15 @@ interface WorkspaceState {
   /** Tableau de bord modulable (disposition personnelle du projet courant). */
   dashboardWidgets: WidgetInstance[];
   setDashboardWidgets: (projectId: Id, widgets: WidgetInstance[]) => Promise<void>;
+
+  /** Outils de gestion activés pour le projet (palette modulable). */
+  setProjectTools: (projectId: Id, tools: ToolId[]) => Promise<void>;
+
+  /** Suivi des coûts. */
+  costItems: CostItem[];
+  addCostItem: (projectId: Id, input: CostItemInput) => Promise<void>;
+  updateCostItem: (id: Id, patch: Partial<CostItemInput>) => Promise<void>;
+  deleteCostItem: (id: Id) => Promise<void>;
 
   addMember: (projectId: Id, input: MemberInput) => Promise<void>;
   updateMember: (projectId: Id, memberId: Id, patch: Partial<MemberInput>) => Promise<void>;
@@ -229,6 +245,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [rdpIndicators, setRdpIndicators] = useState<RdpIndicator[]>([]);
   const [rdpSolutions, setRdpSolutions] = useState<RdpSolution[]>([]);
   const [dashboardWidgets, setDashboardWidgetsState] = useState<WidgetInstance[]>([]);
+  const [costItems, setCostItems] = useState<CostItem[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<Id | null>(null);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -258,6 +275,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       ownerId: r.owner_id as string,
       projectType: (r.project_type as ProjectType) ?? 'gestion',
       status: (r.status as ProjectStatus) ?? 'active',
+      tools: (r.tools as ToolId[] | null) ?? null,
       rdpCurrentPhase: (r.rdp_current_phase as number | null) ?? 0,
       project_members: (r.project_members || []).map(projectMemberFromRow),
     }));
@@ -323,6 +341,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setDashboardWidgetsState(
         !dl.error && dl.data ? ((dl.data.widgets as WidgetInstance[]) ?? []) : [],
       );
+
+      // Suivi des coûts (tolérant : table cost_items absente = liste vide).
+      const ci = await supabase.from('cost_items').select('*').eq('project_id', projectId).order('created_at');
+      setCostItems(!ci.error ? ((ci.data ?? []) as CostItemRow[]).map(costItemFromRow) : []);
     },
     [supabase],
   );
@@ -380,7 +402,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       const filter = `project_id=eq.${currentProjectId}`;
       let ch = supabase.channel(`project-${currentProjectId}`);
-      for (const table of ['members', 'actions', 'amdec_items', 'five_why_analyses', 'five_why_levels', 'ishikawa_analyses', 'ishikawa_causes', 'capa_actions', 'rdp_subjects', 'rdp_problem', 'rdp_indicators', 'rdp_solutions', 'dashboard_layouts']) {
+      for (const table of ['members', 'actions', 'amdec_items', 'five_why_analyses', 'five_why_levels', 'ishikawa_analyses', 'ishikawa_causes', 'capa_actions', 'rdp_subjects', 'rdp_problem', 'rdp_indicators', 'rdp_solutions', 'dashboard_layouts', 'cost_items']) {
         ch = ch.on(
           'postgres_changes',
           { event: '*', schema: 'public', table, filter },
@@ -417,6 +439,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setRdpIndicators([]);
       setRdpSolutions([]);
       setDashboardWidgetsState([]);
+      setCostItems([]);
       void fetchProjectData(id);
     },
     [fetchProjectData],
@@ -1372,6 +1395,50 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [supabase],
   );
 
+  const setProjectTools = useCallback(
+    async (projectId: Id, tools: ToolId[]) => {
+      setMetas((s) => s.map((p) => (p.id === projectId ? { ...p, tools } : p)));
+      const { error } = await supabase.from('projects').update({ tools }).eq('id', projectId);
+      // Tolérant : si fix-08 (colonne tools) n'est pas appliqué, on garde le
+      // choix en mémoire et on n'alerte pas (juste un log).
+      if (error) console.warn('[entan] outils non persistés :', error.message);
+    },
+    [supabase],
+  );
+
+  const addCostItem = useCallback(
+    async (projectId: Id, input: CostItemInput) => {
+      const id = uid();
+      const createdAt = new Date().toISOString();
+      setCostItems((s) => [...s, { id, projectId, createdAt, ...input }]);
+      const { error } = await supabase
+        .from('cost_items')
+        .insert({ id, project_id: projectId, ...costItemInputToRow(input) });
+      // Tolérant : si fix-08 (table cost_items) n'est pas appliqué, on garde la
+      // saisie en mémoire et on n'alerte pas (juste un log).
+      if (error) console.warn('[entan] coût non enregistré :', error.message);
+    },
+    [supabase],
+  );
+
+  const updateCostItem = useCallback(
+    async (id: Id, patch: Partial<CostItemInput>) => {
+      setCostItems((s) => s.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+      const { error } = await supabase.from('cost_items').update(costItemInputToRow(patch)).eq('id', id);
+      if (error) console.warn('[entan] coût non mis à jour :', error.message);
+    },
+    [supabase],
+  );
+
+  const deleteCostItem = useCallback(
+    async (id: Id) => {
+      setCostItems((s) => s.filter((c) => c.id !== id));
+      const { error } = await supabase.from('cost_items').delete().eq('id', id);
+      if (error) console.warn('[entan] coût non supprimé :', error.message);
+    },
+    [supabase],
+  );
+
   const value: WorkspaceState = {
     loading,
     userEmail,
@@ -1397,6 +1464,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     seedDemoProject,
     dashboardWidgets,
     setDashboardWidgets,
+    setProjectTools,
+    costItems,
+    addCostItem,
+    updateCostItem,
+    deleteCostItem,
     addMember,
     updateMember,
     removeMember,
@@ -1473,6 +1545,13 @@ export function useProjectActions(projectId: Id | undefined): Action[] {
 /** Disposition modulable du tableau de bord (widgets perso du projet courant). */
 export function useDashboardLayout(): WidgetInstance[] {
   return useWorkspace().dashboardWidgets;
+}
+
+/** Suivi des coûts du projet courant. */
+export function useProjectCostItems(projectId: Id | undefined): CostItem[] {
+  const { costItems } = useWorkspace();
+  if (!projectId) return [];
+  return costItems.filter((c) => c.projectId === projectId);
 }
 
 export function useProjectAmdecs(projectId: Id | undefined): AmdecEntry[] {

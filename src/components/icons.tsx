@@ -182,3 +182,17 @@ export const IconHelp = () => (
     <line x1="12" y1="17" x2="12.01" y2="17" />
   </svg>
 );
+
+export const IconTools = () => (
+  <svg {...base}>
+    <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.2-.6-.6-2.2 2.3-2.3z" />
+  </svg>
+);
+
+export const IconCost = () => (
+  <svg {...base}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M14.5 9.2c-.6-.7-1.5-1.1-2.5-1.1-1.8 0-3 1.2-3 3.9s1.2 3.9 3 3.9c1 0 1.9-.4 2.5-1.1" />
+    <path d="M8 11.2h4.5M8 13h4.5" />
+  </svg>
+);

@@ -14,6 +14,7 @@ export type WidgetId =
   | 'risks'
   | 'team-load'
   | 'status-breakdown'
+  | 'costs'
   // RDP
   | 'rdp-phase'
   | 'rdp-subject'
@@ -44,6 +45,7 @@ export const WIDGETS: Record<WidgetId, WidgetDef> = {
   risks: { id: 'risks', title: 'Risques (AMDEC)', description: 'Criticité après actions correctives.', scope: 'gestion', span: 1 },
   'team-load': { id: 'team-load', title: 'Charge équipe', description: 'Actions ouvertes par membre.', scope: 'gestion', span: 1 },
   'status-breakdown': { id: 'status-breakdown', title: 'Répartition par statut', description: 'À faire / en cours / terminée.', scope: 'gestion', span: 1 },
+  costs: { id: 'costs', title: 'Suivi des coûts', description: 'Budget prévu vs réel, écart et consommation.', scope: 'gestion', span: 1 },
 
   'rdp-phase': { id: 'rdp-phase', title: 'Avancement de la démarche', description: 'Les 7 phases, navigation et phase courante.', scope: 'rdp', span: 2 },
   'rdp-subject': { id: 'rdp-subject', title: 'Sujet retenu', description: 'Le problème traité.', scope: 'rdp', span: 2 },
