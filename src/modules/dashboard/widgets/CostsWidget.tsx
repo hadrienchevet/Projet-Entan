@@ -28,7 +28,7 @@ export function CostsWidget({ project }: WidgetProps) {
       {items.length === 0 ? (
         <div className="empty"><p>Aucun poste de coût. Renseignez votre budget.</p></div>
       ) : (
-        <>
+        <div className="card-body">
           <div className="cost-bar">
             <span className={`cost-bar-fill${consumption > 100 ? ' over' : ''}`} style={{ width: `${Math.min(consumption, 100)}%` }} />
           </div>
@@ -42,7 +42,7 @@ export function CostsWidget({ project }: WidgetProps) {
               </span>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

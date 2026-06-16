@@ -53,12 +53,14 @@ export function CostsPage() {
 
       {/* Barre de consommation */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="cost-bar">
-          <span className={`cost-bar-fill${consumption > 100 ? ' over' : ''}`} style={{ width: `${Math.min(consumption, 100)}%` }} />
-        </div>
-        <div className="cost-bar-meta">
-          <span>{eur(actual)} dépensés</span>
-          <span>{eur(planned)} budgétés</span>
+        <div className="card-body">
+          <div className="cost-bar">
+            <span className={`cost-bar-fill${consumption > 100 ? ' over' : ''}`} style={{ width: `${Math.min(consumption, 100)}%` }} />
+          </div>
+          <div className="cost-bar-meta">
+            <span>{eur(actual)} dépensés</span>
+            <span>{eur(planned)} budgétés</span>
+          </div>
         </div>
       </div>
 

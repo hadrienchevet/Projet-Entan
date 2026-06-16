@@ -1683,12 +1683,14 @@ a.link:hover { text-decoration: underline; }
 /* Sous-titres internes (ex. À terminer / À démarrer). */
 .widget-subhead {
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
-  color: var(--text-muted); font-weight: 600; margin: 12px 0 4px;
+  color: var(--text-muted); font-weight: 600; margin: 12px 0 4px; padding: 0 16px;
 }
-.widget-subhead:first-of-type { margin-top: 4px; }
+.widget-subhead:first-of-type { margin-top: 12px; }
 
 /* Répartition par statut. */
-.breakdown-row { display: flex; align-items: center; gap: 12px; padding: 7px 0; }
+.breakdown-row { display: flex; align-items: center; gap: 12px; padding: 7px 16px; }
+.breakdown-row:first-child { padding-top: 14px; }
+.breakdown-row:last-child { padding-bottom: 14px; }
 .breakdown-label { width: 90px; font-size: 13px; color: var(--text-secondary); flex-shrink: 0; }
 .breakdown-track { flex: 1; height: 10px; background: var(--stripe); border-radius: 99px; overflow: hidden; }
 .breakdown-fill { display: block; height: 100%; border-radius: 99px; }
@@ -1701,7 +1703,7 @@ a.link:hover { text-decoration: underline; }
 .tool-list { display: flex; flex-direction: column; }
 .tool-row {
   display: flex; align-items: center; gap: 16px;
-  padding: 16px 4px; border-bottom: 1px solid var(--border); cursor: pointer;
+  padding: 16px; border-bottom: 1px solid var(--border); cursor: pointer;
 }
 .tool-row:last-child { border-bottom: none; }
 .tool-row-main { flex: 1; }
