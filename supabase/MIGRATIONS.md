@@ -1,0 +1,51 @@
+# Migrations Supabase — ordre & état
+
+À exécuter dans le **SQL Editor** du dashboard Supabase, **dans l'ordre**.
+Toutes sont **idempotentes** (ré-exécutables sans erreur).
+
+| Fichier | Rôle |
+|---|---|
+| `schema.sql` | Schéma de base (install neuve) : profiles, projects, project_members, members, invitations, amdec_items, actions + RLS + `is_project_member()`. |
+| `fix-01` | Policy SELECT de `projects` (owner accepté avant le trigger d'ajout du membre). |
+| `fix-02` | Modèle V1 : table `members`, RACI sur `actions`, `is_project_member()`. |
+| `fix-03` | Tables RDP : five_why_*, ishikawa_*, capa_actions. |
+| `fix-04` | Méthodologie RDP 7 phases : `rdp_current_phase`, rdp_subjects/problem/indicators/solutions. |
+| `fix-05` | Cotation AMDEC résiduelle (`severity_after` / `occurrence_after` / `detection_after`). |
+| `fix-06` | `projects.status` (en cours/terminé) + policy DELETE `projects`. |
+| `fix-07` | `dashboard_layouts` (tableau de bord modulable, perso par membre). |
+| `fix-08` | `projects.tools` (outils modulables) + table `cost_items` (suivi des coûts). |
+| `fix-09` | Charte A3 (`a3_reports`, colonne réservée `"analyse"`) + SWOT (`swot_items`). |
+| `fix-10` | **Répare la policy UPDATE de `projects`** : `owner_id = auth.uid() OR is_project_member(id)`. Sans ça, outils/statut/phase RDP ne persistent pas. |
+
+## Après une migration qui AJOUTE une colonne
+Recharger le cache de l'API REST, sinon l'écriture sur la nouvelle colonne est rejetée en silence :
+```sql
+notify pgrst, 'reload schema';
+```
+
+## Modèle idempotent pour une nouvelle table (à copier)
+```sql
+CREATE TABLE IF NOT EXISTS ma_table (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  -- … colonnes … (quoter les mots réservés, ex. "analyse")
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE ma_table ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "ma_table_all" ON ma_table;
+CREATE POLICY "ma_table_all" ON ma_table
+  FOR ALL USING (is_project_member(project_id)) WITH CHECK (is_project_member(project_id));
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables
+                 WHERE pubname='supabase_realtime' AND schemaname='public' AND tablename='ma_table') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE ma_table;
+  END IF;
+END $$;
+```
+
+## Pièges (vécus)
+- `CREATE POLICY` / `ALTER PUBLICATION ADD TABLE` plantent si l'objet existe → toujours `DROP POLICY IF EXISTS` + garde `DO $$ IF NOT EXISTS`.
+- Mot réservé en colonne (`analyse`) → guillemets `"analyse"`.
+- Disposition perso (`dashboard_layouts`) : RLS `user_id = auth.uid() AND is_project_member`.
+- Une écriture qui « réussit » mais ne persiste pas (0 ligne, sans erreur) = policy RLS trop restrictive (cf. fix-10) **ou** cache d'API non rechargé.
