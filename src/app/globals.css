@@ -1753,8 +1753,25 @@ a.link:hover { text-decoration: underline; }
 .swot-add input { flex: 1; font-size: 13px; padding: 6px 10px; }
 
 /* ── Charte A3 ─────────────────────────────────────────────────────────────── */
-.a3-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.a3-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 18px; }
 @media (max-width: 720px) { .a3-grid { grid-template-columns: 1fr; } }
-.a3-grid textarea { resize: vertical; }
+/* Chaque section = une case d'A3 : encadré titré, champ intégré. */
+.a3-grid .field {
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.a3-grid .field label {
+  font-size: 12px; font-weight: 700; color: var(--accent-text);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.a3-grid textarea {
+  background: transparent; border: none; padding: 0; resize: vertical;
+  font: inherit; color: var(--text); min-height: 90px; line-height: 1.5;
+}
+.a3-grid textarea::placeholder { color: var(--text-muted); }
+.a3-grid textarea:focus { outline: none; }
 .a3-linked { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
 @media (max-width: 720px) { .a3-linked { grid-template-columns: 1fr; } }
