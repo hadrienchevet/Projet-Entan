@@ -1775,3 +1775,24 @@ a.link:hover { text-decoration: underline; }
 .a3-grid textarea:focus { outline: none; }
 .a3-linked { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
 @media (max-width: 720px) { .a3-linked { grid-template-columns: 1fr; } }
+
+/* ── Widget Avancement (frise fine pleine largeur) ─────────────────────────── */
+.progress-card { padding: 16px 18px; }
+.progress-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+.progress-title { font-family: var(--font-serif); font-size: 15px; font-weight: 600; color: var(--text); }
+.progress-pct { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: var(--success); }
+.frise {
+  display: flex; height: 14px; width: 100%; border-radius: 99px; overflow: hidden;
+  background: var(--stripe); border: 1px solid var(--border);
+}
+.frise-seg { height: 100%; transition: width .3s ease; }
+.frise-seg.done { background: var(--success); }
+.frise-seg.in_progress { background: var(--accent); }
+.frise-legend {
+  display: flex; flex-wrap: wrap; gap: 18px; margin-top: 10px;
+  font-size: 12px; color: var(--text-secondary);
+}
+.frise-legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 99px; margin-right: 6px; vertical-align: middle; }
+.frise-legend .dot.done { background: var(--success); }
+.frise-legend .dot.in_progress { background: var(--accent); }
+.frise-legend .dot.todo { background: var(--border-strong); }

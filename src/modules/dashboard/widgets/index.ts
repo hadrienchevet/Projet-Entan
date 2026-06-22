@@ -2,6 +2,7 @@ import type { FC } from 'react';
 import type { Project } from '@/lib/types';
 import type { WidgetId, WidgetInstance } from '@/lib/widgets';
 import { KpisWidget } from './KpisWidget';
+import { ProgressWidget } from './ProgressWidget';
 import { DelaysWidget } from './DelaysWidget';
 import { UpcomingWidget } from './UpcomingWidget';
 import { RisksWidget } from './RisksWidget';
@@ -22,6 +23,7 @@ export interface WidgetProps {
 /** Correspondance id → composant de rendu du widget. */
 export const WIDGET_COMPONENTS: Record<WidgetId, FC<WidgetProps>> = {
   kpis: KpisWidget,
+  progress: ProgressWidget,
   delays: DelaysWidget,
   upcoming: UpcomingWidget,
   risks: RisksWidget,

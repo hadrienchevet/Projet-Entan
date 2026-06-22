@@ -9,6 +9,7 @@ export type WidgetScope = 'gestion' | 'rdp';
 export type WidgetId =
   // Gestion
   | 'kpis'
+  | 'progress'
   | 'delays'
   | 'upcoming'
   | 'risks'
@@ -40,6 +41,7 @@ export interface WidgetDef {
 
 export const WIDGETS: Record<WidgetId, WidgetDef> = {
   kpis: { id: 'kpis', title: 'Chiffres clés', description: 'Actions en cours, avancement, risques critiques.', scope: 'gestion', span: 2 },
+  progress: { id: 'progress', title: 'Avancement', description: 'Frise d’avancement des actions (à faire / en cours / terminé).', scope: 'gestion', span: 2 },
   delays: { id: 'delays', title: 'Retards & urgences', description: 'Actions en retard et échéances proches.', scope: 'gestion', span: 1, defaultSettings: { urgentDays: 3 } },
   upcoming: { id: 'upcoming', title: 'À venir (planning)', description: 'Actions à terminer et à démarrer dans les prochains jours.', scope: 'gestion', span: 1, defaultSettings: { horizonDays: 14 } },
   risks: { id: 'risks', title: 'Risques (AMDEC)', description: 'Criticité après actions correctives.', scope: 'gestion', span: 1 },
