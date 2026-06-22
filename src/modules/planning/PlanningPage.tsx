@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import { memberName, useCurrentProject, useProjectActions } from '@/lib/store';
-import type { Action, ActionStatus, Id } from '@/lib/types';
+import type { Action, ActionInput, ActionStatus, Id } from '@/lib/types';
 import { STATUS_LABELS } from '@/lib/types';
 import { formatDateLong, isOverdue, todayISO, toISO } from '@/lib/date';
 import { StatusBadge } from '@/components/Badges';
+import { IconPlus } from '@/components/icons';
 import { ActionFormModal } from '@/modules/actions/ActionFormModal';
 import { GanttView } from './GanttView';
 
@@ -22,6 +23,8 @@ export function PlanningPage() {
   const [statusFilter, setStatusFilter] = useState<ActionStatus | 'all'>('all');
   const [memberFilter, setMemberFilter] = useState<Id | 'all'>('all');
   const [editing, setEditing] = useState<Action | null>(null);
+  /** Création d'action : null = fermé ; objet = ouvert avec ces valeurs pré-remplies. */
+  const [creating, setCreating] = useState<Partial<ActionInput> | null>(null);
 
   if (!project) return null;
 
@@ -37,6 +40,11 @@ export function PlanningPage() {
           <p className="subtitle">
             Vue temporelle des actions du projet, positionnées sur leur échéance.
           </p>
+        </div>
+        <div className="header-actions">
+          <button className="btn btn-primary" onClick={() => setCreating({})}>
+            <IconPlus /> Nouvelle action
+          </button>
         </div>
       </div>
 
@@ -79,7 +87,12 @@ export function PlanningPage() {
       </div>
 
       {view === 'calendar' && (
-        <CalendarView actions={filtered} onSelect={setEditing} responsibleName={memberFor} />
+        <CalendarView
+          actions={filtered}
+          onSelect={setEditing}
+          responsibleName={memberFor}
+          onCreate={(iso) => setCreating({ dueDate: iso })}
+        />
       )}
       {view === 'gantt' && (
         <GanttView actions={filtered} onSelect={setEditing} responsibleName={memberFor} />
@@ -90,6 +103,9 @@ export function PlanningPage() {
 
       {editing && (
         <ActionFormModal project={project} action={editing} onClose={() => setEditing(null)} />
+      )}
+      {creating && (
+        <ActionFormModal project={project} defaults={creating} onClose={() => setCreating(null)} />
       )}
     </div>
   );
@@ -108,10 +124,12 @@ function CalendarView({
   actions,
   onSelect,
   responsibleName,
+  onCreate,
 }: {
   actions: Action[];
   onSelect: (a: Action) => void;
   responsibleName: (a: Action) => string;
+  onCreate: (iso: string) => void;
 }) {
   const [month, setMonth] = useState(() => {
     const now = new Date();
@@ -168,9 +186,9 @@ function CalendarView({
                 className={`cal-cell${inMonth ? '' : ' out'}${iso === today ? ' today' : ''}`}
               >
                 <span
-                  className={`day-num${dayList.length > 0 ? ' clickable' : ''}`}
-                  onClick={dayList.length > 0 ? () => setDayView(iso) : undefined}
-                  title={dayList.length > 0 ? `${dayList.length} action(s)` : undefined}
+                  className="day-num clickable"
+                  onClick={() => (dayList.length > 0 ? setDayView(iso) : onCreate(iso))}
+                  title={dayList.length > 0 ? `${dayList.length} action(s)` : 'Ajouter une action ce jour'}
                 >
                   {day}
                 </span>
@@ -221,6 +239,14 @@ function CalendarView({
                 </button>
               </div>
             ))}
+            <div style={{ marginTop: 12 }}>
+              <button
+                className="btn btn-sm"
+                onClick={() => { const d = dayView; setDayView(null); onCreate(d); }}
+              >
+                <IconPlus /> Ajouter une action ce jour
+              </button>
+            </div>
           </div>
         </div>
       )}
