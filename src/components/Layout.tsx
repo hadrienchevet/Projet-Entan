@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCurrentProject, useWorkspace } from '@/lib/store';
 import { ProjectFormModal } from './ProjectFormModal';
+import { UpgradePrompt } from './UpgradePrompt';
 import { ThemeToggle } from './ThemeToggle';
 import {
   IconA3,
@@ -68,7 +69,7 @@ const NAV_RDP = [
 
 export function Layout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { projects, currentProjectId, setCurrentProject, userEmail } = useWorkspace();
+  const { projects, currentProjectId, setCurrentProject, userEmail, isPro } = useWorkspace();
   const currentProject = useCurrentProject();
   const [creating, setCreating] = useState(false);
   const nav = currentProject?.projectType === 'rdp' ? NAV_RDP : navGestion(currentProject?.tools);
@@ -119,6 +120,14 @@ export function Layout({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="sidebar-footer">
+          <Link
+            href="/abonnement"
+            className={`nav-link${pathname === '/abonnement' ? ' active' : ''}`}
+            style={{ marginBottom: 6 }}
+          >
+            <IconStar />
+            Abonnement · {isPro ? 'Pro' : 'Gratuit'}
+          </Link>
           <div className="sidebar-user" title={userEmail ?? undefined}>
             {userEmail ?? '...'}
           </div>
@@ -154,6 +163,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <main className="main">{children}</main>
 
       {creating && <ProjectFormModal onClose={() => setCreating(false)} />}
+      <UpgradePrompt />
     </div>
   );
 }

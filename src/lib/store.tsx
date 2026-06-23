@@ -109,6 +109,11 @@ import {
 
 export type Result = { ok: true } | { ok: false; error: string };
 
+export type Plan = 'free' | 'pro';
+
+/** Limite du plan gratuit : nombre de projets autorisés par type. */
+export const FREE_PROJECTS_PER_TYPE = 3;
+
 interface ProjectMeta {
   id: Id;
   name: string;
@@ -140,6 +145,17 @@ interface WorkspaceState {
   rdpProblem: RdpProblem | null;
   rdpIndicators: RdpIndicator[];
   rdpSolutions: RdpSolution[];
+
+  /** Abonnement du compte courant + aide au gating (limite de projets). */
+  plan: Plan;
+  isPro: boolean;
+  /** Nombre de projets POSSÉDÉS par le compte courant, pour un type donné. */
+  ownedProjectCount: (type: ProjectType) => number;
+  /** Recharge le plan depuis Supabase (ex. retour de Checkout). */
+  refreshPlan: () => Promise<void>;
+  /** Type dont la limite Free vient d'être atteinte (déclenche l'UpgradePrompt) ; null sinon. */
+  limitPromptType: ProjectType | null;
+  closeLimitPrompt: () => void;
 
   setCurrentProject: (id: Id) => void;
   createProject: (name: string, description?: string, projectType?: ProjectType) => Promise<void>;
@@ -266,6 +282,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [swotItems, setSwotItems] = useState<SwotItem[]>([]);
   const [a3Report, setA3Report] = useState<A3Report | null>(null);
   const [currentProjectId, setCurrentProjectId] = useState<Id | null>(null);
+  const [plan, setPlan] = useState<Plan>('free');
+  const [limitPromptType, setLimitPromptType] = useState<ProjectType | null>(null);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
 
@@ -300,6 +318,28 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }));
     setMetas(list);
     return list;
+  }, [supabase]);
+
+  // Plan d'abonnement du compte courant (tolérant : table fix-11 absente = 'free').
+  const fetchPlan = useCallback(async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setPlan('free');
+      return;
+    }
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('plan, status')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (error) {
+      setPlan('free');
+      return;
+    }
+    const active = !!data && (data.status === 'active' || data.status === 'trialing');
+    setPlan(active && data?.plan === 'pro' ? 'pro' : 'free');
   }, [supabase]);
 
   const fetchProjectData = useCallback(
@@ -384,6 +424,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       setUserEmail(session?.user.email ?? null);
       setUserId(session?.user.id ?? null);
+      void fetchPlan();
 
       const list = await fetchProjects();
       if (cancelled) return;
@@ -410,7 +451,34 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [supabase, fetchProjects, fetchProjectData]);
+  }, [supabase, fetchProjects, fetchProjectData, fetchPlan]);
+
+  // Realtime sur l'abonnement du compte : le plan se met à jour en direct
+  // après le webhook Stripe (sans rechargement de page).
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    let ch: RealtimeChannel | null = null;
+    (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (cancelled || !session) return;
+      await supabase.realtime.setAuth(session.access_token);
+      ch = supabase
+        .channel(`subscription-${userId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'subscriptions', filter: `user_id=eq.${userId}` },
+          () => void fetchPlan(),
+        )
+        .subscribe();
+    })();
+    return () => {
+      cancelled = true;
+      if (ch) supabase.removeChannel(ch);
+    };
+  }, [supabase, userId, fetchPlan]);
 
   // Realtime : recharge les données du projet courant à chaque changement
   // fait par un autre membre (ou soi-même — refetch idempotent).
@@ -478,16 +546,35 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Garde client : plan gratuit limité à FREE_PROJECTS_PER_TYPE projets par type.
+      if (plan !== 'pro') {
+        const owned = metas.filter(
+          (m) => m.ownerId === user.id && m.projectType === projectType,
+        ).length;
+        if (owned >= FREE_PROJECTS_PER_TYPE) {
+          setLimitPromptType(projectType);
+          return;
+        }
+      }
+
       const { data, error } = await supabase
         .from('projects')
         .insert({ name, description: description ?? null, owner_id: user.id, project_type: projectType })
         .select('id')
         .single();
-      if (error) return onError('Création du projet impossible', error.message);
+      if (error) {
+        // Garde serveur (trigger fix-11) : même limite, si l'état client était en retard.
+        if (error.message.includes('free_plan_project_limit')) {
+          setLimitPromptType(projectType);
+          return;
+        }
+        return onError('Création du projet impossible', error.message);
+      }
       await fetchProjects();
       setCurrentProject(data.id as Id);
     },
-    [supabase, fetchProjects, setCurrentProject],
+    [supabase, plan, metas, fetchProjects, setCurrentProject],
   );
 
   const updateProject = useCallback(
@@ -1520,6 +1607,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     actions,
     amdecs,
     invitations,
+    plan,
+    isPro: plan === 'pro',
+    ownedProjectCount: (type) =>
+      metas.filter((m) => m.ownerId === userId && m.projectType === type).length,
+    refreshPlan: fetchPlan,
+    limitPromptType,
+    closeLimitPrompt: () => setLimitPromptType(null),
     setCurrentProject,
     createProject,
     updateProject,
@@ -1589,6 +1683,12 @@ export function useWorkspace(): WorkspaceState {
   const ctx = useContext(WorkspaceContext);
   if (!ctx) throw new Error('useWorkspace doit être utilisé sous <WorkspaceProvider>.');
   return ctx;
+}
+
+/** Plan d'abonnement du compte courant. */
+export function usePlan(): { plan: Plan; isPro: boolean } {
+  const { plan, isPro } = useWorkspace();
+  return { plan, isPro };
 }
 
 export function useCurrentProject(): Project | null {

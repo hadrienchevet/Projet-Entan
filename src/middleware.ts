@@ -36,7 +36,14 @@ export default async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isPublic = pathname === '/login' || pathname.startsWith('/auth');
+  // Le webhook Stripe est appelé sans session (serveur à serveur) → public.
+  // Les pages légales (CGV / confidentialité) sont consultables sans compte.
+  const isPublic =
+    pathname === '/login' ||
+    pathname.startsWith('/auth') ||
+    pathname === '/api/stripe/webhook' ||
+    pathname === '/cgv' ||
+    pathname === '/confidentialite';
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();

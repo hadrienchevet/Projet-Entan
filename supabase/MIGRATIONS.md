@@ -16,6 +16,7 @@ Toutes sont **idempotentes** (ré-exécutables sans erreur).
 | `fix-08` | `projects.tools` (outils modulables) + table `cost_items` (suivi des coûts). |
 | `fix-09` | Charte A3 (`a3_reports`, colonne réservée `"analyse"`) + SWOT (`swot_items`). |
 | `fix-10` | **Répare la policy UPDATE de `projects`** : `owner_id = auth.uid() OR is_project_member(id)`. Sans ça, outils/statut/phase RDP ne persistent pas. |
+| `fix-11` | **Facturation/plans** : table `subscriptions` (écrite par le webhook Stripe en service-role), `user_plan()`, trigger `enforce_project_limit` (Free = 3 projets/type). |
 
 ## Après une migration qui AJOUTE une colonne
 Recharger le cache de l'API REST, sinon l'écriture sur la nouvelle colonne est rejetée en silence :

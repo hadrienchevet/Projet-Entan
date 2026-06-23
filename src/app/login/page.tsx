@@ -201,6 +201,11 @@ function LoginForm() {
             {pending ? '…' : mode === 'signin' ? 'Se connecter' : 'Créer mon compte'}
           </button>
         </form>
+
+        <p style={{ marginTop: 16, fontSize: 12, textAlign: 'center', color: 'var(--text-muted)' }}>
+          En créant un compte, vous acceptez les <a href="/cgv">CGV</a> et la{' '}
+          <a href="/confidentialite">politique de confidentialité</a>.
+        </p>
       </div>
     </main>
   );
