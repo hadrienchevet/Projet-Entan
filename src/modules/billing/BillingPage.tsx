@@ -1,46 +1,65 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useWorkspace, FREE_PROJECTS_PER_TYPE } from '@/lib/store';
+import { useWorkspace, FREE_SEATS } from '@/lib/store';
+
+/** Prix mensuel par siège (affichage). Le montant réel vient du prix Stripe. */
+const PRICE_PER_SEAT = 9;
 
 /**
- * Page Abonnement : compare Gratuit / Pro et lance Checkout (ou le portail
- * Stripe). Au retour de paiement (?success=1), rafraîchit le plan le temps que
- * le webhook arrive.
+ * Page Abonnement — facturation par siège. Affiche les sièges actifs/payés,
+ * lance Checkout/Portal, ou active un accès offert via clé.
  */
 export function BillingPage() {
-  const { isPro, refreshPlan } = useWorkspace();
+  const { company, seatsActive, isCompanyAdmin, redeemAccessKey, refreshCompany } = useWorkspace();
   const [notice, setNotice] = useState<string | null>(null);
+  const [keyCode, setKeyCode] = useState('');
+  const [keyMsg, setKeyMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, setPending] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('success')) {
-      setNotice('Paiement confirmé — activation de ton abonnement en cours…');
-      let tries = 0;
+    const p = new URLSearchParams(window.location.search);
+    if (p.get('success')) {
+      setNotice('Paiement confirmé — mise à jour des sièges…');
+      let n = 0;
       const t = setInterval(() => {
-        tries += 1;
-        void refreshPlan();
-        if (tries >= 6) clearInterval(t);
+        n += 1;
+        void refreshCompany();
+        if (n >= 6) clearInterval(t);
       }, 1500);
       return () => clearInterval(t);
     }
-    if (params.get('canceled')) setNotice('Paiement annulé — aucun changement.');
-  }, [refreshPlan]);
+    if (p.get('canceled')) setNotice('Paiement annulé — aucun changement.');
+  }, [refreshCompany]);
 
-  const grid = {
-    display: 'grid',
-    gap: 16,
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-  } as const;
+  const paidSeats = company?.seats ?? 0;
+  const isComp = company?.isComp ?? false;
+  const available = Math.max(FREE_SEATS, paidSeats);
+
+  const redeem = async () => {
+    setKeyMsg(null);
+    setPending(true);
+    const r = await redeemAccessKey(keyCode);
+    setPending(false);
+    if (r.ok) {
+      setKeyMsg({ ok: true, text: 'Clé valide — accès offert activé.' });
+      setKeyCode('');
+    } else {
+      setKeyMsg({
+        ok: false,
+        text: r.error.includes('invalid_or_used_key')
+          ? 'Clé invalide ou déjà utilisée.'
+          : 'Échec : ' + r.error,
+      });
+    }
+  };
 
   return (
     <div className="page">
       <header className="page-header">
         <div>
           <h1>Abonnement</h1>
-          <p className="subtitle">
-            Plan actuel : <strong>{isPro ? 'Pro' : 'Gratuit'}</strong>
-          </p>
+          <p className="subtitle">Facturation par siège — {PRICE_PER_SEAT} € / siège / mois.</p>
         </div>
       </header>
 
@@ -50,59 +69,88 @@ export function BillingPage() {
         </div>
       )}
 
-      <div style={grid}>
+      <div className="card">
+        <div className="card-body">
+          {isComp ? (
+            <>
+              <h2>Accès offert ✨</h2>
+              <p style={{ color: 'var(--text-secondary)', marginTop: 6 }}>
+                Votre entreprise bénéficie d’un accès gratuit illimité (sièges illimités). Aucun
+                paiement requis.
+              </p>
+            </>
+          ) : (
+            <>
+              <h2>Sièges</h2>
+              <p style={{ color: 'var(--text-secondary)', marginTop: 6 }}>
+                <strong>{seatsActive}</strong> membre(s) actif(s) · <strong>{available}</strong>{' '}
+                siège(s) disponible(s){' '}
+                {paidSeats > 0 ? `(${paidSeats} payé(s))` : `(dont ${FREE_SEATS} gratuits)`}.
+              </p>
+              {isCompanyAdmin ? (
+                <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+                  {paidSeats > 0 ? (
+                    <form action="/api/stripe/portal" method="post">
+                      <button type="submit" className="btn">
+                        Gérer les sièges &amp; la facturation
+                      </button>
+                    </form>
+                  ) : (
+                    <form action="/api/stripe/checkout" method="post">
+                      <button type="submit" className="btn btn-primary">
+                        Activer la facturation (ajouter des sièges)
+                      </button>
+                    </form>
+                  )}
+                </div>
+              ) : (
+                <p className="form-hint" style={{ marginTop: 12 }}>
+                  Seul un administrateur peut gérer l’abonnement.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {!isComp && isCompanyAdmin && (
         <div className="card">
           <div className="card-body">
-            <h2>Gratuit</h2>
-            <p style={{ fontSize: 24, fontWeight: 700, margin: '8px 0 12px' }}>
-              0 € <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-muted)' }}>/ mois</span>
+            <h2>Utiliser ma clé</h2>
+            <p className="form-hint" style={{ marginTop: 6 }}>
+              Vous avez une clé d’accès ? Saisissez-la pour activer un accès offert.
             </p>
-            <ul style={{ paddingLeft: 18, lineHeight: 1.8, margin: 0 }}>
-              <li>{FREE_PROJECTS_PER_TYPE} projets de gestion</li>
-              <li>{FREE_PROJECTS_PER_TYPE} projets de résolution de problèmes</li>
-              <li>Tous les outils (RACI, AMDEC, Actions, Planning, Coûts, A3, SWOT…)</li>
-              <li>Membres illimités par projet</li>
-            </ul>
-            {!isPro && (
-              <p style={{ marginTop: 12 }}>
-                <span className="badge">Plan actuel</span>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                value={keyCode}
+                onChange={(e) => setKeyCode(e.target.value)}
+                placeholder="ENTAN-XXXX-XXXX-XXXX-XXXX"
+                style={{ maxWidth: 300 }}
+              />
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={pending || !keyCode.trim()}
+                onClick={redeem}
+              >
+                {pending ? '…' : 'Valider la clé'}
+              </button>
+            </div>
+            {keyMsg && (
+              <p
+                style={{
+                  marginTop: 8,
+                  fontSize: 13,
+                  color: keyMsg.ok ? 'var(--success)' : 'var(--danger)',
+                }}
+              >
+                {keyMsg.text}
               </p>
             )}
           </div>
         </div>
-
-        <div className="card">
-          <div className="card-body">
-            <h2>Pro</h2>
-            <p style={{ fontSize: 24, fontWeight: 700, margin: '8px 0 12px' }}>
-              24 € <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-muted)' }}>/ mois</span>
-            </p>
-            <ul style={{ paddingLeft: 18, lineHeight: 1.8, margin: 0 }}>
-              <li>
-                <strong>Projets illimités</strong> (gestion et RDP)
-              </li>
-              <li>Tous les outils</li>
-              <li>Membres illimités</li>
-              <li>Support prioritaire</li>
-            </ul>
-            <div style={{ marginTop: 16 }}>
-              {isPro ? (
-                <form action="/api/stripe/portal" method="post">
-                  <button type="submit" className="btn">
-                    Gérer mon abonnement
-                  </button>
-                </form>
-              ) : (
-                <form action="/api/stripe/checkout" method="post">
-                  <button type="submit" className="btn btn-primary">
-                    Passer à Pro
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
 
       <p className="form-hint" style={{ marginTop: 4 }}>
         En souscrivant, vous acceptez les <a href="/cgv">CGV</a> et la{' '}

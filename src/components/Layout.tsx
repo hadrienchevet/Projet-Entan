@@ -69,7 +69,7 @@ const NAV_RDP = [
 
 export function Layout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { projects, currentProjectId, setCurrentProject, userEmail, isPro } = useWorkspace();
+  const { projects, currentProjectId, setCurrentProject, userEmail, company } = useWorkspace();
   const currentProject = useCurrentProject();
   const [creating, setCreating] = useState(false);
   const nav = currentProject?.projectType === 'rdp' ? NAV_RDP : navGestion(currentProject?.tools);
@@ -120,13 +120,17 @@ export function Layout({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="sidebar-footer">
+          <Link href="/equipe" className={`nav-link${pathname === '/equipe' ? ' active' : ''}`}>
+            <IconUsers />
+            Équipe
+          </Link>
           <Link
             href="/abonnement"
             className={`nav-link${pathname === '/abonnement' ? ' active' : ''}`}
             style={{ marginBottom: 6 }}
           >
             <IconStar />
-            Abonnement · {isPro ? 'Pro' : 'Gratuit'}
+            Abonnement{company?.isComp ? ' · Offert' : ''}
           </Link>
           <div className="sidebar-user" title={userEmail ?? undefined}>
             {userEmail ?? '...'}

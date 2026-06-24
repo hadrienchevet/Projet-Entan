@@ -2,38 +2,31 @@
 
 import Link from 'next/link';
 import { Modal } from './Modal';
-import { useWorkspace, FREE_PROJECTS_PER_TYPE } from '@/lib/store';
-import { PROJECT_TYPE_LABELS } from '@/lib/types';
+import { useWorkspace } from '@/lib/store';
 
-/**
- * Modale affichée quand la limite du plan gratuit (nombre de projets par type)
- * est atteinte. Pilotée par `limitPromptType` dans le store.
- */
+/** Modale affichée quand tous les sièges payés sont occupés. */
 export function UpgradePrompt() {
-  const { limitPromptType, closeLimitPrompt } = useWorkspace();
-  if (!limitPromptType) return null;
+  const { seatLimitPrompt, closeSeatPrompt } = useWorkspace();
+  if (!seatLimitPrompt) return null;
 
   return (
     <Modal
-      title="Limite du plan gratuit atteinte"
-      onClose={closeLimitPrompt}
+      title="Limite de sièges atteinte"
+      onClose={closeSeatPrompt}
       footer={
         <>
-          <button className="btn" onClick={closeLimitPrompt}>
+          <button className="btn" onClick={closeSeatPrompt}>
             Plus tard
           </button>
-          <Link className="btn btn-primary" href="/abonnement" onClick={closeLimitPrompt}>
-            Passer à Pro
+          <Link className="btn btn-primary" href="/abonnement" onClick={closeSeatPrompt}>
+            Ajouter un siège
           </Link>
         </>
       }
     >
       <p>
-        Le plan gratuit est limité à{' '}
-        <strong>
-          {FREE_PROJECTS_PER_TYPE} projets de type «&nbsp;{PROJECT_TYPE_LABELS[limitPromptType]}&nbsp;»
-        </strong>
-        . Passe à <strong>Pro</strong> pour créer des projets en illimité.
+        Tous vos sièges sont occupés. Ajoutez un siège (ou utilisez une clé d’accès) pour inviter un
+        membre supplémentaire.
       </p>
     </Modal>
   );

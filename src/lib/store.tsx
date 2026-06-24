@@ -109,10 +109,26 @@ import {
 
 export type Result = { ok: true } | { ok: false; error: string };
 
-export type Plan = 'free' | 'pro';
+export type CompanyRole = 'owner' | 'admin' | 'member';
 
-/** Limite du plan gratuit : nombre de projets autorisés par type. */
-export const FREE_PROJECTS_PER_TYPE = 3;
+export interface Company {
+  id: Id;
+  name: string;
+  seats: number;
+  isComp: boolean;
+  status: string | null;
+}
+
+export interface CompanyMemberRow {
+  userId: string;
+  role: CompanyRole;
+  status: 'active' | 'invited' | 'disabled';
+  email?: string;
+  displayName?: string;
+}
+
+/** Sièges offerts par entreprise avant facturation. */
+export const FREE_SEATS = 2;
 
 interface ProjectMeta {
   id: Id;
@@ -146,16 +162,26 @@ interface WorkspaceState {
   rdpIndicators: RdpIndicator[];
   rdpSolutions: RdpSolution[];
 
-  /** Abonnement du compte courant + aide au gating (limite de projets). */
-  plan: Plan;
-  isPro: boolean;
-  /** Nombre de projets POSSÉDÉS par le compte courant, pour un type donné. */
-  ownedProjectCount: (type: ProjectType) => number;
-  /** Recharge le plan depuis Supabase (ex. retour de Checkout). */
-  refreshPlan: () => Promise<void>;
-  /** Type dont la limite Free vient d'être atteinte (déclenche l'UpgradePrompt) ; null sinon. */
-  limitPromptType: ProjectType | null;
-  closeLimitPrompt: () => void;
+  /** Entreprise (tenant) du compte courant + sièges. */
+  company: Company | null;
+  companyRole: CompanyRole | null;
+  companyMembers: CompanyMemberRow[];
+  seatsActive: number;
+  seatsAllowed: number;
+  isCompanyAdmin: boolean;
+  /** Connecté, couche entreprise disponible, mais pas encore d'entreprise → onboarding. */
+  needsCompany: boolean;
+  createCompany: (name: string) => Promise<Result>;
+  inviteCompanyMember: (
+    email: string,
+    role: 'admin' | 'member',
+  ) => Promise<{ ok: true; token: string } | { ok: false; error: string }>;
+  removeCompanyMember: (userId: string) => Promise<void>;
+  redeemAccessKey: (code: string) => Promise<Result>;
+  refreshCompany: () => Promise<void>;
+  /** Limite de sièges atteinte (déclenche l'UpgradePrompt). */
+  seatLimitPrompt: boolean;
+  closeSeatPrompt: () => void;
 
   setCurrentProject: (id: Id) => void;
   createProject: (name: string, description?: string, projectType?: ProjectType) => Promise<void>;
@@ -282,8 +308,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [swotItems, setSwotItems] = useState<SwotItem[]>([]);
   const [a3Report, setA3Report] = useState<A3Report | null>(null);
   const [currentProjectId, setCurrentProjectId] = useState<Id | null>(null);
-  const [plan, setPlan] = useState<Plan>('free');
-  const [limitPromptType, setLimitPromptType] = useState<ProjectType | null>(null);
+  const [company, setCompany] = useState<Company | null>(null);
+  const [companyRole, setCompanyRole] = useState<CompanyRole | null>(null);
+  const [companyMembers, setCompanyMembers] = useState<CompanyMemberRow[]>([]);
+  const [companyFeature, setCompanyFeature] = useState(false);
+  const [companyChecked, setCompanyChecked] = useState(false);
+  const [seatLimitPrompt, setSeatLimitPrompt] = useState(false);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
 
@@ -320,27 +350,116 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return list;
   }, [supabase]);
 
-  // Plan d'abonnement du compte courant (tolérant : table fix-11 absente = 'free').
-  const fetchPlan = useCallback(async () => {
+  // Entreprise du compte courant (tolérant : tables fix-12 absentes = mode legacy).
+  const fetchCompany = useCallback(async () => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      setPlan('free');
+      setCompany(null);
+      setCompanyRole(null);
+      setCompanyMembers([]);
+      setCompanyChecked(true);
       return;
     }
-    const { data, error } = await supabase
-      .from('subscriptions')
-      .select('plan, status')
+    const { data: mem, error } = await supabase
+      .from('company_members')
+      .select('role, companies(id, name, seats, is_comp, status)')
       .eq('user_id', user.id)
+      .eq('status', 'active')
+      .order('created_at')
+      .limit(1)
       .maybeSingle();
     if (error) {
-      setPlan('free');
+      // fix-12 non appliqué → pas de couche entreprise (legacy).
+      setCompanyFeature(false);
+      setCompany(null);
+      setCompanyRole(null);
+      setCompanyMembers([]);
+      setCompanyChecked(true);
       return;
     }
-    const active = !!data && (data.status === 'active' || data.status === 'trialing');
-    setPlan(active && data?.plan === 'pro' ? 'pro' : 'free');
+    setCompanyFeature(true);
+    const c = mem?.companies as
+      | { id: string; name: string; seats: number; is_comp: boolean; status: string | null }
+      | undefined;
+    if (!mem || !c) {
+      setCompany(null);
+      setCompanyRole(null);
+      setCompanyMembers([]);
+      setCompanyChecked(true);
+      return;
+    }
+    setCompany({ id: c.id, name: c.name, seats: c.seats, isComp: c.is_comp, status: c.status });
+    setCompanyRole(mem.role as CompanyRole);
+    const { data: members } = await supabase
+      .from('company_members')
+      .select('user_id, role, status, profiles(email, display_name)')
+      .eq('company_id', c.id)
+      .order('created_at');
+    setCompanyMembers(
+      (members ?? []).map((m: Record<string, unknown>) => {
+        const p = m.profiles as { email?: string; display_name?: string } | null;
+        return {
+          userId: m.user_id as string,
+          role: m.role as CompanyRole,
+          status: m.status as CompanyMemberRow['status'],
+          email: p?.email,
+          displayName: p?.display_name,
+        };
+      }),
+    );
+    setCompanyChecked(true);
   }, [supabase]);
+
+  const createCompany = useCallback(
+    async (name: string): Promise<Result> => {
+      const { error } = await supabase.rpc('create_company', { p_name: name });
+      if (error) return { ok: false, error: error.message };
+      await fetchCompany();
+      return { ok: true };
+    },
+    [supabase, fetchCompany],
+  );
+
+  const inviteCompanyMember = useCallback(
+    async (email: string, role: 'admin' | 'member') => {
+      if (!company) return { ok: false as const, error: 'Aucune entreprise.' };
+      const active = companyMembers.filter((m) => m.status === 'active').length;
+      const allowed = company.isComp ? Infinity : Math.max(FREE_SEATS, company.seats);
+      if (active >= allowed) {
+        setSeatLimitPrompt(true);
+        return { ok: false as const, error: 'Limite de sièges atteinte.' };
+      }
+      const { data, error } = await supabase
+        .from('company_invitations')
+        .insert({ company_id: company.id, email: email.trim().toLowerCase(), role, invited_by: userId })
+        .select('token')
+        .single();
+      if (error) return { ok: false as const, error: error.message };
+      return { ok: true as const, token: data.token as string };
+    },
+    [supabase, company, companyMembers, userId],
+  );
+
+  const removeCompanyMember = useCallback(
+    async (uid: string) => {
+      if (!company) return;
+      await supabase.from('company_members').delete().eq('company_id', company.id).eq('user_id', uid);
+      await fetchCompany();
+    },
+    [supabase, company, fetchCompany],
+  );
+
+  const redeemAccessKey = useCallback(
+    async (code: string): Promise<Result> => {
+      const { error } = await supabase.rpc('redeem_access_key', { p_code: code.trim() });
+      if (error) return { ok: false, error: error.message };
+      await fetchCompany();
+      return { ok: true };
+    },
+    [supabase, fetchCompany],
+  );
 
   const fetchProjectData = useCallback(
     async (projectId: Id) => {
@@ -424,7 +543,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       setUserEmail(session?.user.email ?? null);
       setUserId(session?.user.id ?? null);
-      void fetchPlan();
+      void fetchCompany();
 
       const list = await fetchProjects();
       if (cancelled) return;
@@ -451,10 +570,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [supabase, fetchProjects, fetchProjectData, fetchPlan]);
+  }, [supabase, fetchProjects, fetchProjectData, fetchCompany]);
 
-  // Realtime sur l'abonnement du compte : le plan se met à jour en direct
-  // après le webhook Stripe (sans rechargement de page).
+  // Realtime sur l'appartenance entreprise du compte (sièges, rôle, comp…).
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
@@ -466,11 +584,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (cancelled || !session) return;
       await supabase.realtime.setAuth(session.access_token);
       ch = supabase
-        .channel(`subscription-${userId}`)
+        .channel(`company-${userId}`)
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'subscriptions', filter: `user_id=eq.${userId}` },
-          () => void fetchPlan(),
+          { event: '*', schema: 'public', table: 'company_members', filter: `user_id=eq.${userId}` },
+          () => void fetchCompany(),
         )
         .subscribe();
     })();
@@ -478,7 +596,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       if (ch) supabase.removeChannel(ch);
     };
-  }, [supabase, userId, fetchPlan]);
+  }, [supabase, userId, fetchCompany]);
 
   // Realtime : recharge les données du projet courant à chaque changement
   // fait par un autre membre (ou soi-même — refetch idempotent).
@@ -547,34 +665,21 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Garde client : plan gratuit limité à FREE_PROJECTS_PER_TYPE projets par type.
-      if (plan !== 'pro') {
-        const owned = metas.filter(
-          (m) => m.ownerId === user.id && m.projectType === projectType,
-        ).length;
-        if (owned >= FREE_PROJECTS_PER_TYPE) {
-          setLimitPromptType(projectType);
-          return;
-        }
-      }
+      // Projets illimités ; on rattache à l'entreprise courante si dispo.
+      const row: Record<string, unknown> = {
+        name,
+        description: description ?? null,
+        owner_id: user.id,
+        project_type: projectType,
+      };
+      if (company) row.company_id = company.id;
 
-      const { data, error } = await supabase
-        .from('projects')
-        .insert({ name, description: description ?? null, owner_id: user.id, project_type: projectType })
-        .select('id')
-        .single();
-      if (error) {
-        // Garde serveur (trigger fix-11) : même limite, si l'état client était en retard.
-        if (error.message.includes('free_plan_project_limit')) {
-          setLimitPromptType(projectType);
-          return;
-        }
-        return onError('Création du projet impossible', error.message);
-      }
+      const { data, error } = await supabase.from('projects').insert(row).select('id').single();
+      if (error) return onError('Création du projet impossible', error.message);
       await fetchProjects();
       setCurrentProject(data.id as Id);
     },
-    [supabase, plan, metas, fetchProjects, setCurrentProject],
+    [supabase, company, fetchProjects, setCurrentProject],
   );
 
   const updateProject = useCallback(
@@ -1607,13 +1712,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     actions,
     amdecs,
     invitations,
-    plan,
-    isPro: plan === 'pro',
-    ownedProjectCount: (type) =>
-      metas.filter((m) => m.ownerId === userId && m.projectType === type).length,
-    refreshPlan: fetchPlan,
-    limitPromptType,
-    closeLimitPrompt: () => setLimitPromptType(null),
+    company,
+    companyRole,
+    companyMembers,
+    seatsActive: companyMembers.filter((m) => m.status === 'active').length,
+    seatsAllowed: company ? (company.isComp ? Infinity : Math.max(FREE_SEATS, company.seats)) : 0,
+    isCompanyAdmin: companyRole === 'owner' || companyRole === 'admin',
+    needsCompany: companyFeature && companyChecked && !!userId && !company,
+    createCompany,
+    inviteCompanyMember,
+    removeCompanyMember,
+    redeemAccessKey,
+    refreshCompany: fetchCompany,
+    seatLimitPrompt,
+    closeSeatPrompt: () => setSeatLimitPrompt(false),
     setCurrentProject,
     createProject,
     updateProject,
@@ -1685,10 +1797,10 @@ export function useWorkspace(): WorkspaceState {
   return ctx;
 }
 
-/** Plan d'abonnement du compte courant. */
-export function usePlan(): { plan: Plan; isPro: boolean } {
-  const { plan, isPro } = useWorkspace();
-  return { plan, isPro };
+/** Entreprise (tenant) du compte courant. */
+export function useCompany() {
+  const { company, companyRole, isCompanyAdmin } = useWorkspace();
+  return { company, companyRole, isCompanyAdmin };
 }
 
 export function useCurrentProject(): Project | null {

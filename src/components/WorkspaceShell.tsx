@@ -4,19 +4,30 @@ import type { ReactNode } from 'react';
 import { WorkspaceProvider, useWorkspace } from '@/lib/store';
 import { Layout } from './Layout';
 import { Onboarding } from './Onboarding';
+import { CompanyOnboarding } from './CompanyOnboarding';
 
 /**
  * Coquille de l'espace de travail :
  * chargement -> onboarding si aucun projet -> sinon layout + module courant.
  */
 function Shell({ children }: { children: ReactNode }) {
-  const { loading, projects } = useWorkspace();
+  const { loading, projects, needsCompany } = useWorkspace();
 
-  if (loading && projects.length === 0) {
+  if (loading && projects.length === 0 && !needsCompany) {
     return (
       <div className="app-loading">
         <div className="spinner"></div>
         <p>Chargement de vos projets...</p>
+      </div>
+    );
+  }
+
+  if (needsCompany) {
+    return (
+      <div className="app">
+        <main className="main">
+          <CompanyOnboarding />
+        </main>
       </div>
     );
   }
