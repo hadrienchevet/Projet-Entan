@@ -29,9 +29,11 @@ export function UpgradePrompt() {
       }
     >
       <p>
-        Le plan gratuit est limité à <strong>{FREE_PROJECTS_PER_TYPE} projets</strong> de type
-        «&nbsp;{PROJECT_TYPE_LABELS[limitPromptType]}&nbsp;». Passe à <strong>Pro</strong> pour créer
-        des projets en illimité.
+        Le plan gratuit est limité à{' '}
+        <strong>
+          {FREE_PROJECTS_PER_TYPE} projets de type «&nbsp;{PROJECT_TYPE_LABELS[limitPromptType]}&nbsp;»
+        </strong>
+        . Passe à <strong>Pro</strong> pour créer des projets en illimité.
       </p>
     </Modal>
   );
