@@ -42,6 +42,7 @@ export default async function proxy(request: NextRequest) {
     pathname === '/login' ||
     pathname.startsWith('/auth') ||
     pathname === '/api/stripe/webhook' ||
+    pathname === '/api/auth/send-email' ||
     pathname === '/cgv' ||
     pathname === '/confidentialite';
 
