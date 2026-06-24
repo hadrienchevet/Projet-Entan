@@ -31,7 +31,7 @@ function LoginForm() {
   // Seuls les chemins internes sont autorisés en redirection.
   const next = rawNext.startsWith('/') ? rawNext : '/';
 
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -51,6 +51,21 @@ function LoginForm() {
     setUnconfirmedEmail('');
     setPending(true);
     const supabase = createClient();
+
+    if (mode === 'forgot') {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      });
+      setPending(false);
+      if (error) {
+        setError(friendlyError(error.message));
+      } else {
+        setNotice(
+          'Si un compte existe pour cet email, un lien de réinitialisation vient d’être envoyé. Pensez à vérifier vos spams.',
+        );
+      }
+      return;
+    }
 
     if (mode === 'signin') {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -127,18 +142,24 @@ function LoginForm() {
         </div>
 
         <div className="auth-tabs">
-          <div className="segmented">
-            {(['signin', 'signup'] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                className={mode === m ? 'active' : ''}
-                onClick={() => setMode(m)}
-              >
-                {m === 'signin' ? 'Connexion' : 'Créer un compte'}
-              </button>
-            ))}
-          </div>
+          {mode === 'forgot' ? (
+            <p style={{ textAlign: 'center', fontWeight: 600, margin: 0 }}>
+              Réinitialiser le mot de passe
+            </p>
+          ) : (
+            <div className="segmented">
+              {(['signin', 'signup'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  className={mode === m ? 'active' : ''}
+                  onClick={() => setMode(m)}
+                >
+                  {m === 'signin' ? 'Connexion' : 'Créer un compte'}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -167,20 +188,22 @@ function LoginForm() {
               placeholder="vous@entreprise.com"
             />
           </div>
-          <div className="field">
-            <label htmlFor="password">
-              Mot de passe <span className="req">*</span>
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </div>
+          {mode !== 'forgot' && (
+            <div className="field">
+              <label htmlFor="password">
+                Mot de passe <span className="req">*</span>
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+          )}
 
           {error && <div className="form-error">{error}</div>}
           {notice && <div className="form-success">{notice}</div>}
@@ -198,8 +221,44 @@ function LoginForm() {
           )}
 
           <button type="submit" className="btn btn-primary" disabled={pending} style={{ justifyContent: 'center' }}>
-            {pending ? '…' : mode === 'signin' ? 'Se connecter' : 'Créer mon compte'}
+            {pending
+              ? '…'
+              : mode === 'forgot'
+                ? 'Envoyer le lien'
+                : mode === 'signin'
+                  ? 'Se connecter'
+                  : 'Créer mon compte'}
           </button>
+
+          {mode === 'signin' && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{ justifyContent: 'center' }}
+              onClick={() => {
+                setMode('forgot');
+                setError('');
+                setNotice('');
+                setUnconfirmedEmail('');
+              }}
+            >
+              Mot de passe oublié ?
+            </button>
+          )}
+          {mode === 'forgot' && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{ justifyContent: 'center' }}
+              onClick={() => {
+                setMode('signin');
+                setError('');
+                setNotice('');
+              }}
+            >
+              ← Retour à la connexion
+            </button>
+          )}
         </form>
 
         <p style={{ marginTop: 16, fontSize: 12, textAlign: 'center', color: 'var(--text-muted)' }}>
