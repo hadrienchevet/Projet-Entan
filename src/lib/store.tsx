@@ -215,6 +215,7 @@ interface WorkspaceState {
   updateMember: (projectId: Id, memberId: Id, patch: Partial<MemberInput>) => Promise<void>;
   removeMember: (projectId: Id, memberId: Id) => Result;
   removeProjectMember: (projectId: Id, userId: string) => Promise<void>;
+  addProjectMember: (projectId: Id, userId: string) => Promise<Result>;
 
   addAction: (projectId: Id, input: ActionInput) => Promise<void>;
   updateAction: (id: Id, patch: Partial<ActionInput>) => Promise<void>;
@@ -459,6 +460,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return { ok: true };
     },
     [supabase, fetchCompany],
+  );
+
+  const addProjectMember = useCallback(
+    async (projectId: Id, uid: string): Promise<Result> => {
+      const { error } = await supabase
+        .from('project_members')
+        .insert({ project_id: projectId, user_id: uid, role: 'member' });
+      if (error) return { ok: false, error: error.message };
+      await fetchProjects();
+      return { ok: true };
+    },
+    [supabase, fetchProjects],
   );
 
   const fetchProjectData = useCallback(
@@ -1747,6 +1760,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     updateMember,
     removeMember,
     removeProjectMember,
+    addProjectMember,
     addAction,
     updateAction,
     deleteAction,

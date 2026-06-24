@@ -243,6 +243,12 @@ drop policy if exists projects_insert on public.projects;
 create policy projects_insert on public.projects for insert
   with check (owner_id = auth.uid() and company_id = public.current_company_id());
 
+-- project_members : un membre du projet peut ajouter un collègue (le trigger
+-- enforce_project_member_company garantit qu'il est bien dans l'entreprise).
+drop policy if exists pm_insert on public.project_members;
+create policy pm_insert on public.project_members for insert
+  with check (public.is_project_member(project_id) or public.is_project_owner(project_id));
+
 -- ---------------------------------------------------------------------------
 -- 6. Clés d'accès (5) — hashes sha256 (clés en clair remises hors dépôt)
 -- ---------------------------------------------------------------------------

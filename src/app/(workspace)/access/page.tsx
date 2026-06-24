@@ -2,26 +2,46 @@
 
 import { useState } from 'react';
 import { useCurrentProject, useWorkspace } from '@/lib/store';
-import { IconLink, IconTrash } from '@/components/icons';
-import type { Id } from '@/lib/types';
+import { IconTrash } from '@/components/icons';
 
+/**
+ * Accès au projet = membres de l'ENTREPRISE ayant accès à ce projet.
+ * On ajoute des personnes déjà dans l'entreprise (= des sièges). Pour inviter
+ * une nouvelle personne, ça se passe dans Équipe.
+ */
 export default function AccessPage() {
   const project = useCurrentProject();
-  const { removeProjectMember, invitations, createInvitation, revokeInvitation } = useWorkspace();
-  const [copiedId, setCopiedId] = useState<Id | null>(null);
+  const { companyMembers, addProjectMember, removeProjectMember } = useWorkspace();
+  const [selected, setSelected] = useState('');
+  const [error, setError] = useState('');
+  const [pending, setPending] = useState(false);
 
   if (!project) return null;
 
-  const onRemoveMember = (userId: string, name: string) => {
+  const memberIds = new Set((project.project_members ?? []).map((pm) => pm.userId));
+  const candidates = companyMembers.filter((m) => m.status === 'active' && !memberIds.has(m.userId));
+
+  const add = async () => {
+    if (!selected) return;
+    setError('');
+    setPending(true);
+    const r = await addProjectMember(project.id, selected);
+    setPending(false);
+    if (!r.ok) {
+      setError(
+        r.error.includes('user_not_in_company')
+          ? 'Cette personne n’est pas (ou plus) dans l’entreprise.'
+          : r.error,
+      );
+    } else {
+      setSelected('');
+    }
+  };
+
+  const onRemove = (userId: string, name: string) => {
     if (userId === project.ownerId) return;
     if (!window.confirm(`Retirer l'accès de ${name} au projet ?`)) return;
     void removeProjectMember(project.id, userId);
-  };
-
-  const copyInvite = async (id: Id, token: string) => {
-    await navigator.clipboard.writeText(`${window.location.origin}/invite/${token}`);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
   };
 
   return (
@@ -29,56 +49,46 @@ export default function AccessPage() {
       <div className="page-header">
         <div>
           <h1>Accès au projet</h1>
-          <p className="subtitle">
-            Gérez les personnes pouvant consulter ce projet et invitez de nouveaux collaborateurs.
-          </p>
+          <p className="subtitle">Donnez accès à ce projet aux membres de votre entreprise.</p>
         </div>
       </div>
 
       <div className="card">
-        <div className="card-header">
-          <div className="card-title-group">
-            <h2>Inviter par lien</h2>
-            <span className="muted" style={{ fontSize: 12 }}>
-              toute personne ayant le lien peut rejoindre le projet
-            </span>
-          </div>
-          <button className="btn btn-sm" onClick={() => void createInvitation(project.id)}>
-            <IconLink /> Générer un lien
-          </button>
-        </div>
-        {invitations.length === 0 ? (
-          <div className="empty">
-            <p>
-              Aucun lien actif. Générez-en un et partagez-le (validité 7 jours).
+        <div className="card-body">
+          <h2>Ajouter un membre de l’entreprise</h2>
+          {candidates.length === 0 ? (
+            <p className="muted" style={{ marginTop: 8 }}>
+              Tous les membres de l’entreprise ont déjà accès. Pour inviter une nouvelle personne,
+              rendez-vous dans <strong>Équipe</strong>.
             </p>
-          </div>
-        ) : (
-          <div className="list">
-            {invitations.map((inv) => (
-              <div key={inv.id} className="list-row">
-                <div className="row-main">
-                  <div className="row-title invite-url">
-                    {typeof window !== 'undefined' ? window.location.origin : ''}/invite/{inv.token}
-                  </div>
-                  <div className="row-sub">
-                    Expire le {new Date(inv.expiresAt).toLocaleDateString('fr-FR')}
-                  </div>
-                </div>
-                <button className="btn btn-sm" onClick={() => void copyInvite(inv.id, inv.token)}>
-                  {copiedId === inv.id ? 'Copié ✓' : 'Copier'}
-                </button>
-                <button
-                  className="icon-btn danger"
-                  onClick={() => void revokeInvitation(inv.id)}
-                  aria-label="Révoquer ce lien"
-                >
-                  <IconTrash />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+          ) : (
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+              <select
+                value={selected}
+                onChange={(e) => setSelected(e.target.value)}
+                style={{ minWidth: 220 }}
+              >
+                <option value="">Choisir un membre…</option>
+                {candidates.map((m) => (
+                  <option key={m.userId} value={m.userId}>
+                    {m.displayName || m.email}
+                  </option>
+                ))}
+              </select>
+              <button className="btn btn-primary" disabled={pending || !selected} onClick={add}>
+                {pending ? '…' : 'Ajouter au projet'}
+              </button>
+            </div>
+          )}
+          {error && (
+            <div className="form-error" style={{ marginTop: 8 }}>
+              {error}
+            </div>
+          )}
+          <p className="form-hint" style={{ marginTop: 12 }}>
+            Pour inviter une nouvelle personne (= occuper un siège), allez dans <strong>Équipe</strong>.
+          </p>
+        </div>
       </div>
 
       <div className="card" style={{ marginTop: 24 }}>
@@ -107,14 +117,14 @@ export default function AccessPage() {
                       {pm.role === 'owner' ? 'Propriétaire' : 'Membre'}
                     </span>
                   </td>
-                  <td className="muted">
-                    {new Date(pm.joinedAt).toLocaleDateString('fr-FR')}
-                  </td>
+                  <td className="muted">{new Date(pm.joinedAt).toLocaleDateString('fr-FR')}</td>
                   <td style={{ textAlign: 'right' }}>
                     {pm.role !== 'owner' && (
                       <button
                         className="icon-btn danger"
-                        onClick={() => onRemoveMember(pm.userId, pm.profile?.displayName || 'cet utilisateur')}
+                        onClick={() =>
+                          onRemove(pm.userId, pm.profile?.displayName || 'cet utilisateur')
+                        }
                       >
                         <IconTrash />
                       </button>
@@ -124,19 +134,6 @@ export default function AccessPage() {
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-      
-      <div className="card" style={{ marginTop: 24 }}>
-        <div className="card-header">
-          <h2>Note sur le RACI</h2>
-        </div>
-        <div className="card-body">
-          <p className="muted">
-            Avoir accès au projet ne signifie pas être dans l&apos;équipe RACI. 
-            Pour ajouter une personne à la matrice RACI (responsable d&apos;actions), 
-            rendez-vous dans l&apos;onglet <strong>RACI</strong> et ajoutez-la manuellement.
-          </p>
         </div>
       </div>
     </div>
