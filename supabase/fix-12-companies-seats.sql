@@ -68,6 +68,12 @@ create table if not exists public.access_keys (
 alter table public.projects
   add column if not exists company_id uuid references public.companies (id) on delete cascade;
 
+-- Ajout idempotent de la clé entreprise (au cas où `companies` aurait été créée
+-- par une version antérieure de fix-12, sans cette colonne).
+alter table public.companies
+  add column if not exists join_code text not null unique
+  default ('ENT-' || upper(substr(md5(gen_random_uuid()::text), 1, 8)));
+
 create index if not exists idx_projects_company_id  on public.projects (company_id);
 create index if not exists idx_company_members_user on public.company_members (user_id);
 create index if not exists idx_company_invitations_email on public.company_invitations (lower(email));
