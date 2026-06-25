@@ -11,7 +11,8 @@ const PRICE_PER_SEAT = 9;
  * lance Checkout/Portal, ou active un accès offert via clé.
  */
 export function BillingPage() {
-  const { company, seatsActive, isCompanyAdmin, redeemAccessKey, refreshCompany } = useWorkspace();
+  const { company, seatsActive, isCompanyAdmin, companyActivated, redeemAccessKey, refreshCompany } =
+    useWorkspace();
   const [notice, setNotice] = useState<string | null>(null);
   const [keyCode, setKeyCode] = useState('');
   const [keyMsg, setKeyMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -61,6 +62,19 @@ export function BillingPage() {
           <p className="subtitle">Facturation par siège — {PRICE_PER_SEAT} € / siège / mois.</p>
         </div>
       </header>
+
+      {company && !companyActivated && (
+        <div className="card" style={{ borderColor: 'var(--warning)' }}>
+          <div className="card-body">
+            <strong>Activez votre accès pour continuer.</strong>
+            <p style={{ color: 'var(--text-secondary)', marginTop: 4 }}>
+              Votre entreprise n’a ni siège payé ni clé d’accès. Pour utiliser l’application, vous
+              devez <strong>payer un siège</strong> ou <strong>saisir une clé d’accès</strong>{' '}
+              ci-dessous.
+            </p>
+          </div>
+        </div>
+      )}
 
       {notice && (
         <div className="card">
