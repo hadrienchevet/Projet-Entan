@@ -114,6 +114,7 @@ export type CompanyRole = 'owner' | 'admin' | 'member';
 export interface Company {
   id: Id;
   name: string;
+  joinCode: string;
   seats: number;
   isComp: boolean;
   status: string | null;
@@ -127,8 +128,6 @@ export interface CompanyMemberRow {
   displayName?: string;
 }
 
-/** Sièges offerts par entreprise avant facturation. */
-export const FREE_SEATS = 2;
 
 interface ProjectMeta {
   id: Id;
@@ -178,6 +177,9 @@ interface WorkspaceState {
   ) => Promise<{ ok: true; token: string } | { ok: false; error: string }>;
   removeCompanyMember: (userId: string) => Promise<void>;
   redeemAccessKey: (code: string) => Promise<Result>;
+  joinCompany: (code: string) => Promise<Result>;
+  /** L'entreprise a un accès actif (offert via clé, ou ≥ 1 siège payé). */
+  companyActivated: boolean;
   refreshCompany: () => Promise<void>;
   /** Limite de sièges atteinte (déclenche l'UpgradePrompt). */
   seatLimitPrompt: boolean;
@@ -365,7 +367,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
     const { data: mem, error } = await supabase
       .from('company_members')
-      .select('role, companies(id, name, seats, is_comp, status)')
+      .select('role, companies(id, name, join_code, seats, is_comp, status)')
       .eq('user_id', user.id)
       .eq('status', 'active')
       .order('created_at')
@@ -382,7 +384,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
     setCompanyFeature(true);
     const c = mem?.companies as
-      | { id: string; name: string; seats: number; is_comp: boolean; status: string | null }
+      | {
+          id: string;
+          name: string;
+          join_code: string;
+          seats: number;
+          is_comp: boolean;
+          status: string | null;
+        }
       | undefined;
     if (!mem || !c) {
       setCompany(null);
@@ -391,7 +400,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setCompanyChecked(true);
       return;
     }
-    setCompany({ id: c.id, name: c.name, seats: c.seats, isComp: c.is_comp, status: c.status });
+    setCompany({
+      id: c.id,
+      name: c.name,
+      joinCode: c.join_code,
+      seats: c.seats,
+      isComp: c.is_comp,
+      status: c.status,
+    });
     setCompanyRole(mem.role as CompanyRole);
     const { data: members } = await supabase
       .from('company_members')
@@ -427,7 +443,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     async (email: string, role: 'admin' | 'member') => {
       if (!company) return { ok: false as const, error: 'Aucune entreprise.' };
       const active = companyMembers.filter((m) => m.status === 'active').length;
-      const allowed = company.isComp ? Infinity : Math.max(FREE_SEATS, company.seats);
+      const allowed = company.isComp ? Infinity : company.seats;
       if (active >= allowed) {
         setSeatLimitPrompt(true);
         return { ok: false as const, error: 'Limite de sièges atteinte.' };
@@ -456,6 +472,25 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     async (code: string): Promise<Result> => {
       const { error } = await supabase.rpc('redeem_access_key', { p_code: code.trim() });
       if (error) return { ok: false, error: error.message };
+      await fetchCompany();
+      return { ok: true };
+    },
+    [supabase, fetchCompany],
+  );
+
+  const joinCompany = useCallback(
+    async (code: string): Promise<Result> => {
+      const { error } = await supabase.rpc('join_company_by_code', { p_code: code.trim() });
+      if (error) {
+        return {
+          ok: false,
+          error: error.message.includes('company_not_found')
+            ? 'Aucune entreprise ne correspond à cette clé.'
+            : error.message.includes('seat_limit_reached')
+              ? "L'entreprise n'a plus de siège disponible. Demandez à un administrateur d'en ajouter un."
+              : error.message,
+        };
+      }
       await fetchCompany();
       return { ok: true };
     },
@@ -1729,13 +1764,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     companyRole,
     companyMembers,
     seatsActive: companyMembers.filter((m) => m.status === 'active').length,
-    seatsAllowed: company ? (company.isComp ? Infinity : Math.max(FREE_SEATS, company.seats)) : 0,
+    seatsAllowed: company ? (company.isComp ? Infinity : company.seats) : 0,
     isCompanyAdmin: companyRole === 'owner' || companyRole === 'admin',
     needsCompany: companyFeature && companyChecked && !!userId && !company,
+    companyActivated: company ? company.isComp || company.seats >= 1 : false,
     createCompany,
     inviteCompanyMember,
     removeCompanyMember,
     redeemAccessKey,
+    joinCompany,
     refreshCompany: fetchCompany,
     seatLimitPrompt,
     closeSeatPrompt: () => setSeatLimitPrompt(false),

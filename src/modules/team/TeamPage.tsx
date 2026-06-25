@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useWorkspace, FREE_SEATS } from '@/lib/store';
+import { useWorkspace } from '@/lib/store';
 
 /** Gestion de l'équipe = des sièges : membres, invitations, rôles. */
 export function TeamPage() {
@@ -31,7 +31,7 @@ export function TeamPage() {
     );
   }
 
-  const allowed = company.isComp ? '∞' : Math.max(FREE_SEATS, company.seats);
+  const allowed = company.isComp ? '∞' : company.seats;
 
   const invite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +63,31 @@ export function TeamPage() {
           </p>
         </div>
       </header>
+
+      <div className="card">
+        <div className="card-body">
+          <h2>Clé de l’entreprise</h2>
+          <p className="form-hint" style={{ marginTop: 6 }}>
+            Partagez cette clé : en la saisissant, vos collègues rejoignent le réseau de l’entreprise
+            (sans accès automatique à vos projets — ils devront être ajoutés projet par projet).
+          </p>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+            <input
+              readOnly
+              value={company.joinCode}
+              onFocus={(e) => e.currentTarget.select()}
+              style={{ maxWidth: 240, fontWeight: 600 }}
+            />
+            <button
+              type="button"
+              className="btn"
+              onClick={() => void navigator.clipboard.writeText(company.joinCode)}
+            >
+              Copier
+            </button>
+          </div>
+        </div>
+      </div>
 
       {isCompanyAdmin && (
         <div className="card">

@@ -22,6 +22,8 @@ create extension if not exists "pgcrypto";
 create table if not exists public.companies (
   id                     uuid primary key default gen_random_uuid(),
   name                   text not null,
+  -- Clé entreprise unique : à saisir pour rejoindre le réseau de l'entreprise.
+  join_code              text not null unique default ('ENT-' || upper(substr(md5(gen_random_uuid()::text), 1, 8))),
   seats                  int not null default 0,          -- quantité payée (Stripe)
   is_comp                boolean not null default false,   -- accès offert (clé / grandfather)
   status                 text,
@@ -100,10 +102,12 @@ returns boolean language sql security definer stable set search_path = public as
   );
 $$;
 
--- Sièges autorisés : illimité si accès offert, sinon max(gratuits, payés). FREE_SEATS = 2.
+-- Sièges autorisés : illimité si accès offert (clé), sinon EXACTEMENT les sièges
+-- payés (aucun siège gratuit). Le tout 1er membre (owner) est toléré au démarrage
+-- par le trigger, mais l'app reste bloquée tant que l'entreprise n'est pas payée/offerte.
 create or replace function public.seat_allowance(p_company uuid)
 returns int language sql security definer stable set search_path = public as $$
-  select case when c.is_comp then 2147483647 else greatest(2, c.seats) end
+  select case when c.is_comp then 2147483647 else c.seats end
   from public.companies c where c.id = p_company;
 $$;
 
@@ -120,7 +124,8 @@ begin
     select count(*) into v_active
       from public.company_members
      where company_id = new.company_id and status = 'active' and user_id <> new.user_id;
-    if (v_active + 1) > public.seat_allowance(new.company_id) then
+    -- v_active = 0 → tout 1er membre (owner) toléré au démarrage. Sinon, limite stricte.
+    if v_active >= 1 and (v_active + 1) > public.seat_allowance(new.company_id) then
       raise exception 'seat_limit_reached';
     end if;
   end if;
@@ -185,6 +190,22 @@ begin
     values (v_company, auth.uid(), v_role, 'active')
     on conflict (company_id, user_id) do update set status = 'active';
   update public.company_invitations set status = 'accepted' where token = p_token;
+  return v_company;
+end;
+$$;
+
+-- Rejoindre une entreprise via sa clé entreprise (join_code). Occupe un siège
+-- (soumis à enforce_seat_limit). Ne donne PAS accès aux projets (accès par projet).
+create or replace function public.join_company_by_code(p_code text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare v_company uuid;
+begin
+  if auth.uid() is null then raise exception 'not_authenticated'; end if;
+  select id into v_company from public.companies where upper(join_code) = upper(trim(p_code));
+  if v_company is null then raise exception 'company_not_found'; end if;
+  insert into public.company_members (company_id, user_id, role, status)
+    values (v_company, auth.uid(), 'member', 'active')
+    on conflict (company_id, user_id) do update set status = 'active';
   return v_company;
 end;
 $$;

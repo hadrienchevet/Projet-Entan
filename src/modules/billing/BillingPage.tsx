@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useWorkspace, FREE_SEATS } from '@/lib/store';
+import { useWorkspace } from '@/lib/store';
 
 /** Prix mensuel par siège (affichage). Le montant réel vient du prix Stripe. */
 const PRICE_PER_SEAT = 9;
@@ -34,7 +34,6 @@ export function BillingPage() {
 
   const paidSeats = company?.seats ?? 0;
   const isComp = company?.isComp ?? false;
-  const available = Math.max(FREE_SEATS, paidSeats);
 
   const redeem = async () => {
     setKeyMsg(null);
@@ -83,9 +82,8 @@ export function BillingPage() {
             <>
               <h2>Sièges</h2>
               <p style={{ color: 'var(--text-secondary)', marginTop: 6 }}>
-                <strong>{seatsActive}</strong> membre(s) actif(s) · <strong>{available}</strong>{' '}
-                siège(s) disponible(s){' '}
-                {paidSeats > 0 ? `(${paidSeats} payé(s))` : `(dont ${FREE_SEATS} gratuits)`}.
+                <strong>{seatsActive}</strong> membre(s) actif(s) · <strong>{paidSeats}</strong>{' '}
+                siège(s) payé(s). Chaque membre actif nécessite un siège payé (ou une clé d’accès).
               </p>
               {isCompanyAdmin ? (
                 <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
