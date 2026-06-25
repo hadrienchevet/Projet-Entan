@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useWorkspace } from '@/lib/store';
+import { CompanyOnboarding } from '@/components/CompanyOnboarding';
 
 /** Gestion de l'équipe = des sièges : membres, invitations, rôles. */
 export function TeamPage() {
@@ -21,14 +22,9 @@ export function TeamPage() {
   const [link, setLink] = useState('');
   const [pending, setPending] = useState(false);
 
+  // Pas d'entreprise → on propose de créer / rejoindre (sans bloquer l'app).
   if (!company) {
-    return (
-      <div className="page">
-        <div className="card">
-          <div className="card-body">Aucune entreprise active.</div>
-        </div>
-      </div>
-    );
+    return <CompanyOnboarding />;
   }
 
   const invite = async (e: React.FormEvent) => {

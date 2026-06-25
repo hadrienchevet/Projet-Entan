@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 import { WorkspaceProvider, useWorkspace } from '@/lib/store';
 import { Layout } from './Layout';
 import { Onboarding } from './Onboarding';
-import { CompanyOnboarding } from './CompanyOnboarding';
 import { BillingPage } from '@/modules/billing/BillingPage';
 
 /**
@@ -12,9 +11,9 @@ import { BillingPage } from '@/modules/billing/BillingPage';
  * chargement -> onboarding si aucun projet -> sinon layout + module courant.
  */
 function Shell({ children }: { children: ReactNode }) {
-  const { loading, projects, needsSeat, needsCompany } = useWorkspace();
+  const { loading, projects, needsSeat } = useWorkspace();
 
-  if (loading && projects.length === 0 && !needsSeat && !needsCompany) {
+  if (loading && projects.length === 0 && !needsSeat) {
     return (
       <div className="app-loading">
         <div className="spinner"></div>
@@ -29,17 +28,6 @@ function Shell({ children }: { children: ReactNode }) {
       <div className="app">
         <main className="main">
           <BillingPage />
-        </main>
-      </div>
-    );
-  }
-
-  // Siège OK mais pas encore d'entreprise → créer / rejoindre.
-  if (needsCompany) {
-    return (
-      <div className="app">
-        <main className="main">
-          <CompanyOnboarding />
         </main>
       </div>
     );
