@@ -116,7 +116,6 @@ export interface Company {
   name: string;
   joinCode: string;
   seats: number;
-  compSeats: number;
   isComp: boolean;
   status: string | null;
 }
@@ -386,7 +385,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setHasSeat(seat === true);
     const { data: mem, error } = await supabase
       .from('company_members')
-      .select('role, companies(id, name, join_code, seats, comp_seats, is_comp, status)')
+      .select('role, companies(id, name, join_code, seats, is_comp, status)')
       .eq('user_id', user.id)
       .eq('status', 'active')
       .order('created_at')
@@ -408,7 +407,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           name: string;
           join_code: string;
           seats: number;
-          comp_seats: number;
           is_comp: boolean;
           status: string | null;
         }
@@ -425,7 +423,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       name: c.name,
       joinCode: c.join_code,
       seats: c.seats,
-      compSeats: c.comp_seats,
       isComp: c.is_comp,
       status: c.status,
     });
@@ -1779,10 +1776,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     companyRole,
     companyMembers,
     seatsActive: companyMembers.filter((m) => m.status === 'active').length,
-    seatsAllowed: company ? (company.isComp ? Infinity : company.seats + company.compSeats) : 0,
+    seatsAllowed: company ? (company.isComp ? Infinity : company.seats) : 0,
     isCompanyAdmin: companyRole === 'owner' || companyRole === 'admin',
     needsCompany: companyFeature && companyChecked && !!userId && hasSeat && !company,
-    companyActivated: company ? company.isComp || company.seats + company.compSeats >= 1 : false,
+    companyActivated: company ? company.isComp || company.seats >= 1 : false,
     hasSeat,
     needsSeat: companyFeature && companyChecked && !!userId && !hasSeat,
     createCompany,
