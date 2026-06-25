@@ -42,8 +42,9 @@ end;
 $$;
 
 -- Redeem : consomme UNE clé pour le compte courant (1 clé = 1 siège). Idempotent.
+-- search_path inclut `extensions` car digest() (pgcrypto) y vit chez Supabase.
 create or replace function public.redeem_access_key(p_code text)
-returns boolean language plpgsql security definer set search_path = public as $$
+returns boolean language plpgsql security definer set search_path = public, extensions as $$
 declare v_key uuid;
 begin
   if auth.uid() is null then raise exception 'not_authenticated'; end if;
