@@ -73,6 +73,8 @@ alter table public.projects
 -- par une version antérieure de fix-12). En plusieurs temps pour rester robuste
 -- sur une table déjà peuplée.
 alter table public.companies add column if not exists join_code text;
+alter table public.companies alter column join_code
+  set default ('ENT-' || upper(substr(md5(gen_random_uuid()::text), 1, 8)));
 update public.companies
    set join_code = 'ENT-' || upper(substr(md5(gen_random_uuid()::text), 1, 8))
  where join_code is null;
