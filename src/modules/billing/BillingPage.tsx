@@ -13,6 +13,8 @@ const css = `
 .pay-hero h1 { font-size: 27px; letter-spacing: -0.02em; margin: 16px 0 6px; }
 .pay-hero p { color: var(--text-secondary); font-size: 15px; max-width: 460px; margin: 0 auto; line-height: 1.6; }
 .pay-notice { background: var(--accent-soft); color: var(--accent-text); border: 1px solid var(--accent-faint); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; margin-top: 20px; text-align: center; }
+.pay-summary { text-align: center; color: var(--text-secondary); font-size: 14px; margin-top: 18px; }
+.pay-summary strong { color: var(--text); }
 .pay-grid { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; margin-top: 26px; }
 .pay-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); display: flex; flex-direction: column; }
 .pay-card.featured { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 10px 34px rgb(0 0 0 / 0.07); }
@@ -68,6 +70,14 @@ export function BillingPage() {
   }, [refreshCompany]);
 
   const paidSeats = company?.seats ?? 0;
+  const compSeats = company?.compSeats ?? 0;
+  const totalSeats = paidSeats + compSeats;
+  const seatsDetail = (() => {
+    const parts: string[] = [];
+    if (compSeats > 0) parts.push(`${compSeats} via clé${compSeats > 1 ? 's' : ''}`);
+    if (paidSeats > 0) parts.push(`${paidSeats} payé${paidSeats > 1 ? 's' : ''}`);
+    return parts.length ? ` (${parts.join(', ')})` : '';
+  })();
   const isComp = company?.isComp ?? false;
 
   const redeem = async () => {
@@ -76,7 +86,7 @@ export function BillingPage() {
     const r = await redeemAccessKey(keyCode);
     setPending(false);
     if (r.ok) {
-      setKeyMsg({ ok: true, text: 'Clé valide — accès activé ✨' });
+      setKeyMsg({ ok: true, text: 'Clé valide — 1 siège ajouté ✨' });
       setKeyCode('');
     } else {
       setKeyMsg({
@@ -99,7 +109,7 @@ export function BillingPage() {
     <div className="pay-card">
       <div className="pay-eyebrow">Clé d’accès</div>
       <h2>J’ai une clé</h2>
-      <p className="pay-muted">Une clé d’accès débloque votre entreprise gratuitement, sans limite de sièges.</p>
+      <p className="pay-muted">Chaque clé d’accès ajoute <strong>1 siège</strong> à votre entreprise.</p>
       {isCompanyAdmin ? (
         <div className="pay-key">
           <input
@@ -148,60 +158,45 @@ export function BillingPage() {
         <div className="pay-card pay-comp">
           <span className="pay-badge">✨ Accès offert</span>
           <p style={{ color: 'var(--text-secondary)', maxWidth: 360 }}>
-            Sièges illimités et toutes les fonctionnalités, sans paiement. Invitez votre équipe et
-            créez vos projets librement.
+            Sièges illimités et toutes les fonctionnalités, sans paiement.
           </p>
         </div>
-      ) : !companyActivated ? (
-        <div className="pay-grid">
-          <div className="pay-card featured">
-            <div className="pay-eyebrow">Recommandé</div>
-            <h2>Abonnement par siège</h2>
-            <div className="pay-price">
-              {PRICE_PER_SEAT} € <span>/ siège / mois</span>
-            </div>
-            <ul className="pay-list">
-              <li>Projets illimités</li>
-              <li>Collaboration en temps réel</li>
-              <li>Tous les modules (RACI, AMDEC, Planning, RDP…)</li>
-              <li>Ajoutez ou retirez des sièges à tout moment</li>
-            </ul>
-            {isCompanyAdmin ? (
-              <form action="/api/stripe/checkout" method="post" className="pay-cta">
-                <button type="submit" className="btn btn-primary">
-                  S’abonner
-                </button>
-              </form>
-            ) : (
-              <p className="pay-muted">Réservé à un administrateur de l’entreprise.</p>
-            )}
-          </div>
-          {keyCard}
-        </div>
       ) : (
-        <div className="pay-card">
-          <div className="pay-eyebrow">Votre abonnement</div>
-          <h2>Sièges</h2>
-          <div className="pay-seats">
-            <div>
-              <strong>{seatsActive}</strong>
-              <span>membres actifs</span>
+        <>
+          <p className="pay-summary">
+            <strong>{seatsActive}</strong> membre(s) actif(s) · <strong>{totalSeats}</strong> siège(s)
+            {seatsDetail}
+          </p>
+          <div className="pay-grid">
+            <div className="pay-card featured">
+              <div className="pay-eyebrow">Abonnement par siège</div>
+              <h2>Payer un siège</h2>
+              <div className="pay-price">
+                {PRICE_PER_SEAT} € <span>/ siège / mois</span>
+              </div>
+              <ul className="pay-list">
+                <li>Projets illimités</li>
+                <li>Collaboration en temps réel</li>
+                <li>Tous les modules (RACI, AMDEC, Planning, RDP…)</li>
+                <li>Ajoutez ou retirez des sièges à tout moment</li>
+              </ul>
+              {isCompanyAdmin ? (
+                <form
+                  action={paidSeats > 0 ? '/api/stripe/portal' : '/api/stripe/checkout'}
+                  method="post"
+                  className="pay-cta"
+                >
+                  <button type="submit" className="btn btn-primary">
+                    {paidSeats > 0 ? 'Gérer les sièges' : 'S’abonner'}
+                  </button>
+                </form>
+              ) : (
+                <p className="pay-muted">Réservé à un administrateur de l’entreprise.</p>
+              )}
             </div>
-            <div>
-              <strong>{paidSeats}</strong>
-              <span>sièges payés</span>
-            </div>
+            {keyCard}
           </div>
-          {isCompanyAdmin ? (
-            <form action="/api/stripe/portal" method="post" className="pay-cta">
-              <button type="submit" className="btn">
-                Gérer les sièges &amp; la facturation
-              </button>
-            </form>
-          ) : (
-            <p className="pay-muted">Seul un administrateur peut gérer l’abonnement.</p>
-          )}
-        </div>
+        </>
       )}
 
       <p className="pay-legal">

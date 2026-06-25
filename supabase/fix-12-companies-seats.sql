@@ -25,7 +25,8 @@ create table if not exists public.companies (
   -- Clé entreprise unique : à saisir pour rejoindre le réseau de l'entreprise.
   join_code              text not null unique default ('ENT-' || upper(substr(md5(gen_random_uuid()::text), 1, 8))),
   seats                  int not null default 0,          -- quantité payée (Stripe)
-  is_comp                boolean not null default false,   -- accès offert (clé / grandfather)
+  comp_seats             int not null default 0,          -- sièges offerts par clés (1 clé = 1 siège)
+  is_comp                boolean not null default false,   -- legacy : accès illimité (grandfather)
   status                 text,
   stripe_customer_id     text unique,
   stripe_subscription_id text,
@@ -78,6 +79,9 @@ update public.companies
 alter table public.companies alter column join_code set not null;
 create unique index if not exists companies_join_code_key on public.companies (join_code);
 
+-- Sièges offerts par clés (ajout idempotent pour les bases déjà créées).
+alter table public.companies add column if not exists comp_seats int not null default 0;
+
 create index if not exists idx_projects_company_id  on public.projects (company_id);
 create index if not exists idx_company_members_user on public.company_members (user_id);
 create index if not exists idx_company_invitations_email on public.company_invitations (lower(email));
@@ -117,7 +121,7 @@ $$;
 -- par le trigger, mais l'app reste bloquée tant que l'entreprise n'est pas payée/offerte.
 create or replace function public.seat_allowance(p_company uuid)
 returns int language sql security definer stable set search_path = public as $$
-  select case when c.is_comp then 2147483647 else c.seats end
+  select case when c.is_comp then 2147483647 else c.seats + c.comp_seats end
   from public.companies c where c.id = p_company;
 $$;
 
@@ -220,7 +224,7 @@ begin
 end;
 $$;
 
--- Utiliser une clé d'accès : comp l'entreprise courante (accès gratuit illimité).
+-- Utiliser une clé d'accès : ajoute 1 siège offert à l'entreprise courante (1 clé = 1 siège, usage unique).
 create or replace function public.redeem_access_key(p_code text)
 returns boolean language plpgsql security definer set search_path = public as $$
 declare v_company uuid; v_key uuid;
@@ -233,7 +237,8 @@ begin
    for update;
   if v_key is null then raise exception 'invalid_or_used_key'; end if;
   update public.access_keys set redeemed_by = v_company, redeemed_at = now() where id = v_key;
-  update public.companies set is_comp = true, status = 'comp' where id = v_company;
+  -- 1 clé = +1 siège offert (et non un accès illimité).
+  update public.companies set comp_seats = comp_seats + 1 where id = v_company;
   return true;
 end;
 $$;
