@@ -31,8 +31,6 @@ export function TeamPage() {
     );
   }
 
-  const allowed = company.isComp ? '∞' : company.seats;
-
   const invite = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -57,10 +55,7 @@ export function TeamPage() {
       <header className="page-header">
         <div>
           <h1>Équipe</h1>
-          <p className="subtitle">
-            {seatsActive} membre(s) actif(s) · {allowed} siège(s){' '}
-            {company.isComp ? '(accès offert)' : ''}
-          </p>
+          <p className="subtitle">{seatsActive} membre(s) dans l’entreprise</p>
         </div>
       </header>
 

@@ -181,6 +181,10 @@ interface WorkspaceState {
   joinCompany: (code: string) => Promise<Result>;
   /** L'entreprise a un accès actif (offert via clé, ou ≥ 1 siège payé). */
   companyActivated: boolean;
+  /** L'utilisateur a-t-il un siège (clé d'accès consommée) ? */
+  hasSeat: boolean;
+  /** Connecté, fonctionnalité dispo, mais pas de siège → écran clé. */
+  needsSeat: boolean;
   refreshCompany: () => Promise<void>;
   /** Limite de sièges atteinte (déclenche l'UpgradePrompt). */
   seatLimitPrompt: boolean;
@@ -318,6 +322,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [companyFeature, setCompanyFeature] = useState(false);
   const [companyChecked, setCompanyChecked] = useState(false);
   const [seatLimitPrompt, setSeatLimitPrompt] = useState(false);
+  const [hasSeat, setHasSeat] = useState(false);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
 
@@ -363,9 +368,22 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setCompany(null);
       setCompanyRole(null);
       setCompanyMembers([]);
+      setHasSeat(false);
       setCompanyChecked(true);
       return;
     }
+    // Siège personnel (fix-13) : la clé donne le siège. Fonction absente → legacy.
+    const { data: seat, error: seatErr } = await supabase.rpc('has_seat');
+    if (seatErr) {
+      setCompanyFeature(false);
+      setHasSeat(false);
+      setCompany(null);
+      setCompanyRole(null);
+      setCompanyMembers([]);
+      setCompanyChecked(true);
+      return;
+    }
+    setHasSeat(seat === true);
     const { data: mem, error } = await supabase
       .from('company_members')
       .select('role, companies(id, name, join_code, seats, comp_seats, is_comp, status)')
@@ -445,12 +463,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const inviteCompanyMember = useCallback(
     async (email: string, role: 'admin' | 'member') => {
       if (!company) return { ok: false as const, error: 'Aucune entreprise.' };
-      const active = companyMembers.filter((m) => m.status === 'active').length;
-      const allowed = company.isComp ? Infinity : company.seats + company.compSeats;
-      if (active >= allowed) {
-        setSeatLimitPrompt(true);
-        return { ok: false as const, error: 'Limite de sièges atteinte.' };
-      }
       const { data, error } = await supabase
         .from('company_invitations')
         .insert({ company_id: company.id, email: email.trim().toLowerCase(), role, invited_by: userId })
@@ -1769,8 +1781,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     seatsActive: companyMembers.filter((m) => m.status === 'active').length,
     seatsAllowed: company ? (company.isComp ? Infinity : company.seats + company.compSeats) : 0,
     isCompanyAdmin: companyRole === 'owner' || companyRole === 'admin',
-    needsCompany: companyFeature && companyChecked && !!userId && !company,
+    needsCompany: companyFeature && companyChecked && !!userId && hasSeat && !company,
     companyActivated: company ? company.isComp || company.seats + company.compSeats >= 1 : false,
+    hasSeat,
+    needsSeat: companyFeature && companyChecked && !!userId && !hasSeat,
     createCompany,
     inviteCompanyMember,
     removeCompanyMember,

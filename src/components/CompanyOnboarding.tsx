@@ -21,7 +21,17 @@ export function CompanyOnboarding() {
     setPending(true);
     const r = mode === 'create' ? await createCompany(name.trim()) : await joinCompany(code.trim());
     setPending(false);
-    if (!r.ok) setError(r.error);
+    if (!r.ok) {
+      setError(
+        r.error.includes('company_name_taken')
+          ? 'Une entreprise porte déjà ce nom. Rejoignez-la avec sa clé, ou choisissez un autre nom.'
+          : r.error.includes('name_required')
+            ? 'Le nom de l’entreprise est obligatoire.'
+            : r.error.includes('seat_required')
+              ? 'Activez d’abord votre siège avec une clé d’accès.'
+              : r.error,
+      );
+    }
   };
 
   return (

@@ -12,9 +12,9 @@ import { BillingPage } from '@/modules/billing/BillingPage';
  * chargement -> onboarding si aucun projet -> sinon layout + module courant.
  */
 function Shell({ children }: { children: ReactNode }) {
-  const { loading, projects, needsCompany, company, companyActivated } = useWorkspace();
+  const { loading, projects, needsSeat, needsCompany } = useWorkspace();
 
-  if (loading && projects.length === 0 && !needsCompany) {
+  if (loading && projects.length === 0 && !needsSeat && !needsCompany) {
     return (
       <div className="app-loading">
         <div className="spinner"></div>
@@ -23,22 +23,23 @@ function Shell({ children }: { children: ReactNode }) {
     );
   }
 
-  if (needsCompany) {
+  // Pas de siège (pas de clé) → écran d'activation par clé.
+  if (needsSeat) {
     return (
       <div className="app">
         <main className="main">
-          <CompanyOnboarding />
+          <BillingPage />
         </main>
       </div>
     );
   }
 
-  // Paywall : une entreprise sans accès (ni clé, ni siège payé) est bloquée.
-  if (company && !companyActivated) {
+  // Siège OK mais pas encore d'entreprise → créer / rejoindre.
+  if (needsCompany) {
     return (
       <div className="app">
         <main className="main">
-          <BillingPage />
+          <CompanyOnboarding />
         </main>
       </div>
     );
