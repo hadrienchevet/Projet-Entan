@@ -69,10 +69,14 @@ alter table public.projects
   add column if not exists company_id uuid references public.companies (id) on delete cascade;
 
 -- Ajout idempotent de la clé entreprise (au cas où `companies` aurait été créée
--- par une version antérieure de fix-12, sans cette colonne).
-alter table public.companies
-  add column if not exists join_code text not null unique
-  default ('ENT-' || upper(substr(md5(gen_random_uuid()::text), 1, 8)));
+-- par une version antérieure de fix-12). En plusieurs temps pour rester robuste
+-- sur une table déjà peuplée.
+alter table public.companies add column if not exists join_code text;
+update public.companies
+   set join_code = 'ENT-' || upper(substr(md5(gen_random_uuid()::text), 1, 8))
+ where join_code is null;
+alter table public.companies alter column join_code set not null;
+create unique index if not exists companies_join_code_key on public.companies (join_code);
 
 create index if not exists idx_projects_company_id  on public.projects (company_id);
 create index if not exists idx_company_members_user on public.company_members (user_id);
