@@ -19,6 +19,9 @@ Toutes sont **idempotentes** (ré-exécutables sans erreur).
 | `fix-11` | **Facturation/plans** : table `subscriptions` (écrite par le webhook Stripe en service-role), `user_plan()`, trigger `enforce_project_limit` (Free = 3 projets/type). *(superseded par fix-12)* |
 | `fix-12` | **Multi-tenant B2B + sièges** : `companies`, `company_members` (= sièges), `company_invitations`, `access_keys` (clés d'accès offert), `projects.company_id` ; `current_company_id()`, `enforce_seat_limit`, RPC `create_company`/`accept_company_invitation`/`redeem_access_key` ; backfill ; retire `enforce_project_limit`. Facturation par siège (Stripe quantity). |
 | `fix-13` | **Sièges personnels** : 1 clé = 1 siège rattaché à l'utilisateur (`access_keys.redeemed_by_user`) ; `has_seat()` ; membre actif requiert un siège ; `create_company` (nom unique, refus doublon) / `join_company_by_code`. |
+| `fix-14` | **Entreprise optionnelle** : projets « solo » (`company_id` null) autorisés ; seule la clé (siège) conditionne l'accès. |
+| `fix-15` | **Siège = frontière de sécurité** : impose `user_has_seat()` au niveau RLS (INSERT projet) ET trigger (INSERT accès projet, y c. projets solo). Avant fix-15 le paywall n'était QUE côté client → contournable par appel API direct (clé anon publique). Ne révoque aucun accès existant. |
+| `fix-16` | **Verrouille `companies` en lecture seule** (anon/authenticated) : supprime la policy `companies_update` qui laissait un admin écrire `is_comp`/`seats` → s'auto-octroyer des sièges illimités. Écritures réservées au webhook (service-role) et aux RPC `SECURITY DEFINER`. |
 
 ## Après une migration qui AJOUTE une colonne
 Recharger le cache de l'API REST, sinon l'écriture sur la nouvelle colonne est rejetée en silence :
