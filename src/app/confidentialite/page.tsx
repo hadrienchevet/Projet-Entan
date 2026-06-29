@@ -32,6 +32,10 @@ export default function ConfidentialitePage() {
           <strong>Compte</strong> : adresse email, nom affiché.
         </li>
         <li>
+          <strong>Entreprise et équipe</strong> : nom de l’entreprise, appartenance et rôle au sein de
+          l’équipe, invitations envoyées.
+        </li>
+        <li>
           <strong>Contenu</strong> : les données que vous saisissez (projets, actions, membres,
           analyses AMDEC / RDP, etc.).
         </li>
@@ -104,7 +108,7 @@ export default function ConfidentialitePage() {
       </p>
 
       <p className="muted">
-        Dernière mise à jour : 23 juin 2026. — <span className="ph">[Modèle à compléter et à faire
+        Dernière mise à jour : 29 juin 2026. — <span className="ph">[Modèle à compléter et à faire
         valider avant mise en production réelle.]</span>
       </p>
     </LegalLayout>

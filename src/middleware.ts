@@ -44,7 +44,10 @@ export default async function proxy(request: NextRequest) {
     pathname === '/api/stripe/webhook' ||
     pathname === '/api/auth/send-email' ||
     pathname === '/cgv' ||
-    pathname === '/confidentialite';
+    pathname === '/confidentialite' ||
+    pathname === '/mentions-legales' ||
+    pathname === '/dpa' ||
+    pathname === '/securite';
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();

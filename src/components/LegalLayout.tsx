@@ -31,6 +31,8 @@ export function LegalLayout({ title, children }: { title: string; children: Reac
           <nav>
             <Link href="/cgv">CGV</Link>
             <Link href="/confidentialite">Confidentialité</Link>
+            <Link href="/mentions-legales">Mentions légales</Link>
+            <Link href="/dpa">DPA</Link>
           </nav>
         </div>
         <article className="legal">
