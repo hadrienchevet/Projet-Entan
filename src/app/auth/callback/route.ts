@@ -7,7 +7,8 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
   const rawNext = searchParams.get('next') ?? '/projects';
-  const next = rawNext.startsWith('/') ? rawNext : '/projects';
+  // Chemin interne simple uniquement (anti open-redirect : refuse //host et /\host).
+  const next = /^\/(?![/\\])/.test(rawNext) ? rawNext : '/projects';
 
   if (code) {
     const supabase = await createClient();

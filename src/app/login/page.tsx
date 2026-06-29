@@ -28,8 +28,10 @@ function isUnconfirmed(error: { code?: string; message: string }): boolean {
 function LoginForm() {
   const searchParams = useSearchParams();
   const rawNext = searchParams.get('next') ?? '/';
-  // Seuls les chemins internes sont autorisés en redirection.
-  const next = rawNext.startsWith('/') ? rawNext : '/';
+  // Seuls les chemins internes SIMPLES sont autorisés (anti open-redirect) :
+  // un `next` comme `//evil.com` ou `/\evil.com` passe un simple startsWith('/')
+  // mais est interprété comme une URL absolue par le navigateur → on le refuse.
+  const next = /^\/(?![/\\])/.test(rawNext) ? rawNext : '/';
 
   const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [email, setEmail] = useState('');
