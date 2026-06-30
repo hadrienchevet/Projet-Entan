@@ -43,8 +43,14 @@ function LoginForm() {
   /** Email d'un compte créé mais pas encore confirmé → propose le renvoi. */
   const [unconfirmedEmail, setUnconfirmedEmail] = useState('');
 
+  // Base canonique des liens email : l'URL stable (NEXT_PUBLIC_SITE_URL) si elle
+  // est définie, sinon l'origine courante. Évite de générer des liens vers un
+  // déploiement figé (…-<hash>-….vercel.app) lorsqu'on agit depuis une preview.
+  const siteOrigin = () =>
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || window.location.origin;
+
   const emailRedirectTo = () =>
-    `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+    `${siteOrigin()}/auth/callback?next=${encodeURIComponent(next)}`;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +62,7 @@ function LoginForm() {
 
     if (mode === 'forgot') {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+        redirectTo: `${siteOrigin()}/auth/callback?next=/reset-password`,
       });
       setPending(false);
       if (error) {

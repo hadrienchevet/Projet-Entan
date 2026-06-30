@@ -68,10 +68,16 @@ function renderHtml(intro: string, cta: string, link: string): string {
   return `<!doctype html>
 <html lang="fr"><body style="margin:0;background:#faf9f5;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f1e1b;">
   <div style="max-width:480px;margin:0 auto;padding:32px 24px;">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
-      <span style="width:32px;height:32px;border-radius:8px;background:#c15f3c;color:#ffffff;display:inline-grid;place-items:center;font-weight:700;">PE</span>
-      <strong style="font-size:16px;">Projet Entan</strong>
-    </div>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+      <tr>
+        <td style="vertical-align:middle;">
+          <div style="width:34px;height:34px;border-radius:9px;background:#c15f3c;color:#ffffff;font-weight:700;font-size:14px;line-height:34px;text-align:center;font-family:Arial,Helvetica,sans-serif;">PE</div>
+        </td>
+        <td style="vertical-align:middle;padding-left:10px;">
+          <strong style="font-size:16px;color:#1f1e1b;">Projet Entan</strong>
+        </td>
+      </tr>
+    </table>
     <p style="font-size:15px;line-height:1.6;color:#5d5c56;">${intro}</p>
     <p style="margin:28px 0;">
       <a href="${link}" style="display:inline-block;background:#c15f3c;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">${cta}</a>
