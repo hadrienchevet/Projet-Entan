@@ -21,7 +21,7 @@ export function AmdecPage() {
   /** Analyse pour laquelle on crée une action corrective. */
   const [actionFor, setActionFor] = useState<AmdecEntry | null>(null);
   const [view, setView] = useState<'tableau' | 'matrice'>('tableau');
-  const [exporting, setExporting] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   if (!project) return null;
 
@@ -36,18 +36,6 @@ export function AmdecPage() {
         ? `Supprimer cette analyse ? Les ${linked} action(s) liée(s) seront conservées mais détachées.`
         : 'Supprimer cette analyse ?';
     if (window.confirm(msg)) void deleteAmdec(entry.id);
-  };
-
-  const exportPdf = async () => {
-    if (sorted.length === 0) return;
-    setExporting(true);
-    try {
-      const { exportAmdecPdf } = await import('./AmdecPdf');
-      await exportAmdecPdf(project.name, sorted);
-    } catch (err) {
-      console.warn('Export PDF AMDEC échoué', err);
-    }
-    setExporting(false);
   };
 
   return (
@@ -73,8 +61,8 @@ export function AmdecPage() {
               </button>
             ))}
           </div>
-          <button className="btn" onClick={exportPdf} disabled={exporting || sorted.length === 0}>
-            {exporting ? 'Génération…' : 'Exporter PDF'}
+          <button className="btn" onClick={() => setExportOpen(true)} disabled={sorted.length === 0}>
+            Exporter PDF
           </button>
           <button className="btn btn-primary" onClick={() => setCreating(true)}>
             <IconPlus /> Nouvelle analyse
@@ -184,7 +172,78 @@ export function AmdecPage() {
           onClose={() => setActionFor(null)}
         />
       )}
+
+      {exportOpen && (
+        <ExportPdfModal
+          projectName={project.name}
+          entries={sorted}
+          onClose={() => setExportOpen(false)}
+        />
+      )}
     </div>
+  );
+}
+
+function ExportPdfModal({
+  projectName,
+  entries,
+  onClose,
+}: {
+  projectName: string;
+  entries: AmdecEntry[];
+  onClose: () => void;
+}) {
+  const [table, setTable] = useState(true);
+  const [matrices, setMatrices] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!table && !matrices) return;
+    setBusy(true);
+    try {
+      const { exportAmdecPdf } = await import('./AmdecPdf');
+      await exportAmdecPdf(projectName, entries, { table, matrices });
+      onClose();
+    } catch (err) {
+      console.warn('Export PDF AMDEC échoué', err);
+      setBusy(false);
+    }
+  };
+
+  const checkRow = (checked: boolean, set: (v: boolean) => void, label: string, hint: string) => (
+    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '10px 0' }}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => set(e.target.checked)}
+        style={{ width: 'auto', marginTop: 2 }}
+      />
+      <span>
+        <span style={{ fontWeight: 600 }}>{label}</span>
+        <span className="form-hint" style={{ display: 'block' }}>{hint}</span>
+      </span>
+    </label>
+  );
+
+  return (
+    <Modal
+      title="Exporter en PDF"
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>Annuler</button>
+          <button className="btn btn-primary" onClick={submit} disabled={busy || (!table && !matrices)}>
+            {busy ? 'Génération…' : 'Exporter'}
+          </button>
+        </>
+      }
+    >
+      <p className="form-hint" style={{ marginBottom: 4 }}>
+        Sélectionnez les sections à inclure dans le rapport :
+      </p>
+      {checkRow(table, setTable, 'Tableau AMDEC détaillé', 'Toutes les analyses : cotation G/O/D, criticité avant/après, évolution.')}
+      {checkRow(matrices, setMatrices, 'Matrices de risque (avant / après)', 'Les deux matrices Gravité × Occurrence sur une page dédiée, avec légende.')}
+    </Modal>
   );
 }
 

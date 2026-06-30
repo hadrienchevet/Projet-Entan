@@ -6,9 +6,15 @@ import { criticality, residualCriticality } from '@/lib/types';
 
 /**
  * Export PDF d'un rapport AMDEC (vectoriel, texte sélectionnable, à la charte).
+ * Sections optionnelles : tableau détaillé et/ou matrices de risque (avant/après).
  * Chargé en dynamique (`import('./AmdecPdf')`) → @react-pdf reste hors du bundle
- * principal et n'est téléchargé qu'au clic sur « Exporter PDF ».
+ * principal et n'est téléchargé qu'au moment de l'export.
  */
+
+export interface AmdecPdfOptions {
+  table: boolean;
+  matrices: boolean;
+}
 
 const ACCENT = '#c15f3c';
 const INK = '#1f1e1b';
@@ -39,6 +45,25 @@ const styles = StyleSheet.create({
     position: 'absolute', bottom: 16, left: 28, right: 28,
     flexDirection: 'row', justifyContent: 'space-between', fontSize: 7, color: MUTED,
   },
+  // Matrices
+  matricesRow: { flexDirection: 'row' },
+  matrixBlock: { marginRight: 36 },
+  matrixTitle: { fontSize: 9, fontFamily: 'Helvetica-Bold', marginBottom: 6 },
+  matrixRow: { flexDirection: 'row' },
+  matrixHeadY: { width: 16, height: 36, fontSize: 7, color: MUTED, textAlign: 'center', paddingTop: 14 },
+  matrixHeadX: { width: 36, height: 14, fontSize: 7, color: MUTED, textAlign: 'center', paddingTop: 4 },
+  matrixCorner: { width: 16, height: 14 },
+  matrixCell: {
+    width: 36, height: 36, borderWidth: 0.5, borderColor: '#ffffff',
+    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', padding: 2,
+  },
+  matrixChip: {
+    width: 13, height: 13, borderRadius: 6.5, backgroundColor: INK, color: '#ffffff',
+    fontSize: 6.5, textAlign: 'center', paddingTop: 3.5, marginHorizontal: 1, marginVertical: 0.5, fontFamily: 'Helvetica-Bold',
+  },
+  matrixAxisX: { fontSize: 7, color: MUTED, marginTop: 3, marginLeft: 16 },
+  legendTitle: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', marginTop: 18, marginBottom: 6 },
+  legendItem: { fontSize: 7.5, color: INK, marginBottom: 2 },
 });
 
 const COLS = [
@@ -61,14 +86,97 @@ function chipStyle(score: number): { backgroundColor: string; color: string } {
   return { backgroundColor: '#dcefdc', color: DOWN };
 }
 
-function AmdecReport({ projectName, entries }: { projectName: string; entries: AmdecEntry[] }) {
-  const reassessed = entries.filter((e) => residualCriticality(e) !== null);
+/** Couleur de zone de la matrice selon le produit G × O (≥ 9 critique, ≥ 4 à surveiller). */
+function zoneColor(g: number, o: number): string {
+  const p = g * o;
+  if (p >= 9) return '#efc3b4';
+  if (p >= 4) return '#f6dcb0';
+  return '#cfe7cf';
+}
+
+interface Plotted {
+  entry: AmdecEntry;
+  num: number;
+}
+
+const Header = ({ title, subtitle }: { title: string; subtitle: string }) => (
+  <View style={styles.header}>
+    <View style={styles.logo}><Text style={styles.logoText}>PE</Text></View>
+    <View>
+      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.subtitle}>{subtitle}</Text>
+    </View>
+  </View>
+);
+
+const Footer = () => (
+  <View style={styles.footer} fixed>
+    <Text>Généré par Projet Entan — projetentan.fr</Text>
+    <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
+  </View>
+);
+
+function PdfMatrix({
+  title,
+  items,
+  position,
+}: {
+  title: string;
+  items: Plotted[];
+  position: (e: AmdecEntry) => { g: number; o: number };
+}) {
+  const grid: number[][][] = Array.from({ length: 4 }, () => Array.from({ length: 4 }, () => []));
+  for (const { entry, num } of items) {
+    const { g, o } = position(entry);
+    if (g >= 1 && g <= 4 && o >= 1 && o <= 4) grid[g - 1][o - 1].push(num);
+  }
+  return (
+    <View style={styles.matrixBlock}>
+      <Text style={styles.matrixTitle}>{title}</Text>
+      {[4, 3, 2, 1].map((g) => (
+        <View key={g} style={styles.matrixRow}>
+          <Text style={styles.matrixHeadY}>{g}</Text>
+          {[1, 2, 3, 4].map((o) => (
+            <View key={o} style={[styles.matrixCell, { backgroundColor: zoneColor(g, o) }]}>
+              {grid[g - 1][o - 1].map((n) => (
+                <Text key={n} style={styles.matrixChip}>{n}</Text>
+              ))}
+            </View>
+          ))}
+        </View>
+      ))}
+      <View style={styles.matrixRow}>
+        <View style={styles.matrixCorner} />
+        {[1, 2, 3, 4].map((o) => (
+          <Text key={o} style={styles.matrixHeadX}>{o}</Text>
+        ))}
+      </View>
+      <Text style={styles.matrixAxisX}>Horizontal : Occurrence  ·  Vertical : Gravité</Text>
+    </View>
+  );
+}
+
+function AmdecReport({
+  projectName,
+  entries,
+  opts,
+}: {
+  projectName: string;
+  entries: AmdecEntry[];
+  opts: AmdecPdfOptions;
+}) {
+  const plotted: Plotted[] = entries.map((entry, i) => ({ entry, num: i + 1 }));
+  const reassessed = plotted.filter(({ entry }) => residualCriticality(entry) !== null);
+
   const totalBefore = entries.reduce((s, e) => s + criticality(e), 0);
-  const beforeR = reassessed.reduce((s, e) => s + criticality(e), 0);
-  const afterR = reassessed.reduce((s, e) => s + (residualCriticality(e) ?? 0), 0);
+  const beforeR = reassessed.reduce((s, { entry }) => s + criticality(entry), 0);
+  const afterR = reassessed.reduce((s, { entry }) => s + (residualCriticality(entry) ?? 0), 0);
   const reduction = beforeR > 0 ? Math.round(((beforeR - afterR) / beforeR) * 100) : null;
-  const exited = reassessed.filter((e) => criticality(e) >= 24 && (residualCriticality(e) ?? 0) < 24).length;
+  const exited = reassessed.filter(
+    ({ entry }) => criticality(entry) >= 24 && (residualCriticality(entry) ?? 0) < 24,
+  ).length;
   const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const subtitle = `Analyse des modes de défaillance · Criticité = Gravité × Occurrence × Détectabilité (échelle 1–4) · ${today}`;
 
   const stat = (value: string | number, label: string, last = false) => (
     <View style={last ? [styles.stat, { marginRight: 0 }] : styles.stat}>
@@ -79,73 +187,85 @@ function AmdecReport({ projectName, entries }: { projectName: string; entries: A
 
   return (
     <Document title={`AMDEC - ${projectName}`} author="Projet Entan">
-      <Page size="A4" orientation="landscape" style={styles.page}>
-        <View style={styles.header}>
-          <View style={styles.logo}><Text style={styles.logoText}>PE</Text></View>
-          <View>
-            <Text style={styles.title}>Rapport AMDEC — {projectName}</Text>
-            <Text style={styles.subtitle}>
-              Analyse des modes de défaillance · Criticité = Gravité × Occurrence × Détectabilité (échelle 1–4) · {today}
-            </Text>
+      {opts.table && (
+        <Page size="A4" orientation="landscape" style={styles.page}>
+          <Header title={`Rapport AMDEC — ${projectName}`} subtitle={subtitle} />
+          <View style={styles.summaryRow}>
+            {stat(entries.length, 'Analyses')}
+            {stat(totalBefore, 'Criticité cumulée avant actions')}
+            {stat(reassessed.length > 0 ? afterR : '—', `Criticité après actions (${reassessed.length}/${entries.length} réévaluées)`)}
+            {stat(reduction !== null ? `-${reduction} %` : '—', 'Réduction du risque')}
+            {stat(reassessed.length > 0 ? exited : '—', 'Sorties de la zone critique', true)}
           </View>
-        </View>
+          <View style={styles.thead} fixed>
+            {COLS.map((col) => (
+              <Text key={col.key} style={[styles.th, { width: col.width }, ...(col.c ? [styles.center] : [])]}>{col.label}</Text>
+            ))}
+          </View>
+          {plotted.map(({ entry: e }, i) => {
+            const before = criticality(e);
+            const after = residualCriticality(e);
+            const delta = after !== null ? after - before : null;
+            return (
+              <View key={e.id} style={i % 2 ? [styles.row, styles.rowAlt] : [styles.row]} wrap={false}>
+                <Text style={[styles.td, { width: '13%' }]}>{e.element}</Text>
+                <Text style={[styles.td, { width: '17%' }]}>{e.failureMode}</Text>
+                <Text style={[styles.td, { width: '15%' }]}>{e.cause}</Text>
+                <Text style={[styles.td, { width: '14%' }]}>{e.effect ?? ''}</Text>
+                <Text style={[styles.td, { width: '4%' }, styles.center]}>{e.severity}</Text>
+                <Text style={[styles.td, { width: '4%' }, styles.center]}>{e.occurrence}</Text>
+                <Text style={[styles.td, { width: '4%' }, styles.center]}>{e.detection}</Text>
+                <View style={[styles.td, { width: '10%' }, styles.chipWrap]}>
+                  <Text style={[styles.chip, chipStyle(before)]}>{before}</Text>
+                </View>
+                <View style={[styles.td, { width: '10%' }, styles.chipWrap]}>
+                  {after !== null
+                    ? <Text style={[styles.chip, chipStyle(after)]}>{after}</Text>
+                    : <Text style={[styles.center, { color: MUTED }]}>—</Text>}
+                </View>
+                <Text style={[styles.td, { width: '9%' }, styles.center, { color: delta === null ? MUTED : delta < 0 ? DOWN : delta > 0 ? UP : MUTED }]}>
+                  {delta === null ? '—' : delta > 0 ? `+${delta}` : `${delta}`}
+                </Text>
+              </View>
+            );
+          })}
+          <Footer />
+        </Page>
+      )}
 
-        <View style={styles.summaryRow}>
-          {stat(entries.length, 'Analyses')}
-          {stat(totalBefore, 'Criticité cumulée avant actions')}
-          {stat(reassessed.length > 0 ? afterR : '—', `Criticité après actions (${reassessed.length}/${entries.length} réévaluées)`)}
-          {stat(reduction !== null ? `-${reduction} %` : '—', 'Réduction du risque')}
-          {stat(reassessed.length > 0 ? exited : '—', 'Sorties de la zone critique', true)}
-        </View>
-
-        <View style={styles.thead} fixed>
-          {COLS.map((col) => (
-            <Text key={col.key} style={[styles.th, { width: col.width }, ...(col.c ? [styles.center] : [])]}>
-              {col.label}
-            </Text>
+      {opts.matrices && (
+        <Page size="A4" orientation="landscape" style={styles.page}>
+          <Header title={`Matrices de risque — ${projectName}`} subtitle={subtitle} />
+          <View style={styles.matricesRow}>
+            <PdfMatrix
+              title="Avant actions correctives"
+              items={plotted}
+              position={(e) => ({ g: e.severity, o: e.occurrence })}
+            />
+            <PdfMatrix
+              title="Après actions correctives"
+              items={reassessed}
+              position={(e) => ({ g: e.severityAfter ?? 1, o: e.occurrenceAfter ?? 1 })}
+            />
+          </View>
+          <Text style={styles.legendTitle}>Légende des analyses (numéro = ligne du tableau, triées par criticité)</Text>
+          {plotted.map(({ entry: e, num }) => (
+            <Text key={e.id} style={styles.legendItem}>{num}. {e.element} — {e.failureMode}</Text>
           ))}
-        </View>
-
-        {entries.map((e, i) => {
-          const before = criticality(e);
-          const after = residualCriticality(e);
-          const delta = after !== null ? after - before : null;
-          return (
-            <View key={e.id} style={i % 2 ? [styles.row, styles.rowAlt] : [styles.row]} wrap={false}>
-              <Text style={[styles.td, { width: '13%' }]}>{e.element}</Text>
-              <Text style={[styles.td, { width: '17%' }]}>{e.failureMode}</Text>
-              <Text style={[styles.td, { width: '15%' }]}>{e.cause}</Text>
-              <Text style={[styles.td, { width: '14%' }]}>{e.effect ?? ''}</Text>
-              <Text style={[styles.td, { width: '4%' }, styles.center]}>{e.severity}</Text>
-              <Text style={[styles.td, { width: '4%' }, styles.center]}>{e.occurrence}</Text>
-              <Text style={[styles.td, { width: '4%' }, styles.center]}>{e.detection}</Text>
-              <View style={[styles.td, { width: '10%' }, styles.chipWrap]}>
-                <Text style={[styles.chip, chipStyle(before)]}>{before}</Text>
-              </View>
-              <View style={[styles.td, { width: '10%' }, styles.chipWrap]}>
-                {after !== null
-                  ? <Text style={[styles.chip, chipStyle(after)]}>{after}</Text>
-                  : <Text style={[styles.center, { color: MUTED }]}>—</Text>}
-              </View>
-              <Text style={[styles.td, { width: '9%' }, styles.center, { color: delta === null ? MUTED : delta < 0 ? DOWN : delta > 0 ? UP : MUTED }]}>
-                {delta === null ? '—' : delta > 0 ? `+${delta}` : `${delta}`}
-              </Text>
-            </View>
-          );
-        })}
-
-        <View style={styles.footer} fixed>
-          <Text>Généré par Projet Entan — projetentan.fr</Text>
-          <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
-        </View>
-      </Page>
+          <Footer />
+        </Page>
+      )}
     </Document>
   );
 }
 
-/** Génère le PDF et déclenche le téléchargement. */
-export async function exportAmdecPdf(projectName: string, entries: AmdecEntry[]): Promise<void> {
-  const blob = await pdf(<AmdecReport projectName={projectName} entries={entries} />).toBlob();
+/** Génère le PDF et déclenche le téléchargement (sections selon `opts`). */
+export async function exportAmdecPdf(
+  projectName: string,
+  entries: AmdecEntry[],
+  opts: AmdecPdfOptions,
+): Promise<void> {
+  const blob = await pdf(<AmdecReport projectName={projectName} entries={entries} opts={opts} />).toBlob();
   const slug = projectName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'projet';
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
