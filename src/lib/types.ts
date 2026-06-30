@@ -835,8 +835,15 @@ export interface CostItem {
   id: Id;
   projectId: Id;
   label: string;
+  /** Montant prévu, par unité (et par mois si abonnement). */
   planned: number;
+  /** Montant réel, par unité (et par mois si abonnement). */
   actual: number;
+  quantity: number;
+  /** Coût récurrent mensuel (cumulé sur `months`). */
+  isSubscription: boolean;
+  /** Nombre de mois facturés (abonnement) — incrémenté via « +1 mois ». */
+  months: number;
   createdAt: string;
 }
 
@@ -844,6 +851,9 @@ export interface CostItemInput {
   label: string;
   planned: number;
   actual: number;
+  quantity: number;
+  isSubscription: boolean;
+  months: number;
 }
 
 export interface CostItemRow {
@@ -852,6 +862,9 @@ export interface CostItemRow {
   label: string;
   planned: number | string;
   actual: number | string;
+  quantity?: number | string;
+  is_subscription?: boolean;
+  months?: number | string;
   created_at: string;
 }
 
@@ -862,6 +875,9 @@ export function costItemFromRow(r: CostItemRow): CostItem {
     label: r.label,
     planned: Number(r.planned) || 0,
     actual: Number(r.actual) || 0,
+    quantity: Number(r.quantity) || 1,
+    isSubscription: r.is_subscription ?? false,
+    months: Number(r.months) || 1,
     createdAt: r.created_at,
   };
 }
@@ -871,12 +887,36 @@ export function costItemInputToRow(input: Partial<CostItemInput>): Record<string
   if (input.label !== undefined) row.label = input.label;
   if (input.planned !== undefined) row.planned = input.planned;
   if (input.actual !== undefined) row.actual = input.actual;
+  if (input.quantity !== undefined) row.quantity = input.quantity;
+  if (input.isSubscription !== undefined) row.is_subscription = input.isSubscription;
+  if (input.months !== undefined) row.months = input.months;
   return row;
 }
 
-/** Écart = réel − prévu (positif = dépassement). */
-export function costVariance(c: Pick<CostItem, 'planned' | 'actual'>): number {
-  return c.actual - c.planned;
+/** Multiplicateur d'une ligne : quantité × (abonnement ? nombre de mois : 1). */
+export function costMultiplier(c: Pick<CostItem, 'quantity' | 'isSubscription' | 'months'>): number {
+  return (c.quantity || 1) * (c.isSubscription ? Math.max(c.months || 1, 1) : 1);
+}
+
+/** Total prévu d'une ligne (montant × quantité × mois). */
+export function costPlannedTotal(
+  c: Pick<CostItem, 'planned' | 'quantity' | 'isSubscription' | 'months'>,
+): number {
+  return c.planned * costMultiplier(c);
+}
+
+/** Total réel d'une ligne (montant × quantité × mois). */
+export function costActualTotal(
+  c: Pick<CostItem, 'actual' | 'quantity' | 'isSubscription' | 'months'>,
+): number {
+  return c.actual * costMultiplier(c);
+}
+
+/** Écart = réel − prévu sur les totaux (positif = dépassement). */
+export function costVariance(
+  c: Pick<CostItem, 'planned' | 'actual' | 'quantity' | 'isSubscription' | 'months'>,
+): number {
+  return costActualTotal(c) - costPlannedTotal(c);
 }
 
 /* --- SWOT ------------------------------------------------------------------- */

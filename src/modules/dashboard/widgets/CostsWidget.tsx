@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useProjectCostItems } from '@/lib/store';
+import { costPlannedTotal, costActualTotal } from '@/lib/types';
 import type { WidgetProps } from './index';
 
 const eur = (n: number) =>
@@ -9,8 +10,8 @@ const eur = (n: number) =>
 
 export function CostsWidget({ project }: WidgetProps) {
   const items = useProjectCostItems(project.id);
-  const planned = items.reduce((s, c) => s + c.planned, 0);
-  const actual = items.reduce((s, c) => s + c.actual, 0);
+  const planned = items.reduce((s, c) => s + costPlannedTotal(c), 0);
+  const actual = items.reduce((s, c) => s + costActualTotal(c), 0);
   const variance = actual - planned;
   const consumption = planned > 0 ? Math.round((actual / planned) * 100) : 0;
 
