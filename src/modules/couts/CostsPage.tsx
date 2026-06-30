@@ -98,7 +98,7 @@ export function CostsPage() {
                           className="btn btn-sm"
                           onClick={() => void updateCostItem(c.id, { months: c.months + 1 })}
                           title="Ajouter un mois facturé"
-                        >+1 mois</button>
+                        >+1</button>
                       )}
                       <button className="icon-btn" onClick={() => setEditing(c)} aria-label="Modifier"><IconEdit /></button>
                       <button
