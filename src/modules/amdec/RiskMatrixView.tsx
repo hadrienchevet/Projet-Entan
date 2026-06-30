@@ -109,6 +109,10 @@ export function RiskMatrixView({ entries }: { entries: AmdecEntry[] }) {
     beforeOnReassessed > 0
       ? Math.round(((beforeOnReassessed - afterOnReassessed) / beforeOnReassessed) * 100)
       : null;
+  // Analyses qui étaient en zone critique (≥ 24) et qui en sont sorties après actions.
+  const exitedCritical = reassessed.filter(
+    ({ entry }) => criticality(entry) >= 24 && (residualCriticality(entry) ?? 0) < 24,
+  ).length;
 
   return (
     <>
@@ -128,6 +132,12 @@ export function RiskMatrixView({ entries }: { entries: AmdecEntry[] }) {
         <div className="card stat-card">
           <div className="stat-value">{reduction !== null ? `−${reduction} %` : '—'}</div>
           <div className="stat-label">Réduction du risque (analyses réévaluées)</div>
+        </div>
+        <div className="card stat-card">
+          <div className="stat-value" style={{ color: exitedCritical > 0 ? 'var(--success)' : 'inherit' }}>
+            {reassessed.length > 0 ? exitedCritical : '—'}
+          </div>
+          <div className="stat-label">Analyses sorties de la zone critique</div>
         </div>
       </div>
 

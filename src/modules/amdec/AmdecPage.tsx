@@ -21,6 +21,7 @@ export function AmdecPage() {
   /** Analyse pour laquelle on crée une action corrective. */
   const [actionFor, setActionFor] = useState<AmdecEntry | null>(null);
   const [view, setView] = useState<'tableau' | 'matrice'>('tableau');
+  const [exporting, setExporting] = useState(false);
 
   if (!project) return null;
 
@@ -35,6 +36,18 @@ export function AmdecPage() {
         ? `Supprimer cette analyse ? Les ${linked} action(s) liée(s) seront conservées mais détachées.`
         : 'Supprimer cette analyse ?';
     if (window.confirm(msg)) void deleteAmdec(entry.id);
+  };
+
+  const exportPdf = async () => {
+    if (sorted.length === 0) return;
+    setExporting(true);
+    try {
+      const { exportAmdecPdf } = await import('./AmdecPdf');
+      await exportAmdecPdf(project.name, sorted);
+    } catch (err) {
+      console.warn('Export PDF AMDEC échoué', err);
+    }
+    setExporting(false);
   };
 
   return (
@@ -60,6 +73,9 @@ export function AmdecPage() {
               </button>
             ))}
           </div>
+          <button className="btn" onClick={exportPdf} disabled={exporting || sorted.length === 0}>
+            {exporting ? 'Génération…' : 'Exporter PDF'}
+          </button>
           <button className="btn btn-primary" onClick={() => setCreating(true)}>
             <IconPlus /> Nouvelle analyse
           </button>
