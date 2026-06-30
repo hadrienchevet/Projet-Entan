@@ -19,6 +19,7 @@ export function ActionsPage() {
   const [creating, setCreating] = useState(false);
   const [statusFilter, setStatusFilter] = useState<ActionStatus | 'all'>('all');
   const [memberFilter, setMemberFilter] = useState<Id | 'all'>('all');
+  const [exporting, setExporting] = useState(false);
 
   if (!project) return null;
 
@@ -38,6 +39,18 @@ export function ActionsPage() {
     }
   };
 
+  const exportPdf = async () => {
+    if (filtered.length === 0) return;
+    setExporting(true);
+    try {
+      const { exportActionsPdf } = await import('./ActionsPdf');
+      await exportActionsPdf(project.name, filtered, project.members);
+    } catch (err) {
+      console.warn('Export PDF actions échoué', err);
+    }
+    setExporting(false);
+  };
+
   return (
     <div className="page">
       <div className="page-header">
@@ -48,9 +61,14 @@ export function ActionsPage() {
             directement.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setCreating(true)}>
-          <IconPlus /> Nouvelle action
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button className="btn" onClick={exportPdf} disabled={exporting || filtered.length === 0}>
+            {exporting ? 'Génération…' : 'Exporter PDF'}
+          </button>
+          <button className="btn btn-primary" onClick={() => setCreating(true)}>
+            <IconPlus /> Nouvelle action
+          </button>
+        </div>
       </div>
 
       <div className="toolbar">
