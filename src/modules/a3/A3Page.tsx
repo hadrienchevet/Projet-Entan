@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { memberName, useCurrentProject, useProjectActions, useProjectAmdecs, useWorkspace } from '@/lib/store';
 import type { A3ReportInput } from '@/lib/types';
@@ -26,6 +27,7 @@ export function A3Page() {
   const actions = useProjectActions(project?.id);
   const amdecs = useProjectAmdecs(project?.id);
   const { a3Report, saveA3Report } = useWorkspace();
+  const [exporting, setExporting] = useState(false);
 
   if (!project) return null;
 
@@ -43,6 +45,17 @@ export function A3Page() {
     .sort((a, b) => a.dueDate!.localeCompare(b.dueDate!))
     .slice(0, 4);
 
+  const exportPdf = async () => {
+    setExporting(true);
+    try {
+      const { exportA3Pdf } = await import('./A3Pdf');
+      await exportA3Pdf(project.name, a3Report ?? null, topRisks, keyActions, project.members);
+    } catch (err) {
+      console.warn('Export PDF A3 échoué', err);
+    }
+    setExporting(false);
+  };
+
   return (
     <div className="page" key={formKey}>
       <div className="page-header">
@@ -50,7 +63,12 @@ export function A3Page() {
           <h1>Charte A3 — {project.name}</h1>
           <p className="subtitle">Une page pour cadrer le problème, l’analyse et le plan d’action.</p>
         </div>
-        <span className="muted" style={{ fontSize: 12.5 }}>Enregistré automatiquement</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="muted" style={{ fontSize: 12.5 }}>Enregistré automatiquement</span>
+          <button className="btn" onClick={exportPdf} disabled={exporting}>
+            {exporting ? 'Génération…' : 'Exporter PDF'}
+          </button>
+        </div>
       </div>
 
       <div className="card">
