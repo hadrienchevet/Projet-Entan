@@ -14,6 +14,7 @@ export function SwotPage() {
   const items = useProjectSwot(project?.id);
   const { addSwotItem, deleteSwotItem } = useWorkspace();
   const [drafts, setDrafts] = useState<Partial<Record<SwotQuadrant, string>>>({});
+  const [exporting, setExporting] = useState(false);
 
   if (!project) return null;
 
@@ -22,6 +23,18 @@ export function SwotPage() {
     if (!text) return;
     void addSwotItem(project.id, q, text);
     setDrafts((d) => ({ ...d, [q]: '' }));
+  };
+
+  const exportPdf = async () => {
+    if (items.length === 0) return;
+    setExporting(true);
+    try {
+      const { exportSwotPdf } = await import('./SwotPdf');
+      await exportSwotPdf(project.name, items);
+    } catch (err) {
+      console.warn('Export PDF SWOT échoué', err);
+    }
+    setExporting(false);
   };
 
   return (
@@ -33,6 +46,9 @@ export function SwotPage() {
             Forces et faiblesses (internes), opportunités et menaces (externes) — vue stratégique du projet.
           </p>
         </div>
+        <button className="btn" onClick={exportPdf} disabled={exporting || items.length === 0}>
+          {exporting ? 'Génération…' : 'Exporter PDF'}
+        </button>
       </div>
 
       <div className="swot-grid">

@@ -16,6 +16,7 @@ export function CostsPage() {
   const { deleteCostItem, updateCostItem } = useWorkspace();
   const [editing, setEditing] = useState<CostItem | null>(null);
   const [creating, setCreating] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   if (!project) return null;
 
@@ -24,6 +25,18 @@ export function CostsPage() {
   const variance = actual - planned;
   const consumption = planned > 0 ? Math.round((actual / planned) * 100) : 0;
 
+  const exportPdf = async () => {
+    if (items.length === 0) return;
+    setExporting(true);
+    try {
+      const { exportCostsPdf } = await import('./CostsPdf');
+      await exportCostsPdf(project.name, items);
+    } catch (err) {
+      console.warn('Export PDF coûts échoué', err);
+    }
+    setExporting(false);
+  };
+
   return (
     <div className="page">
       <div className="page-header">
@@ -31,9 +44,14 @@ export function CostsPage() {
           <h1>Suivi des coûts</h1>
           <p className="subtitle">Budget prévu vs coût réel par poste de dépense.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setCreating(true)}>
-          <IconPlus /> Nouveau poste
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button className="btn" onClick={exportPdf} disabled={exporting || items.length === 0}>
+            {exporting ? 'Génération…' : 'Exporter PDF'}
+          </button>
+          <button className="btn btn-primary" onClick={() => setCreating(true)}>
+            <IconPlus /> Nouveau poste
+          </button>
+        </div>
       </div>
 
       <div className="stat-row" style={{ marginBottom: 16 }}>
