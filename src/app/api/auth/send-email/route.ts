@@ -65,12 +65,13 @@ function content(actionType: string): { subject: string; intro: string; cta: str
 }
 
 function renderHtml(intro: string, cta: string, link: string): string {
+  const logoUrl = `${(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://pilotix-hadrien-chevets-projects.vercel.app').replace(/\/$/, '')}/email-logo.png`;
   return `<!doctype html>
 <html lang="fr"><body style="margin:0;background:#faf9f5;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f1e1b;">
   <div style="max-width:480px;margin:0 auto;padding:32px 24px;">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
       <tr>
-        <td width="36" height="36" align="center" valign="middle" bgcolor="#c15f3c" style="width:36px;height:36px;background-color:#c15f3c;border-radius:9px;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;line-height:36px;text-align:center;mso-line-height-rule:exactly;">PE</td>
+        <td valign="middle"><img src="${logoUrl}" width="36" height="36" alt="Projet Entan" style="display:block;border:0;border-radius:9px;" /></td>
         <td valign="middle" style="padding-left:10px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
           <strong style="font-size:16px;color:#1f1e1b;">Projet Entan</strong>
         </td>
