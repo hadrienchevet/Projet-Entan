@@ -70,10 +70,8 @@ function renderHtml(intro: string, cta: string, link: string): string {
   <div style="max-width:480px;margin:0 auto;padding:32px 24px;">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
       <tr>
-        <td style="vertical-align:middle;">
-          <div style="width:34px;height:34px;border-radius:9px;background:#c15f3c;color:#ffffff;font-weight:700;font-size:14px;line-height:34px;text-align:center;font-family:Arial,Helvetica,sans-serif;">PE</div>
-        </td>
-        <td style="vertical-align:middle;padding-left:10px;">
+        <td width="36" height="36" align="center" valign="middle" bgcolor="#c15f3c" style="width:36px;height:36px;background-color:#c15f3c;border-radius:9px;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;line-height:36px;text-align:center;mso-line-height-rule:exactly;">PE</td>
+        <td valign="middle" style="padding-left:10px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
           <strong style="font-size:16px;color:#1f1e1b;">Projet Entan</strong>
         </td>
       </tr>
