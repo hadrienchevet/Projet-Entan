@@ -71,7 +71,7 @@ export default function AccessPage() {
                 <option value="">Choisir un membre…</option>
                 {candidates.map((m) => (
                   <option key={m.userId} value={m.userId}>
-                    {m.displayName || m.email}
+                    {m.displayName ? `${m.displayName} — ${m.email}` : m.email}
                   </option>
                 ))}
               </select>
