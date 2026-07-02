@@ -104,6 +104,8 @@ export interface Action {
   dueDate?: string;
   /** Analyse AMDEC d'origine, si l'action en découle. */
   amdecId?: Id;
+  /** Rappel email au responsable le jour du démarrage (opt-in). */
+  notifyEmail: boolean;
   createdAt: string;
 }
 
@@ -190,6 +192,8 @@ export interface ActionInput {
   startDate?: string;
   dueDate?: string;
   amdecId?: Id;
+  /** Rappel email au responsable au démarrage (opt-in). */
+  notifyEmail?: boolean;
 }
 
 export interface AmdecInput {
@@ -243,6 +247,7 @@ export interface ActionRow {
   status: ActionStatus;
   start_date: string | null;
   due_date: string | null;
+  notify_email?: boolean;
   created_at: string;
 }
 
@@ -298,6 +303,7 @@ export function actionFromRow(r: ActionRow): Action {
     startDate: r.start_date ?? undefined,
     dueDate: r.due_date ?? undefined,
     amdecId: r.amdec_item_id ?? undefined,
+    notifyEmail: r.notify_email ?? false,
     createdAt: r.created_at,
   };
 }
@@ -314,6 +320,7 @@ export function actionInputToRow(input: Partial<ActionInput>): Record<string, un
   if ('startDate' in input) row.start_date = input.startDate ?? null;
   if ('dueDate' in input) row.due_date = input.dueDate ?? null;
   if ('amdecId' in input) row.amdec_item_id = input.amdecId ?? null;
+  if (input.notifyEmail !== undefined) row.notify_email = input.notifyEmail;
   return row;
 }
 

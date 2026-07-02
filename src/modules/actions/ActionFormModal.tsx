@@ -30,7 +30,12 @@ export function ActionFormModal({ project, action, defaults, onClose }: Props) {
   const [startDate, setStartDate] = useState(init.startDate ?? '');
   const [dueDate, setDueDate] = useState(init.dueDate ?? '');
   const [amdecId, setAmdecId] = useState<Id>(init.amdecId ?? '');
+  const [notifyEmail, setNotifyEmail] = useState(init.notifyEmail ?? false);
   const [error, setError] = useState('');
+
+  // L'email n'est possible que si le responsable a un compte rattaché.
+  const responsibleMember = project.members.find((m) => m.id === responsibleId);
+  const canEmail = !!responsibleMember?.userId;
 
   const toggle = (list: Id[], setList: (v: Id[]) => void, id: Id) =>
     setList(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
@@ -63,6 +68,7 @@ export function ActionFormModal({ project, action, defaults, onClose }: Props) {
       startDate: startDate || undefined,
       dueDate: dueDate || undefined,
       amdecId: amdecId || undefined,
+      notifyEmail: canEmail ? notifyEmail : false,
     };
 
     if (action) {
@@ -214,6 +220,37 @@ export function ActionFormModal({ project, action, defaults, onClose }: Props) {
               Fortement recommandée : sans échéance, l&apos;action n&apos;apparaît pas dans le
               calendrier.
             </span>
+          )}
+        </div>
+
+        <div className="field span-2">
+          <label>Rappel email</label>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontWeight: 400,
+              cursor: canEmail ? 'pointer' : 'not-allowed',
+              opacity: canEmail ? 1 : 0.55,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={notifyEmail && canEmail}
+              disabled={!canEmail}
+              onChange={(e) => setNotifyEmail(e.target.checked)}
+              style={{ width: 'auto' }}
+            />
+            Prévenir le responsable par email le jour du démarrage
+          </label>
+          {!canEmail && (
+            <span className="form-hint">
+              Ce membre n&apos;a pas de compte rattaché — invitez-le (page Accès) pour activer l&apos;email.
+            </span>
+          )}
+          {canEmail && !startDate && (
+            <span className="form-hint">Renseignez une date de début pour que le rappel puisse partir.</span>
           )}
         </div>
       </div>

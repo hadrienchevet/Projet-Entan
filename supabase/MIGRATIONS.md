@@ -24,6 +24,7 @@ Toutes sont **idempotentes** (ré-exécutables sans erreur).
 | `fix-16` | **Verrouille `companies` en lecture seule** (anon/authenticated) : supprime la policy `companies_update` qui laissait un admin écrire `is_comp`/`seats` → s'auto-octroyer des sièges illimités. Écritures réservées au webhook (service-role) et aux RPC `SECURITY DEFINER`. |
 | `fix-17` | **Coûts : quantité + abonnement** : ajoute `quantity`, `is_subscription`, `months` à `cost_items`. Total d'une ligne = montant × quantité × (abonnement ? mois : 1). Bouton « +1 mois » côté app. Lignes existantes inchangées (défauts 1/false/1). |
 | `fix-18` | **Journal d'activité (notifications in-app)** : table `activity_events` (RLS `is_project_member` + realtime). Alimentée par le store (écriture tolérante) pour le fil d'activité. Les alertes (retards/échéances/risques sans plan) restent calculées côté client. |
+| `fix-19` | **Rappel email au démarrage d'action** : `actions.notify_email` (opt-in) + table `notification_log` (RLS sans policy → cron/service-role only, anti-doublon `unique(action_id, kind)`). Le cron `/api/cron/notify-action-start` envoie au responsable (s'il a un compte) le jour de la date de début. Nécessite `CRON_SECRET` dans Vercel + le cron déclaré dans `vercel.json`. |
 
 ## Après une migration qui AJOUTE une colonne
 Recharger le cache de l'API REST, sinon l'écriture sur la nouvelle colonne est rejetée en silence :

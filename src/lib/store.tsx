@@ -964,7 +964,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     async (projectId: Id, input: ActionInput) => {
       const id = uid();
       const createdAt = new Date().toISOString();
-      setActions((s) => [...s, { id, projectId, createdAt, ...input }]);
+      setActions((s) => [...s, { id, projectId, createdAt, ...input, notifyEmail: input.notifyEmail ?? false }]);
       const { error } = await supabase
         .from('actions')
         .insert({ id, project_id: projectId, ...actionInputToRow(input) });
