@@ -7,6 +7,7 @@ import { useCurrentProject, useWorkspace } from '@/lib/store';
 import { ProjectFormModal } from './ProjectFormModal';
 import { UpgradePrompt } from './UpgradePrompt';
 import { ThemeToggle } from './ThemeToggle';
+import { NotificationsBell } from './NotificationsPanel';
 import {
   IconA3,
   IconActions,
@@ -141,6 +142,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 <IconLogout /> Déconnexion
               </button>
             </form>
+            <NotificationsBell />
             <ThemeToggle />
             <Link 
               href="/help" 

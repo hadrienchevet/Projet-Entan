@@ -993,3 +993,49 @@ export function a3ReportInputToRow(input: Partial<A3ReportInput>): Record<string
   }
   return row;
 }
+
+/* --- Journal d'activité (notifications in-app) ----------------------------- */
+
+export type ActivityType =
+  | 'action_created'
+  | 'action_assigned'
+  | 'action_done'
+  | 'amdec_created'
+  | 'doc_updated';
+
+export interface ActivityEvent {
+  id: Id;
+  projectId: Id;
+  actorId?: string;
+  actorName: string;
+  type: ActivityType;
+  /** Texte sans l'acteur (ex. « a modifié la charte A3 »). */
+  summary: string;
+  /** Cible facultative — sert au regroupement (ex. « a3 »). */
+  entity?: string;
+  createdAt: string;
+}
+
+export interface ActivityEventRow {
+  id: string;
+  project_id: string;
+  actor_id: string | null;
+  actor_name: string;
+  type: ActivityType;
+  summary: string;
+  entity: string | null;
+  created_at: string;
+}
+
+export function activityEventFromRow(r: ActivityEventRow): ActivityEvent {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    actorId: r.actor_id ?? undefined,
+    actorName: r.actor_name,
+    type: r.type,
+    summary: r.summary,
+    entity: r.entity ?? undefined,
+    createdAt: r.created_at,
+  };
+}

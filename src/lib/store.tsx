@@ -35,6 +35,9 @@ import type {
   Action,
   ActionInput,
   ActionRow,
+  ActivityEvent,
+  ActivityEventRow,
+  ActivityType,
   CostItem,
   CostItemInput,
   CostItemRow,
@@ -86,6 +89,7 @@ import type {
 import {
   actionFromRow,
   actionInputToRow,
+  activityEventFromRow,
   amdecFromRow,
   amdecInputToRow,
   a3ReportFromRow,
@@ -217,6 +221,10 @@ interface WorkspaceState {
   a3Report: A3Report | null;
   saveA3Report: (projectId: Id, patch: Partial<A3ReportInput>) => Promise<void>;
 
+  /** Journal d'activité (notifications in-app). */
+  activityEvents: ActivityEvent[];
+  logActivity: (projectId: Id, type: ActivityType, summary: string, entity?: string) => Promise<void>;
+
   addMember: (projectId: Id, input: MemberInput) => Promise<void>;
   updateMember: (projectId: Id, memberId: Id, patch: Partial<MemberInput>) => Promise<void>;
   removeMember: (projectId: Id, memberId: Id) => Result;
@@ -302,6 +310,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [actions, setActions] = useState<Action[]>([]);
   const [amdecs, setAmdecs] = useState<AmdecEntry[]>([]);
+  const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [fiveWhyAnalyses, setFiveWhyAnalyses] = useState<FiveWhyAnalysis[]>([]);
   const [ishikawaAnalyses, setIshikawaAnalyses] = useState<IshikawaAnalysis[]>([]);
@@ -589,8 +598,49 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setSwotItems(!sw.error ? ((sw.data ?? []) as SwotItemRow[]).map(swotItemFromRow) : []);
       const a3 = await supabase.from('a3_reports').select('*').eq('project_id', projectId).maybeSingle();
       setA3Report(!a3.error && a3.data ? a3ReportFromRow(a3.data as A3ReportRow) : null);
+
+      // Journal d'activité (tolérant : table fix-18 absente = liste vide).
+      const ae = await supabase
+        .from('activity_events')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      setActivityEvents(!ae.error ? ((ae.data ?? []) as ActivityEventRow[]).map(activityEventFromRow) : []);
     },
     [supabase],
+  );
+
+  /** Journalise un événement d'activité (optimiste + tolérant ; regroupé si < 1 h). */
+  const logActivity = useCallback(
+    async (projectId: Id, type: ActivityType, summary: string, entity?: string) => {
+      const actorName = members.find((m) => m.userId === userId)?.name || userEmail || 'Un membre';
+      const cutoff = Date.now() - 60 * 60 * 1000;
+      const dup = activityEvents.some(
+        (e) =>
+          e.type === type &&
+          (e.entity ?? '') === (entity ?? '') &&
+          (e.actorId ?? '') === (userId ?? '') &&
+          new Date(e.createdAt).getTime() > cutoff,
+      );
+      if (dup) return;
+      const id = uid();
+      const createdAt = new Date().toISOString();
+      setActivityEvents((s) =>
+        [{ id, projectId, actorId: userId ?? undefined, actorName, type, summary, entity, createdAt }, ...s].slice(0, 50),
+      );
+      const { error } = await supabase.from('activity_events').insert({
+        id,
+        project_id: projectId,
+        actor_id: userId,
+        actor_name: actorName,
+        type,
+        summary,
+        entity: entity ?? null,
+      });
+      if (error) console.warn('[entan] activité non journalisée :', error.message);
+    },
+    [supabase, userId, userEmail, members, activityEvents],
   );
 
   // Démarrage : session, projets, projet courant (?project= > localStorage > premier).
@@ -673,7 +723,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       const filter = `project_id=eq.${currentProjectId}`;
       let ch = supabase.channel(`project-${currentProjectId}`);
-      for (const table of ['members', 'actions', 'amdec_items', 'five_why_analyses', 'five_why_levels', 'ishikawa_analyses', 'ishikawa_causes', 'capa_actions', 'rdp_subjects', 'rdp_problem', 'rdp_indicators', 'rdp_solutions', 'dashboard_layouts', 'cost_items', 'swot_items', 'a3_reports']) {
+      for (const table of ['members', 'actions', 'amdec_items', 'five_why_analyses', 'five_why_levels', 'ishikawa_analyses', 'ishikawa_causes', 'capa_actions', 'rdp_subjects', 'rdp_problem', 'rdp_indicators', 'rdp_solutions', 'dashboard_layouts', 'cost_items', 'swot_items', 'a3_reports', 'activity_events']) {
         ch = ch.on(
           'postgres_changes',
           { event: '*', schema: 'public', table, filter },
@@ -921,9 +971,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (error) {
         onError("Création de l'action impossible", error.message);
         await fetchProjectData(projectId);
+      } else {
+        void logActivity(projectId, 'action_created', `a créé l'action « ${input.title} »`);
       }
     },
-    [supabase, fetchProjectData],
+    [supabase, fetchProjectData, logActivity],
   );
 
   const updateAction = useCallback(
@@ -951,8 +1003,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const setActionStatus = useCallback(
-    (id: Id, status: ActionStatus) => updateAction(id, { status }),
-    [updateAction],
+    (id: Id, status: ActionStatus) => {
+      if (status === 'done') {
+        const a = actions.find((x) => x.id === id);
+        if (a) void logActivity(a.projectId, 'action_done', `a terminé l'action « ${a.title} »`);
+      }
+      return updateAction(id, { status });
+    },
+    [actions, updateAction, logActivity],
   );
 
   const setRaciRole = useCallback(
@@ -1005,9 +1063,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (error) {
         onError("Création de l'analyse impossible", error.message);
         await fetchProjectData(projectId);
+      } else {
+        void logActivity(projectId, 'amdec_created', `a ajouté un risque AMDEC : ${input.element} — ${input.failureMode}`);
       }
     },
-    [supabase, fetchProjectData],
+    [supabase, fetchProjectData, logActivity],
   );
 
   const updateAmdec = useCallback(
@@ -1750,8 +1810,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         .from('a3_reports')
         .upsert({ project_id: projectId, ...a3ReportInputToRow(patch) }, { onConflict: 'project_id' });
       if (error) console.warn('[entan] charte A3 non enregistrée :', error.message);
+      else void logActivity(projectId, 'doc_updated', 'a modifié la charte A3', 'a3');
     },
-    [supabase],
+    [supabase, logActivity],
   );
 
   const value: WorkspaceState = {
@@ -1807,6 +1868,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     deleteSwotItem,
     a3Report,
     saveA3Report,
+    activityEvents,
+    logActivity,
     addMember,
     updateMember,
     removeMember,

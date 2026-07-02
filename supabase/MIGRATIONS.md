@@ -23,6 +23,7 @@ Toutes sont **idempotentes** (ré-exécutables sans erreur).
 | `fix-15` | **Siège = frontière de sécurité** : impose `user_has_seat()` au niveau RLS (INSERT projet) ET trigger (INSERT accès projet, y c. projets solo). Avant fix-15 le paywall n'était QUE côté client → contournable par appel API direct (clé anon publique). Ne révoque aucun accès existant. |
 | `fix-16` | **Verrouille `companies` en lecture seule** (anon/authenticated) : supprime la policy `companies_update` qui laissait un admin écrire `is_comp`/`seats` → s'auto-octroyer des sièges illimités. Écritures réservées au webhook (service-role) et aux RPC `SECURITY DEFINER`. |
 | `fix-17` | **Coûts : quantité + abonnement** : ajoute `quantity`, `is_subscription`, `months` à `cost_items`. Total d'une ligne = montant × quantité × (abonnement ? mois : 1). Bouton « +1 mois » côté app. Lignes existantes inchangées (défauts 1/false/1). |
+| `fix-18` | **Journal d'activité (notifications in-app)** : table `activity_events` (RLS `is_project_member` + realtime). Alimentée par le store (écriture tolérante) pour le fil d'activité. Les alertes (retards/échéances/risques sans plan) restent calculées côté client. |
 
 ## Après une migration qui AJOUTE une colonne
 Recharger le cache de l'API REST, sinon l'écriture sur la nouvelle colonne est rejetée en silence :
