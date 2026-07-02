@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useWorkspace } from '@/lib/store';
 import { criticality } from '@/lib/types';
@@ -51,19 +51,53 @@ export function NotificationsBell() {
     return { overdue, dueSoon, criticalNoPlan, total: overdue.length + dueSoon.length + criticalNoPlan.length };
   }, [actions, amdecs]);
 
+  // Clés des éléments « à traiter » — sert au suivi « vu / non vu ».
+  const currentKeys = useMemo(
+    () => [
+      ...alerts.overdue.map((a) => `o:${a.id}`),
+      ...alerts.dueSoon.map((a) => `s:${a.id}`),
+      ...alerts.criticalNoPlan.map((r) => `c:${r.id}`),
+    ],
+    [alerts],
+  );
+
+  // « Vu » persistant par projet : le badge ne compte que les nouveautés et
+  // disparaît dès l'ouverture du panneau (réapparaît si une nouvelle alerte arrive).
+  const storeKey = currentProjectId ? `entan-notif-seen-${currentProjectId}` : null;
+  const [seen, setSeen] = useState<string[]>([]);
+  useEffect(() => {
+    if (!storeKey) return;
+    try {
+      setSeen(JSON.parse(localStorage.getItem(storeKey) ?? '[]'));
+    } catch {
+      setSeen([]);
+    }
+  }, [storeKey]);
+
+  const seenSet = useMemo(() => new Set(seen), [seen]);
+  const unseen = currentKeys.filter((k) => !seenSet.has(k)).length;
+
+  const openPanel = () => {
+    setOpen(true);
+    if (storeKey) {
+      localStorage.setItem(storeKey, JSON.stringify(currentKeys));
+      setSeen(currentKeys);
+    }
+  };
+
   if (!currentProjectId) return null;
 
   return (
     <>
       <button
         className="icon-btn"
-        onClick={() => setOpen(true)}
+        onClick={openPanel}
         title="Notifications"
         aria-label="Notifications"
         style={{ position: 'relative' }}
       >
         <IconBell />
-        {alerts.total > 0 && (
+        {unseen > 0 && (
           <span
             style={{
               position: 'absolute', top: -3, right: -3, minWidth: 15, height: 15, padding: '0 3px',
@@ -71,7 +105,7 @@ export function NotificationsBell() {
               display: 'grid', placeItems: 'center', lineHeight: 1,
             }}
           >
-            {alerts.total}
+            {unseen}
           </span>
         )}
       </button>
