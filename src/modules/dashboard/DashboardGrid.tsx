@@ -18,6 +18,7 @@ import { WIDGET_COMPONENTS } from './widgets';
 import type { Project } from '@/lib/types';
 import {
   DndContext,
+  DragOverlay,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
@@ -65,6 +66,7 @@ export function DashboardGrid() {
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
   const [creatingAction, setCreatingAction] = useState(false);
+  const [activeId, setActiveId] = useState<WidgetId | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -151,7 +153,13 @@ export function DashboardGrid() {
         </div>
       )}
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={(e) => setActiveId(e.active.id as WidgetId)}
+        onDragEnd={(e) => { setActiveId(null); onDragEnd(e); }}
+        onDragCancel={() => setActiveId(null)}
+      >
         <SortableContext items={ids} strategy={rectSortingStrategy}>
           <div className="dash-grid">
             {layout.map((instance, i) => (
@@ -168,6 +176,9 @@ export function DashboardGrid() {
             ))}
           </div>
         </SortableContext>
+        <DragOverlay>
+          {activeId ? <WidgetOverlay instance={layout.find((w) => w.id === activeId) ?? { id: activeId }} project={project} /> : null}
+        </DragOverlay>
       </DndContext>
 
       {creatingAction && <ActionFormModal project={project} onClose={() => setCreatingAction(false)} />}
@@ -204,7 +215,8 @@ function SortableWidget({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 20 : undefined,
+    // Emplacement fantôme atténué : le widget « soulevé » est rendu par le DragOverlay.
+    opacity: isDragging ? 0.35 : 1,
   };
 
   return (
@@ -240,6 +252,18 @@ function SortableWidget({
       <div className={editing ? 'widget-dim' : undefined}>
         <Comp project={project} instance={instance} />
       </div>
+    </div>
+  );
+}
+
+/** Calque flottant rendu pendant le glisser (suit le curseur, net et élevé). */
+function WidgetOverlay({ instance, project }: { instance: WidgetInstance; project: Project }) {
+  const def = WIDGETS[instance.id];
+  const Comp = WIDGET_COMPONENTS[instance.id];
+  if (!def || !Comp) return null;
+  return (
+    <div className="widget-wrap widget-overlay-floating" style={{ cursor: 'grabbing' }}>
+      <Comp project={project} instance={instance} />
     </div>
   );
 }

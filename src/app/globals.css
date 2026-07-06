@@ -1638,7 +1638,8 @@ a.link:hover { text-decoration: underline; }
   border-radius: var(--radius);
   background: var(--stripe);
 }
-.widget-wrap.dragging { box-shadow: var(--shadow); border-style: solid; border-color: var(--accent); }
+.widget-wrap.dragging { border-style: dashed; }
+.widget-overlay-floating { box-shadow: 0 14px 34px rgb(0 0 0 / 0.18); border-radius: var(--radius); }
 .widget-dim { pointer-events: none; }
 /* En édition, le contenu descend sous la barre d'outils en overlay (pas de décalage de grille). */
 .widget-wrap.editing .widget-dim { opacity: 0.5; padding-top: 44px; }
