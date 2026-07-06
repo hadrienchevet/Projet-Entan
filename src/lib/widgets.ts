@@ -26,6 +26,8 @@ export type WidgetId =
 /** Instance de widget telle que stockée (ordre = position dans le tableau). */
 export interface WidgetInstance {
   id: WidgetId;
+  /** Largeur personnalisée (override du `span` par défaut du widget). */
+  span?: 1 | 2;
   settings?: Record<string, number | string | boolean>;
 }
 
