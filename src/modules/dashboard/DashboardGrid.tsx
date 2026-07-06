@@ -29,7 +29,6 @@ import {
 import {
   SortableContext,
   arrayMove,
-  rectSortingStrategy,
   sortableKeyboardCoordinates,
   useSortable,
 } from '@dnd-kit/sortable';
@@ -67,6 +66,7 @@ export function DashboardGrid() {
   const [adding, setAdding] = useState(false);
   const [creatingAction, setCreatingAction] = useState(false);
   const [activeId, setActiveId] = useState<WidgetId | null>(null);
+  const [overId, setOverId] = useState<WidgetId | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -157,10 +157,13 @@ export function DashboardGrid() {
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={(e) => setActiveId(e.active.id as WidgetId)}
-        onDragEnd={(e) => { setActiveId(null); onDragEnd(e); }}
-        onDragCancel={() => setActiveId(null)}
+        onDragOver={(e) => setOverId((e.over?.id as WidgetId) ?? null)}
+        onDragEnd={(e) => { setActiveId(null); setOverId(null); onDragEnd(e); }}
+        onDragCancel={() => { setActiveId(null); setOverId(null); }}
       >
-        <SortableContext items={ids} strategy={rectSortingStrategy}>
+        {/* strategy () => null : les autres widgets ne bougent pas pendant le drag ;
+            un indicateur de dépôt (case illuminée) montre où le widget atterrira. */}
+        <SortableContext items={ids} strategy={() => null}>
           <div className="dash-grid">
             {layout.map((instance, i) => (
               <SortableWidget
@@ -168,6 +171,7 @@ export function DashboardGrid() {
                 instance={instance}
                 project={project}
                 editing={editing}
+                isOver={editing && overId === instance.id && activeId !== null && activeId !== instance.id}
                 controls={SETTINGS_UI[instance.id]}
                 onSetting={(key, val) => setSetting(i, key, val)}
                 onToggleWidth={() => toggleWidth(i)}
@@ -190,6 +194,7 @@ function SortableWidget({
   instance,
   project,
   editing,
+  isOver,
   controls,
   onSetting,
   onToggleWidth,
@@ -198,6 +203,7 @@ function SortableWidget({
   instance: WidgetInstance;
   project: Project;
   editing: boolean;
+  isOver: boolean;
   controls?: { key: string; label: string; options: number[]; suffix?: string }[];
   onSetting: (key: string, val: number) => void;
   onToggleWidth: () => void;
@@ -223,7 +229,7 @@ function SortableWidget({
     <div
       ref={setNodeRef}
       style={style}
-      className={`widget-wrap${span === 2 ? ' span-2' : ''}${editing ? ' editing' : ''}${isDragging ? ' dragging' : ''}`}
+      className={`widget-wrap${span === 2 ? ' span-2' : ''}${editing ? ' editing' : ''}${isDragging ? ' dragging' : ''}${isOver ? ' drop-target' : ''}`}
     >
       {editing && (
         <div className="widget-edit-overlay">

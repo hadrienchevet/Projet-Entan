@@ -1640,6 +1640,8 @@ a.link:hover { text-decoration: underline; }
 }
 .widget-wrap.dragging { border-style: dashed; }
 .widget-overlay-floating { box-shadow: 0 14px 34px rgb(0 0 0 / 0.18); border-radius: var(--radius); }
+/* Indicateur de dépôt : la case cible s'illumine (les autres widgets ne bougent pas). */
+.widget-wrap.drop-target { outline: 2px dashed var(--accent); outline-offset: 3px; border-radius: var(--radius); }
 .widget-dim { pointer-events: none; }
 /* En édition, le contenu descend sous la barre d'outils en overlay (pas de décalage de grille). */
 .widget-wrap.editing .widget-dim { opacity: 0.5; padding-top: 44px; }
