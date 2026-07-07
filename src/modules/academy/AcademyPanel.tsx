@@ -19,8 +19,10 @@ import {
   challengeSet,
   type AcademyToolId,
 } from './challenges';
+import { AMDEC_BUILDER } from './amdecBuilder';
 import { useAcademyProgress } from './useAcademyProgress';
 import { ClassifyGame } from './ClassifyGame';
+import { AmdecBuilderGame } from './AmdecBuilderGame';
 
 const ICONS: Record<AcademyToolId, ReactNode> = {
   swot: <IconSwot />,
@@ -38,9 +40,25 @@ export function AcademyPanel() {
   const { progress, record } = useAcademyProgress();
   const [active, setActive] = useState<AcademyToolId | null>(null);
 
-  const playable = ACADEMY_TOOL_ORDER.filter((t) => challengeSet(t));
+  // AMDEC a sa propre mécanique (constructeur de ligne) ; les autres passent
+  // par le moteur de classement.
+  const isPlayable = (t: AcademyToolId) => Boolean(challengeSet(t)) || t === 'amdec';
+  const taglineOf = (t: AcademyToolId) =>
+    challengeSet(t)?.tagline ?? (t === 'amdec' ? AMDEC_BUILDER.tagline : 'Mini-jeu en préparation.');
+  const playable = ACADEMY_TOOL_ORDER.filter(isPlayable);
   const mastered = playable.filter((t) => progress[t]?.passed).length;
 
+  if (active === 'amdec') {
+    return (
+      <div className="page">
+        <AmdecBuilderGame
+          key="amdec"
+          onFinish={(score, total, passed) => record('amdec', score, total, passed)}
+          onExit={() => setActive(null)}
+        />
+      </div>
+    );
+  }
   if (active) {
     const set = challengeSet(active);
     if (set) {
@@ -76,27 +94,27 @@ export function AcademyPanel() {
 
       <div className="acad-cards">
         {ACADEMY_TOOL_ORDER.map((tool) => {
-          const set = challengeSet(tool);
           const state = progress[tool];
+          const canPlay = isPlayable(tool);
           return (
             <button
               key={tool}
-              className={`card acad-card${set ? '' : ' locked'}`}
-              onClick={() => set && setActive(tool)}
-              disabled={!set}
+              className={`card acad-card${canPlay ? '' : ' locked'}`}
+              onClick={() => canPlay && setActive(tool)}
+              disabled={!canPlay}
             >
               <div className="acad-card-top">
                 <span className="acad-card-ic">{ICONS[tool]}</span>
                 {state?.passed ? (
                   <span className="badge done"><IconCheck /> Réussi</span>
-                ) : set ? (
+                ) : canPlay ? (
                   <span className="badge in_progress">À faire</span>
                 ) : (
                   <span className="badge todo">Bientôt</span>
                 )}
               </div>
               <h3>{ACADEMY_TOOL_LABELS[tool]}</h3>
-              <p>{set ? set.tagline : 'Mini-jeu en préparation.'}</p>
+              <p>{taglineOf(tool)}</p>
               {state && (
                 <div className="acad-card-best">Meilleur score : {state.best} / {state.total}</div>
               )}

@@ -159,41 +159,6 @@ const RACI: ChallengeSet = {
   ],
 };
 
-const AMDEC: ChallengeSet = {
-  id: 'amdec',
-  tool: 'amdec',
-  title: 'AMDEC — quelle criticité ?',
-  tagline: 'Criticité = Gravité × Occurrence × Détectabilité.',
-  passThreshold: 0.875,
-  buckets: [
-    { id: 'high', label: 'Critique', hint: '≥ 24', tone: 'danger' },
-    { id: 'medium', label: 'À surveiller', hint: '12 à 23', tone: 'warning' },
-    { id: 'low', label: 'Faible', hint: '< 12', tone: 'success' },
-  ],
-  items: [
-    { id: 'am1', prompt: 'Gravité 2 · Occurrence 2 · Détectabilité 2', answer: 'low', why: '2 × 2 × 2 = 8, sous 12 : faible.' },
-    { id: 'am2', prompt: 'Gravité 1 · Occurrence 3 · Détectabilité 3', answer: 'low', why: '1 × 3 × 3 = 9, sous 12 : faible.' },
-    { id: 'am3', prompt: 'Gravité 3 · Occurrence 1 · Détectabilité 2', answer: 'low', why: '3 × 1 × 2 = 6, sous 12 : faible.' },
-    { id: 'am4', prompt: 'Gravité 2 · Occurrence 1 · Détectabilité 4', answer: 'low', why: '2 × 1 × 4 = 8, sous 12 : faible.' },
-    { id: 'am5', prompt: 'Gravité 3 · Occurrence 3 · Détectabilité 1', answer: 'low', why: '3 × 3 × 1 = 9, sous 12 : faible.' },
-    { id: 'am6', prompt: 'Gravité 2 · Occurrence 2 · Détectabilité 1', answer: 'low', why: '2 × 2 × 1 = 4, sous 12 : faible.' },
-    { id: 'am7', prompt: 'Gravité 1 · Occurrence 2 · Détectabilité 4', answer: 'low', why: '1 × 2 × 4 = 8, sous 12 : faible.' },
-    { id: 'am8', prompt: 'Gravité 2 · Occurrence 2 · Détectabilité 3', answer: 'medium', why: '2 × 2 × 3 = 12, entre 12 et 23 : à surveiller.' },
-    { id: 'am9', prompt: 'Gravité 3 · Occurrence 3 · Détectabilité 2', answer: 'medium', why: '3 × 3 × 2 = 18, entre 12 et 23 : à surveiller.' },
-    { id: 'am10', prompt: 'Gravité 4 · Occurrence 2 · Détectabilité 2', answer: 'medium', why: '4 × 2 × 2 = 16, entre 12 et 23 : à surveiller.' },
-    { id: 'am11', prompt: 'Gravité 3 · Occurrence 4 · Détectabilité 1', answer: 'medium', why: '3 × 4 × 1 = 12, entre 12 et 23 : à surveiller.' },
-    { id: 'am12', prompt: 'Gravité 2 · Occurrence 3 · Détectabilité 3', answer: 'medium', why: '2 × 3 × 3 = 18, entre 12 et 23 : à surveiller.' },
-    { id: 'am13', prompt: 'Gravité 4 · Occurrence 4 · Détectabilité 1', answer: 'medium', why: '4 × 4 × 1 = 16, entre 12 et 23 : à surveiller.' },
-    { id: 'am14', prompt: 'Gravité 4 · Occurrence 3 · Détectabilité 2', answer: 'high', why: '4 × 3 × 2 = 24, seuil 24 atteint : critique.' },
-    { id: 'am15', prompt: 'Gravité 3 · Occurrence 3 · Détectabilité 3', answer: 'high', why: '3 × 3 × 3 = 27, ≥ 24 : critique.' },
-    { id: 'am16', prompt: 'Gravité 4 · Occurrence 4 · Détectabilité 2', answer: 'high', why: '4 × 4 × 2 = 32, ≥ 24 : critique.' },
-    { id: 'am17', prompt: 'Gravité 4 · Occurrence 3 · Détectabilité 3', answer: 'high', why: '4 × 3 × 3 = 36, ≥ 24 : critique.' },
-    { id: 'am18', prompt: 'Gravité 2 · Occurrence 4 · Détectabilité 3', answer: 'high', why: '2 × 4 × 3 = 24, seuil 24 atteint : critique.' },
-    { id: 'am19', prompt: 'Gravité 4 · Occurrence 4 · Détectabilité 4', answer: 'high', why: '4 × 4 × 4 = 64, ≥ 24 : critique.' },
-    { id: 'am20', prompt: 'Gravité 3 · Occurrence 4 · Détectabilité 2', answer: 'high', why: '3 × 4 × 2 = 24, seuil 24 atteint : critique.' },
-  ],
-};
-
 const ACTIONS: ChallengeSet = {
   id: 'actions',
   tool: 'actions',
@@ -378,7 +343,6 @@ const A3: ChallengeSet = {
 export const CHALLENGE_SETS: Partial<Record<AcademyToolId, ChallengeSet>> = {
   swot: SWOT,
   raci: RACI,
-  amdec: AMDEC,
   actions: ACTIONS,
   planning: PLANNING,
   ishikawa: ISHIKAWA,

@@ -1875,3 +1875,19 @@ a.link:hover { text-decoration: underline; }
 .acad-badge { display: inline-flex; align-items: center; gap: 7px; margin-top: 16px; background: var(--success-soft); color: var(--success); padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; }
 .acad-badge svg { width: 15px; height: 15px; }
 .acad-result-actions { display: flex; gap: 8px; justify-content: center; margin-top: 20px; }
+
+/* Constructeur AMDEC (mode/cause/effet + cotation). */
+.amdec-context { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 14px; font-size: 13px; color: var(--text-secondary); }
+.amdec-context .el { display: block; font-weight: 600; font-size: 14px; color: var(--text); margin-bottom: 2px; }
+.amdec-scale { font-size: 12px; color: var(--text-muted); line-height: 1.7; margin: 4px 0 12px; }
+.amdec-cote { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.amdec-cote label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--text-secondary); }
+.amdec-cote select { padding: 8px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; font-size: 14px; }
+.amdec-crit { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-secondary); flex-wrap: wrap; }
+.amdec-crit .val { font-size: 20px; font-weight: 700; color: var(--text); }
+.amdec-ref { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-top: 14px; font-size: 13px; color: var(--text-secondary); }
+.amdec-ref b { color: var(--text); }
+.amdec-recap { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.amdec-recap-cell { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+.amdec-recap-cell .k { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 3px; }
+.amdec-recap-cell .v { font-size: 13px; color: var(--text); }
