@@ -8,16 +8,16 @@ import { useWorkspace } from '@/lib/store';
  * combien restent. Purement présentational — lit `seatsAllowed`,
  * `companyMembers` et les statuts déjà fournis par le store.
  *
- * Convention d'affichage : un membre `invited` réserve un siège jusqu'à son
- * acceptation (le blocage effectif des invitations au-delà de la limite est un
- * réglage distinct côté store / invitation).
+ * Convention : une invitation en attente (`seatsInvited`) réserve un siège
+ * jusqu'à son acceptation ou son expiration. Le store bloque l'invitation en
+ * amont quand actifs + invités atteignent la limite.
  */
 export function SeatsPanel() {
-  const { company, companyMembers, seatsAllowed, isCompanyAdmin } = useWorkspace();
+  const { company, companyMembers, seatsAllowed, seatsInvited, isCompanyAdmin } = useWorkspace();
   if (!company) return null;
 
   const active = companyMembers.filter((m) => m.status === 'active').length;
-  const invited = companyMembers.filter((m) => m.status === 'invited').length;
+  const invited = seatsInvited;
   const unlimited = !Number.isFinite(seatsAllowed);
   const reserved = active + invited;
   const free = unlimited ? Infinity : Math.max(0, seatsAllowed - reserved);

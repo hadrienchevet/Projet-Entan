@@ -171,6 +171,8 @@ interface WorkspaceState {
   companyMembers: CompanyMemberRow[];
   seatsActive: number;
   seatsAllowed: number;
+  /** Invitations en attente (chacune réserve un siège). */
+  seatsInvited: number;
   isCompanyAdmin: boolean;
   /** Connecté, couche entreprise disponible, mais pas encore d'entreprise → onboarding. */
   needsCompany: boolean;
@@ -331,6 +333,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [companyChecked, setCompanyChecked] = useState(false);
   const [seatLimitPrompt, setSeatLimitPrompt] = useState(false);
   const [hasSeat, setHasSeat] = useState(false);
+  const [seatsInvited, setSeatsInvited] = useState(0);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
 
@@ -369,6 +372,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   // Entreprise du compte courant (tolérant : tables fix-12 absentes = mode legacy).
   const fetchCompany = useCallback(async () => {
+    setSeatsInvited(0);
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -453,6 +457,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         };
       }),
     );
+    // Invitations en attente (non expirées) : chacune réserve un siège.
+    const { count: invitedCount } = await supabase
+      .from('company_invitations')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', c.id)
+      .eq('status', 'pending')
+      .gt('expires_at', new Date().toISOString());
+    setSeatsInvited(invitedCount ?? 0);
     setCompanyChecked(true);
   }, [supabase]);
 
@@ -469,15 +481,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const inviteCompanyMember = useCallback(
     async (email: string, role: 'admin' | 'member') => {
       if (!company) return { ok: false as const, error: 'Aucune entreprise.' };
+      // Un invité en attente réserve un siège : on bloque en amont si tout est pris.
+      const allowance = company.isComp ? Infinity : company.seats;
+      const active = companyMembers.filter((m) => m.status === 'active').length;
+      if (Number.isFinite(allowance) && active + seatsInvited >= allowance) {
+        setSeatLimitPrompt(true);
+        return { ok: false as const, error: 'seat_limit_reached' };
+      }
       const { data, error } = await supabase
         .from('company_invitations')
         .insert({ company_id: company.id, email: email.trim().toLowerCase(), role, invited_by: userId })
         .select('token')
         .single();
       if (error) return { ok: false as const, error: error.message };
+      await fetchCompany();
       return { ok: true as const, token: data.token as string };
     },
-    [supabase, company, companyMembers, userId],
+    [supabase, company, companyMembers, seatsInvited, userId, fetchCompany],
   );
 
   const removeCompanyMember = useCallback(
@@ -1838,6 +1858,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     companyMembers,
     seatsActive: companyMembers.filter((m) => m.status === 'active').length,
     seatsAllowed: company ? (company.isComp ? Infinity : company.seats) : 0,
+    seatsInvited,
     isCompanyAdmin: companyRole === 'owner' || companyRole === 'admin',
     needsCompany: companyFeature && companyChecked && !!userId && hasSeat && !company,
     companyActivated: company ? company.isComp || company.seats >= 1 : false,

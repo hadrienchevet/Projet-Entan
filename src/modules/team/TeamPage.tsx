@@ -39,7 +39,11 @@ export function TeamPage() {
     const r = await inviteCompanyMember(email.trim(), role);
     setPending(false);
     if (!r.ok) {
-      setError(r.error);
+      setError(
+        r.error === 'seat_limit_reached'
+          ? 'Tous les sièges sont occupés. Ajoutez un siège avant d’inviter un nouveau membre.'
+          : r.error,
+      );
       return;
     }
     setLink(`${window.location.origin}/rejoindre/${r.token}`);
