@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCurrentProject, useDashboardLayout, useWorkspace } from '@/lib/store';
 import {
   WIDGETS,
@@ -213,11 +213,32 @@ function SortableWidget({
     id: instance.id,
     disabled: !editing,
   });
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const prevSpan = useRef<number | null>(null);
   const def = WIDGETS[instance.id];
   const Comp = WIDGET_COMPONENTS[instance.id];
-  if (!def || !Comp) return null;
-  const span = instance.span ?? def.span;
+  const span = instance.span ?? (def?.span ?? 1);
 
+  // Petite animation quand la largeur (span) change.
+  useEffect(() => {
+    if (prevSpan.current !== null && prevSpan.current !== span && wrapRef.current) {
+      wrapRef.current.animate(
+        [
+          { transform: 'scale(0.97)', opacity: 0.7 },
+          { transform: 'scale(1)', opacity: 1 },
+        ],
+        { duration: 240, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      );
+    }
+    prevSpan.current = span;
+  }, [span]);
+
+  if (!def || !Comp) return null;
+
+  const setRefs = (el: HTMLDivElement | null) => {
+    setNodeRef(el);
+    wrapRef.current = el;
+  };
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -227,7 +248,7 @@ function SortableWidget({
 
   return (
     <div
-      ref={setNodeRef}
+      ref={setRefs}
       style={style}
       className={`widget-wrap${span === 2 ? ' span-2' : ''}${editing ? ' editing' : ''}${isDragging ? ' dragging' : ''}${isOver ? ' drop-target' : ''}`}
     >
