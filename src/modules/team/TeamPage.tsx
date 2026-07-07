@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import { useWorkspace } from '@/lib/store';
 import { CompanyOnboarding } from '@/components/CompanyOnboarding';
+import { SeatsPanel } from './SeatsPanel';
 
 /** Gestion de l'équipe = des sièges : membres, invitations, rôles. */
 export function TeamPage() {
   const {
     company,
     companyMembers,
-    seatsActive,
     isCompanyAdmin,
     inviteCompanyMember,
     removeCompanyMember,
@@ -51,9 +51,11 @@ export function TeamPage() {
       <header className="page-header">
         <div>
           <h1>Équipe</h1>
-          <p className="subtitle">{seatsActive} membre(s) dans l’entreprise</p>
+          <p className="subtitle">Gérez les sièges, les membres et leurs accès.</p>
         </div>
       </header>
+
+      <SeatsPanel />
 
       <div className="card">
         <div className="card-body">

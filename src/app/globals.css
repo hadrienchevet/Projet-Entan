@@ -1891,3 +1891,23 @@ a.link:hover { text-decoration: underline; }
 .amdec-recap-cell { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
 .amdec-recap-cell .k { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 3px; }
 .amdec-recap-cell .v { font-size: 13px; color: var(--text); }
+
+/* ── Sièges (résumé entreprise) ────────────────────────────────────────────── */
+.seats-metric { display: flex; align-items: baseline; gap: 8px; }
+.seats-metric .n { font-size: 28px; font-weight: 700; color: var(--text); }
+.seats-metric .d { font-size: 14px; color: var(--text-secondary); }
+.seats-bar { display: flex; height: 10px; border-radius: 99px; overflow: hidden; background: var(--stripe); margin: 14px 0 10px; }
+.seats-bar span { display: block; height: 100%; }
+.seats-bar .u { background: var(--accent); }
+.seats-bar .i { background: var(--warning); }
+.seats-cells { display: grid; grid-template-columns: repeat(auto-fit, minmax(26px, 1fr)); gap: 6px; margin: 14px 0 12px; max-width: 340px; }
+.seats-cell { aspect-ratio: 1; border-radius: var(--radius-sm); }
+.seats-cell.u { background: var(--accent); }
+.seats-cell.i { background: var(--warning); }
+.seats-cell.f { border: 1px dashed var(--border-strong); }
+.seats-legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; color: var(--text-secondary); }
+.seats-legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+.seats-legend .dot.u { background: var(--accent); }
+.seats-legend .dot.i { background: var(--warning); }
+.seats-legend .dot.f { background: var(--border-strong); }
+.seats-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-top: 1px solid var(--border); font-size: 13px; }
