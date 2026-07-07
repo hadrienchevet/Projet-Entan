@@ -47,6 +47,7 @@ export function AcademyPanel() {
       return (
         <div className="page">
           <ClassifyGame
+            key={set.id}
             set={set}
             onFinish={(score, total, passed) => record(set.id, score, total, passed)}
             onExit={() => setActive(null)}

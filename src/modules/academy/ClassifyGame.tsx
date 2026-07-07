@@ -11,19 +11,31 @@ interface Props {
   onExit: () => void;
 }
 
+/** Fisher-Yates : renvoie une copie mélangée (l'ordre change à chaque partie). */
+function shuffle<T>(input: readonly T[]): T[] {
+  const a = input.slice();
+  for (let k = a.length - 1; k > 0; k--) {
+    const j = Math.floor(Math.random() * (k + 1));
+    [a[k], a[j]] = [a[j], a[k]];
+  }
+  return a;
+}
+
 /**
  * Moteur générique de défi « classement » : un énoncé, des paniers, une
  * correction immédiate, un score et un badge. Réutilisable pour SWOT, RACI,
  * Ishikawa 5M… — seul le jeu de données change.
  */
 export function ClassifyGame({ set, onFinish, onExit }: Props) {
+  // Ordre tiré au sort à l'ouverture ; re-mélangé à chaque relance.
+  const [items, setItems] = useState(() => shuffle(set.items));
   const [i, setI] = useState(0);
   const [score, setScore] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  const total = set.items.length;
-  const item = set.items[i];
+  const total = items.length;
+  const item = items[i];
   const bucketById = useMemo(
     () => Object.fromEntries(set.buckets.map((b) => [b.id, b])),
     [set.buckets],
@@ -46,6 +58,7 @@ export function ClassifyGame({ set, onFinish, onExit }: Props) {
   };
 
   const replay = () => {
+    setItems(shuffle(set.items));
     setI(0);
     setScore(0);
     setPicked(null);
@@ -64,7 +77,7 @@ export function ClassifyGame({ set, onFinish, onExit }: Props) {
             <div className="acad-badge"><IconCheck /> Badge {ACADEMY_TOOL_LABELS[set.tool]} débloqué</div>
           ) : (
             <p className="muted" style={{ fontSize: 13, marginTop: 12 }}>
-              Vise {Math.round(set.passThreshold * 100)} % pour décrocher le badge.
+              Vise {Math.ceil(set.passThreshold * total)} / {total} pour décrocher le badge.
             </p>
           )}
           <div className="acad-result-actions">
