@@ -9,6 +9,7 @@ import { RisksWidget } from './RisksWidget';
 import { TeamLoadWidget } from './TeamLoadWidget';
 import { StatusBreakdownWidget } from './StatusBreakdownWidget';
 import { CostsWidget } from './CostsWidget';
+import { CostsBreakdownWidget } from './CostsBreakdownWidget';
 import { RdpPhaseWidget } from './RdpPhaseWidget';
 import { RdpSubjectWidget } from './RdpSubjectWidget';
 import { RdpStatsWidget } from './RdpStatsWidget';
@@ -30,6 +31,7 @@ export const WIDGET_COMPONENTS: Record<WidgetId, FC<WidgetProps>> = {
   'team-load': TeamLoadWidget,
   'status-breakdown': StatusBreakdownWidget,
   costs: CostsWidget,
+  'costs-breakdown': CostsBreakdownWidget,
   'rdp-phase': RdpPhaseWidget,
   'rdp-subject': RdpSubjectWidget,
   'rdp-stats': RdpStatsWidget,

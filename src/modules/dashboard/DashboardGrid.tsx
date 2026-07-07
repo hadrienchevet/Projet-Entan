@@ -97,10 +97,11 @@ export function DashboardGrid() {
     save(arrayMove(layout, oldI, newI));
   };
 
-  // Le widget « coûts » n'est proposé que si l'outil Suivi des coûts est activé.
+  // Les widgets de coûts ne sont proposés que si l'outil Suivi des coûts est activé.
   const coutsOn = enabledTools(project.tools).includes('couts');
+  const needsCouts = (id: WidgetId) => id === 'costs' || id === 'costs-breakdown';
   const available = widgetsForScope(scope).filter(
-    (id) => !layout.some((w) => w.id === id) && (id !== 'costs' || coutsOn),
+    (id) => !layout.some((w) => w.id === id) && (!needsCouts(id) || coutsOn),
   );
   const ids = layout.map((w) => w.id);
 

@@ -1749,6 +1749,14 @@ a.link:hover { text-decoration: underline; }
 .cost-summary-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); }
 .cost-summary-val { font-size: 17px; font-weight: 700; color: var(--text); }
 
+/* Répartition des coûts (poids de chaque poste — réutilise .breakdown-track/-fill). */
+.cost-split { display: flex; flex-direction: column; gap: 14px; padding: 16px; }
+.cost-split-item { display: flex; flex-direction: column; gap: 7px; }
+.cost-split-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; }
+.cost-split-name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cost-split-amt { flex-shrink: 0; font-weight: 600; color: var(--text); }
+.cost-split-amt .pct { margin-left: 7px; font-weight: 500; font-size: 12px; color: var(--text-muted); }
+
 /* ── SWOT (matrice 2×2 à puces) ────────────────────────────────────────────── */
 .swot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 720px) { .swot-grid { grid-template-columns: 1fr; } }
@@ -1812,3 +1820,58 @@ a.link:hover { text-decoration: underline; }
 .frise-legend .dot.done { background: var(--success); }
 .frise-legend .dot.in_progress { background: var(--accent); }
 .frise-legend .dot.todo { background: var(--border-strong); }
+
+/* ── Académie (mini-jeux de prise en main) ─────────────────────────────────── */
+.acad-tabbar { max-width: 1100px; margin: 0 auto; padding: 20px 32px 0; }
+.acad-tabs { display: inline-flex; gap: 4px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 4px; }
+.acad-tab { display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; font-weight: 500; padding: 7px 16px; border-radius: 999px; cursor: pointer; }
+.acad-tab svg { width: 15px; height: 15px; }
+.acad-tab:hover { color: var(--text); }
+.acad-tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+
+.acad-hub { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.acad-mastery { text-align: right; flex-shrink: 0; }
+.acad-mastery-num { display: block; font-size: 24px; font-weight: 700; color: var(--text); }
+.acad-mastery-lbl { font-size: 12px; color: var(--text-muted); }
+
+.acad-cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.acad-card { text-align: left; font: inherit; padding: 16px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: border-color .15s, transform .08s; }
+.acad-card:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-2px); }
+.acad-card:disabled { cursor: default; opacity: 0.6; }
+.acad-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.acad-card-ic { color: var(--accent); display: inline-flex; }
+.acad-card-ic svg { width: 22px; height: 22px; }
+.acad-card h3 { margin: 0; font-size: 15px; color: var(--text); }
+.acad-card p { margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+.acad-card-best { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+
+.acad-game { overflow: hidden; }
+.acad-prog { height: 6px; background: var(--stripe); }
+.acad-prog-bar { display: block; height: 100%; background: var(--accent); transition: width .3s ease; }
+.acad-prompt { font-size: 17px; text-align: center; padding: 22px 12px; background: var(--surface-2); border-radius: var(--radius); margin-bottom: 16px; color: var(--text); }
+.acad-buckets { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.acad-bucket { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; text-align: left; font: inherit; padding: 14px; border: 1px solid transparent; border-radius: var(--radius); cursor: pointer; transition: transform .08s, box-shadow .12s, opacity .12s; }
+.acad-bucket:hover:not(:disabled) { transform: translateY(-1px); }
+.acad-bucket:disabled { cursor: default; }
+.acad-bucket-label { font-size: 14px; font-weight: 600; }
+.acad-bucket-hint { font-size: 11px; opacity: 0.85; }
+.acad-bucket.tone-accent { background: var(--accent-soft); color: var(--accent-text); }
+.acad-bucket.tone-success { background: var(--success-soft); color: var(--success); }
+.acad-bucket.tone-warning { background: var(--warning-soft); color: var(--warning); }
+.acad-bucket.tone-danger { background: var(--danger-soft); color: var(--danger); }
+.acad-bucket.tone-neutral { background: var(--surface-2); color: var(--text-secondary); }
+.acad-bucket.correct { box-shadow: 0 0 0 2px var(--success); }
+.acad-bucket.wrong { box-shadow: 0 0 0 2px var(--danger); }
+.acad-bucket.dim { opacity: 0.45; }
+
+.acad-feedback { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding: 12px 14px; border-radius: var(--radius); font-size: 13.5px; line-height: 1.5; }
+.acad-feedback.ok { background: var(--success-soft); color: var(--success); }
+.acad-feedback.ko { background: var(--danger-soft); color: var(--danger); }
+.acad-feedback .btn { flex-shrink: 0; }
+
+.acad-result { text-align: center; padding: 32px 20px; }
+.acad-result-score { font-size: 30px; font-weight: 700; color: var(--text); }
+.acad-result-pct { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+.acad-badge { display: inline-flex; align-items: center; gap: 7px; margin-top: 16px; background: var(--success-soft); color: var(--success); padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+.acad-badge svg { width: 15px; height: 15px; }
+.acad-result-actions { display: flex; gap: 8px; justify-content: center; margin-top: 20px; }
