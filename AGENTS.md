@@ -12,7 +12,7 @@ migrations dans [supabase/MIGRATIONS.md](supabase/MIGRATIONS.md).
 ## Quoi / où
 - SaaS de **gestion de projet industriel** + **résolution de problèmes (RDP)**, multi-utilisateurs, temps réel.
 - Code dans **ce dossier** (`pilotix`). ⚠️ Le dossier voisin `Gestion de projet` est l'ancienne **V1 Vite**, un projet **séparé** — ne pas y toucher.
-- Repo : `github.com/hadrienchevet/Projet-Entan`. On pousse sur **`main` ET `master`** (`git push origin main:master`) car **Vercel déploie `master`**.
+- Repo : `github.com/hadrienchevet/Projet-Entan`. **Vercel déploie `main`** → simple `git push origin main`. (`master` est une branche morte, ne plus y pousser.)
 - Prod : `https://pilotix-hadrien-chevets-projects.vercel.app` (toujours l'URL **sans hash** ; une URL `…-<hash>-…vercel.app` est un déploiement figé).
 - Stack : Next.js 16 (App Router, React 19), Supabase (Auth + Postgres + RLS + Realtime), TypeScript strict. CSS = tokens dans `src/app/globals.css`, 2 thèmes (clair/sombre).
 
