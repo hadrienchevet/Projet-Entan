@@ -119,7 +119,10 @@ export interface Company {
   id: Id;
   name: string;
   joinCode: string;
+  /** Sièges payés (quantité de l'abonnement Stripe). */
   seats: number;
+  /** Sièges offerts par clés d'accès (legacy). Allocation réelle = seats + compSeats. */
+  compSeats: number;
   isComp: boolean;
   status: string | null;
 }
@@ -408,7 +411,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setHasSeat(seat === true);
     const { data: mem, error } = await supabase
       .from('company_members')
-      .select('role, companies(id, name, join_code, seats, is_comp, status)')
+      .select('role, companies(id, name, join_code, seats, comp_seats, is_comp, status)')
       .eq('user_id', user.id)
       .eq('status', 'active')
       .order('created_at')
@@ -430,6 +433,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           name: string;
           join_code: string;
           seats: number;
+          comp_seats: number;
           is_comp: boolean;
           status: string | null;
         }
@@ -446,6 +450,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       name: c.name,
       joinCode: c.join_code,
       seats: c.seats,
+      compSeats: c.comp_seats ?? 0,
       isComp: c.is_comp,
       status: c.status,
     });
@@ -499,9 +504,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     async (email: string, role: 'admin' | 'member') => {
       if (!company) return { ok: false as const, error: 'Aucune entreprise.' };
       // Un invité en attente réserve un siège : on bloque en amont si tout est pris.
-      const allowance = company.isComp ? Infinity : company.seats;
+      // Uniquement quand il y a une vraie allocation (abonnement) ; en modèle par
+      // clé (allocation 0), l'accès se gère par siège personnel, on ne bloque pas.
+      const allowance = company.isComp ? Infinity : company.seats + company.compSeats;
       const active = companyMembers.filter((m) => m.status === 'active').length;
-      if (Number.isFinite(allowance) && active + seatsInvited >= allowance) {
+      if (Number.isFinite(allowance) && allowance > 0 && active + seatsInvited >= allowance) {
         setSeatLimitPrompt(true);
         return { ok: false as const, error: 'seat_limit_reached' };
       }
@@ -1875,7 +1882,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     companyMembers,
     companyInvitations,
     seatsActive: companyMembers.filter((m) => m.status === 'active').length,
-    seatsAllowed: company ? (company.isComp ? Infinity : company.seats) : 0,
+    seatsAllowed: company ? (company.isComp ? Infinity : company.seats + company.compSeats) : 0,
     seatsInvited,
     isCompanyAdmin: companyRole === 'owner' || companyRole === 'admin',
     needsCompany: companyFeature && companyChecked && !!userId && hasSeat && !company,

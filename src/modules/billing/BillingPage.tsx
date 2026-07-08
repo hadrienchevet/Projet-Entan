@@ -111,6 +111,11 @@ export function BillingPage() {
         </div>
       )}
 
+      <p className="pay-muted" style={{ textAlign: 'center', maxWidth: 460, margin: '22px auto 0' }}>
+        L’accès se fait aujourd’hui par <strong>clé (1 clé = 1 siège)</strong>. La gestion des sièges
+        par abonnement en ligne (paiement par carte) arrivera prochainement.
+      </p>
+
       <p className="pay-legal">
         En utilisant le service, vous acceptez les <a href="/cgv">CGV</a> et la{' '}
         <a href="/confidentialite">politique de confidentialité</a>.

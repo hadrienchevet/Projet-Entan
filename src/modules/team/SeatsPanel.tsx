@@ -5,12 +5,11 @@ import { useWorkspace } from '@/lib/store';
 import { IconMail, IconPlus, IconTrash, IconUser } from '@/components/icons';
 
 /**
- * Carte « Sièges » de l'entreprise (page Équipe) : combien de sièges, combien
- * utilisés, combien libres, avec la liste des membres et des invitations.
+ * Carte « Sièges » de l'entreprise (page Équipe). Trois états :
+ *  - accès offert (`isComp`) → sièges illimités ;
+ *  - abonnement (seats > 0) → visualisation utilisés / libres, réservation ;
+ *  - accès par clé (seats = 0) → pas de quota, chaque membre a sa clé perso.
  * Lit `seatsAllowed`, `companyMembers`, `companyInvitations` du store.
- *
- * Convention : une invitation en attente réserve un siège jusqu'à son
- * acceptation ou son expiration ; le store bloque l'invitation au-delà.
  */
 
 function initials(name?: string, email?: string): string {
@@ -40,16 +39,18 @@ export function SeatsPanel() {
   const active = activeMembers.length;
   const invited = seatsInvited;
   const unlimited = !Number.isFinite(seatsAllowed);
+  const subscribed = !unlimited && seatsAllowed > 0;
   const reserved = active + invited;
-  const free = unlimited ? Infinity : Math.max(0, seatsAllowed - reserved);
-  const noSeats = !unlimited && seatsAllowed === 0;
-  const full = !unlimited && !noSeats && free === 0;
+  const free = Math.max(0, seatsAllowed - reserved);
+  const full = subscribed && free === 0;
 
-  // Une case par siège (icône : actif / invité / libre) ; barre au-delà de 24.
-  const cellCount = unlimited ? 0 : Math.min(Math.max(seatsAllowed, reserved), 24);
+  const cellCount = subscribed ? Math.min(Math.max(seatsAllowed, reserved), 24) : 0;
   const cells = Array.from({ length: cellCount }, (_, i) =>
     i < active ? 'u' : i < reserved ? 'i' : 'f',
   );
+
+  const badgeLabel = unlimited ? 'Accès offert' : subscribed ? 'Plan Équipe' : 'Accès par clé';
+  const badgeClass = unlimited ? 'done' : subscribed ? 'in_progress' : 'todo';
 
   const onRemove = (uid: string, name: string) => {
     if (!window.confirm(`Retirer ${name} de l'entreprise ?`)) return;
@@ -61,9 +62,7 @@ export function SeatsPanel() {
       <div className="card-header">
         <div className="card-title-group">
           <h2>Sièges</h2>
-          <span className={`badge ${unlimited ? 'done' : 'in_progress'}`}>
-            {unlimited ? 'Accès offert' : 'Plan Équipe'}
-          </span>
+          <span className={`badge ${badgeClass}`}>{badgeLabel}</span>
         </div>
         {isCompanyAdmin && (
           <Link className="link" href="/abonnement">Gérer l’abonnement</Link>
@@ -76,13 +75,13 @@ export function SeatsPanel() {
           <span className="d">
             {unlimited
               ? 'membre(s) · sièges illimités'
-              : noSeats
-                ? 'membre(s) · aucun siège attribué'
-                : `/ ${seatsAllowed} sièges utilisés`}
+              : subscribed
+                ? `/ ${seatsAllowed} sièges utilisés`
+                : active > 1 ? 'membres actifs' : 'membre actif'}
           </span>
         </div>
 
-        {cellCount > 0 && (
+        {subscribed && (
           <div className="seats-cells">
             {cells.map((k, i) => (
               <span key={i} className={`seats-cell ${k}`}>
@@ -92,7 +91,7 @@ export function SeatsPanel() {
           </div>
         )}
 
-        {!unlimited && (
+        {subscribed && (
           <div className="seats-legend">
             <span><span className="dot u" />{active} actif(s)</span>
             {invited > 0 && <span><span className="dot i" />{invited} invité(s) — réservé</span>}
@@ -145,18 +144,25 @@ export function SeatsPanel() {
         ))}
       </div>
 
-      {isCompanyAdmin && (
+      {isCompanyAdmin && !unlimited && (
         <div className="seats-foot">
-          <span className={full || noSeats ? 'danger-text' : 'muted'}>
-            {noSeats
-              ? 'Aucun siège au plan — ajoutez-en pour votre équipe.'
-              : full
-                ? 'Tous les sièges sont occupés.'
-                : `${free} siège(s) disponible(s) pour inviter votre équipe.`}
-          </span>
-          <Link className="btn btn-sm" href="/abonnement">
-            {full || noSeats ? 'Ajouter des sièges' : 'Voir l’abonnement'}
-          </Link>
+          {subscribed ? (
+            <>
+              <span className={full ? 'danger-text' : 'muted'}>
+                {full
+                  ? 'Tous les sièges sont occupés.'
+                  : `${free} siège(s) disponible(s) pour inviter votre équipe.`}
+              </span>
+              <Link className="btn btn-sm" href="/abonnement">Gérer l’abonnement</Link>
+            </>
+          ) : (
+            <>
+              <span className="muted">
+                Accès par clé (1 clé = 1 siège). L’abonnement en ligne arrivera bientôt.
+              </span>
+              <Link className="btn btn-sm" href="/abonnement">En savoir plus</Link>
+            </>
+          )}
         </div>
       )}
     </div>
