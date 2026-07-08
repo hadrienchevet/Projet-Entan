@@ -408,6 +408,7 @@ export default async function LandingPage() {
         <footer className="lp-foot">
           <span className="lp-brand"><span className="mark">EN</span> ENTAN</span>
           <span className="lp-foot-links">
+            <Link href="/methodes">Méthodes</Link>
             <Link href="/login">Connexion</Link>
             <Link href="/cgv">CGV</Link>
             <Link href="/confidentialite">Confidentialité</Link>

@@ -40,6 +40,7 @@ export default async function proxy(request: NextRequest) {
   // Les pages légales (CGV / confidentialité) sont consultables sans compte.
   const isPublic =
     pathname === '/' ||
+    pathname === '/methodes' ||
     pathname === '/login' ||
     pathname.startsWith('/auth') ||
     pathname === '/api/stripe/webhook' ||

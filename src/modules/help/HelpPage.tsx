@@ -240,7 +240,18 @@ const css = `
 .ex-a3 b { display: block; color: var(--text); font-size: 11px; margin-bottom: 1px; }
 `;
 
-export function HelpPage() {
+export interface HelpPageProps {
+  title?: string;
+  subtitle?: string;
+  /** Masque la section vidéo (utile pour la page publique). */
+  showVideo?: boolean;
+}
+
+export function HelpPage({
+  title = 'Aide & Tutoriel',
+  subtitle = 'Un guide complet des outils de gestion de projet — et de l’intérêt de les combiner.',
+  showVideo = true,
+}: HelpPageProps = {}) {
   return (
     <div className="page guide">
       <style dangerouslySetInnerHTML={{ __html: css }} />
@@ -248,50 +259,49 @@ export function HelpPage() {
       <div className="page-header">
         <div>
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <IconHelp /> Aide &amp; Tutoriel
+            <IconHelp /> {title}
           </h1>
-          <p className="subtitle">
-            Un guide complet des outils de gestion de projet — et de l’intérêt de les combiner.
-          </p>
+          <p className="subtitle">{subtitle}</p>
         </div>
       </div>
 
-      {/* Vidéo */}
-      <div className="card">
-        <div className="card-body">
-          <h2 style={{ marginBottom: 4 }}>Visite guidée en vidéo</h2>
-          <p className="lead">Une vue d’ensemble de Projet Entan en quelques minutes.</p>
-          <div
-            style={{
-              aspectRatio: '16/9',
-              background: '#000',
-              borderRadius: 12,
-              overflow: 'hidden',
-              boxShadow: 'var(--shadow-modal)',
-              border: '1px solid var(--border)',
-            }}
-          >
-            <video
-              src="/projet-entan.mp4"
-              style={{ width: '100%', height: '100%', display: 'block' }}
-              controls
-              muted
-              loop
-              playsInline
-            />
-          </div>
-          <div style={{ marginTop: 12, textAlign: 'center' }}>
-            <a
-              href="/projet-entan.mp4"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-ghost btn-sm"
+      {showVideo && (
+        <div className="card">
+          <div className="card-body">
+            <h2 style={{ marginBottom: 4 }}>Visite guidée en vidéo</h2>
+            <p className="lead">Une vue d’ensemble de Projet Entan en quelques minutes.</p>
+            <div
+              style={{
+                aspectRatio: '16/9',
+                background: '#000',
+                borderRadius: 12,
+                overflow: 'hidden',
+                boxShadow: 'var(--shadow-modal)',
+                border: '1px solid var(--border)',
+              }}
             >
-              Ouvrir la vidéo en plein écran →
-            </a>
+              <video
+                src="/projet-entan.mp4"
+                style={{ width: '100%', height: '100%', display: 'block' }}
+                controls
+                muted
+                loop
+                playsInline
+              />
+            </div>
+            <div style={{ marginTop: 12, textAlign: 'center' }}>
+              <a
+                href="/projet-entan.mp4"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost btn-sm"
+              >
+                Ouvrir la vidéo en plein écran →
+              </a>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Intro */}
       <div className="card">
