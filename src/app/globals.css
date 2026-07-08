@@ -1923,3 +1923,9 @@ a.link:hover { text-decoration: underline; }
 .seats-member-name { font-size: 13.5px; color: var(--text); }
 .seats-member-name .you { color: var(--text-muted); }
 .seats-member-sub { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Bandeau d'essai gratuit ───────────────────────────────────────────────── */
+.trial-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 16px 32px 0; padding: 10px 16px; background: var(--accent-soft); color: var(--accent-text); border: 1px solid var(--accent-faint); border-radius: var(--radius); font-size: 13px; font-weight: 500; }
+.trial-banner svg { width: 15px; height: 15px; vertical-align: -2px; margin-right: 6px; }
+.trial-banner .btn { background: var(--accent); border-color: var(--accent); color: #fff; }
+.trial-banner .btn:hover { background: var(--accent-hover); }

@@ -25,6 +25,7 @@ Toutes sont **idempotentes** (ré-exécutables sans erreur).
 | `fix-17` | **Coûts : quantité + abonnement** : ajoute `quantity`, `is_subscription`, `months` à `cost_items`. Total d'une ligne = montant × quantité × (abonnement ? mois : 1). Bouton « +1 mois » côté app. Lignes existantes inchangées (défauts 1/false/1). |
 | `fix-18` | **Journal d'activité (notifications in-app)** : table `activity_events` (RLS `is_project_member` + realtime). Alimentée par le store (écriture tolérante) pour le fil d'activité. Les alertes (retards/échéances/risques sans plan) restent calculées côté client. |
 | `fix-19` | **Rappel email au démarrage d'action** : `actions.notify_email` (opt-in) + table `notification_log` (RLS sans policy → cron/service-role only, anti-doublon `unique(action_id, kind)`). Le cron `/api/cron/notify-action-start` envoie au responsable (s'il a un compte) le jour de la date de début. Nécessite `CRON_SECRET` dans Vercel + le cron déclaré dans `vercel.json`. |
+| `fix-20` | **Siège d'essai 14 jours** : étend `user_has_seat()` → un compte a un siège pendant 14 j après `profiles.created_at` (essai auto), puis clé/abonnement requis. Débloque le 1er run (avant : nouveau compte coincé sur une erreur RLS `projects`). RPC `trial_ends_at()` (fin d'essai si accès purement essai, sinon null) pour le bandeau « J-X ». Frontière de sécurité fix-15 inchangée : l'essai EST un siège temporaire. |
 
 ## Après une migration qui AJOUTE une colonne
 Recharger le cache de l'API REST, sinon l'écriture sur la nouvelle colonne est rejetée en silence :

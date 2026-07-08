@@ -18,7 +18,6 @@ import {
   IconSwot,
   IconDashboard,
   IconFolder,
-  IconHelp,
   IconIshikawa,
   IconLayers,
   IconLogout,
@@ -70,10 +69,16 @@ const NAV_RDP = [
 
 export function Layout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { projects, currentProjectId, setCurrentProject, userEmail, company } = useWorkspace();
+  const { projects, currentProjectId, setCurrentProject, userEmail, company, trialEndsAt } =
+    useWorkspace();
   const currentProject = useCurrentProject();
   const [creating, setCreating] = useState(false);
   const nav = currentProject?.projectType === 'rdp' ? NAV_RDP : navGestion(currentProject?.tools);
+
+  // Essai gratuit en cours → bandeau « J-X » (null si accès par clé/entreprise).
+  const trialDaysLeft = trialEndsAt
+    ? Math.ceil((new Date(trialEndsAt).getTime() - new Date().getTime()) / 86_400_000)
+    : null;
 
   return (
     <div className="app">
@@ -166,7 +171,21 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <main className="main">{children}</main>
+      <main className="main">
+        {trialDaysLeft !== null && trialDaysLeft >= 0 && (
+          <div className="trial-banner">
+            <span>
+              <IconStar />
+              Essai gratuit —{' '}
+              {trialDaysLeft <= 0
+                ? 'dernier jour'
+                : `${trialDaysLeft} jour${trialDaysLeft > 1 ? 's' : ''} restant${trialDaysLeft > 1 ? 's' : ''}`}
+            </span>
+            <Link href="/abonnement" className="btn btn-sm">Activer mon siège</Link>
+          </div>
+        )}
+        {children}
+      </main>
 
       {creating && <ProjectFormModal onClose={() => setCreating(false)} />}
       <UpgradePrompt />

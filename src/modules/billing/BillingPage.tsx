@@ -28,7 +28,8 @@ const css = `
  * → statut. (Le paiement Stripe sera réintégré ici plus tard.)
  */
 export function BillingPage() {
-  const { hasSeat, company, redeemAccessKey } = useWorkspace();
+  const { hasSeat, company, redeemAccessKey, trialEndsAt } = useWorkspace();
+  const trialOver = !hasSeat && !!trialEndsAt && new Date(trialEndsAt) < new Date();
   const [keyCode, setKeyCode] = useState('');
   const [keyMsg, setKeyMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, setPending] = useState(false);
@@ -61,7 +62,9 @@ export function BillingPage() {
         <p>
           {hasSeat
             ? 'Votre accès est actif.'
-            : 'Pour accéder à Projet Entan, activez votre siège avec votre clé d’accès (1 clé = 1 siège).'}
+            : trialOver
+              ? 'Votre essai gratuit de 14 jours est terminé. Activez votre siège avec une clé d’accès (l’abonnement en ligne arrivera bientôt).'
+              : 'Pour accéder à Projet Entan, activez votre siège avec votre clé d’accès (1 clé = 1 siège).'}
         </p>
       </div>
 

@@ -197,8 +197,10 @@ interface WorkspaceState {
   joinCompany: (code: string) => Promise<Result>;
   /** L'entreprise a un accès actif (offert via clé, ou ≥ 1 siège payé). */
   companyActivated: boolean;
-  /** L'utilisateur a-t-il un siège (clé d'accès consommée) ? */
+  /** L'utilisateur a-t-il un siège (clé, entreprise offerte, ou essai en cours) ? */
   hasSeat: boolean;
+  /** Fin de l'essai gratuit (ISO) si l'accès repose sur l'essai, sinon null. */
+  trialEndsAt: string | null;
   /** Connecté, fonctionnalité dispo, mais pas de siège → écran clé. */
   needsSeat: boolean;
   refreshCompany: () => Promise<void>;
@@ -344,6 +346,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [companyChecked, setCompanyChecked] = useState(false);
   const [seatLimitPrompt, setSeatLimitPrompt] = useState(false);
   const [hasSeat, setHasSeat] = useState(false);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [seatsInvited, setSeatsInvited] = useState(0);
   const [companyInvitations, setCompanyInvitations] = useState<CompanyInvitationRow[]>([]);
 
@@ -386,6 +389,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const fetchCompany = useCallback(async () => {
     setSeatsInvited(0);
     setCompanyInvitations([]);
+    setTrialEndsAt(null);
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -409,6 +413,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return;
     }
     setHasSeat(seat === true);
+    // Fin d'essai (null si l'accès vient d'une clé/entreprise, ou si fix-20 non appliqué).
+    const { data: trialEnd } = await supabase.rpc('trial_ends_at');
+    setTrialEndsAt((trialEnd as string | null) ?? null);
     const { data: mem, error } = await supabase
       .from('company_members')
       .select('role, companies(id, name, join_code, seats, comp_seats, is_comp, status)')
@@ -1888,6 +1895,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     needsCompany: companyFeature && companyChecked && !!userId && hasSeat && !company,
     companyActivated: company ? company.isComp || company.seats >= 1 : false,
     hasSeat,
+    trialEndsAt,
     needsSeat: companyFeature && companyChecked && !!userId && !hasSeat,
     createCompany,
     inviteCompanyMember,
