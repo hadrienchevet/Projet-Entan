@@ -2,9 +2,21 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Projet Entan',
+  metadataBase: new URL('https://projetentan.fr'),
+  title: {
+    default: 'Projet Entan — Gestion de projet industriel et résolution de problèmes',
+    template: '%s · Projet Entan',
+  },
   description:
-    'Pilotage de projets industriels — RACI, AMDEC, actions et planning, en équipe et en temps réel.',
+    'Pilotez vos projets industriels et vos démarches qualité en un seul outil : RACI, AMDEC, plan d’action, planning, Ishikawa, 5 pourquoi, SWOT et A3. Essai gratuit 14 jours.',
+  applicationName: 'Projet Entan',
+  authors: [{ name: 'Projet Entan' }],
+  openGraph: {
+    type: 'website',
+    locale: 'fr_FR',
+    siteName: 'Projet Entan',
+    url: '/',
+  },
 };
 
 /** Applique le thème avant le premier rendu (pas de flash clair/sombre). */

@@ -33,7 +33,8 @@ function LoginForm() {
   // mais est interprété comme une URL absolue par le navigateur → on le refuse.
   const next = /^\/(?![/\\])/.test(rawNext) ? rawNext : '/';
 
-  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
+  const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin';
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');

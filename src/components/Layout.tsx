@@ -48,7 +48,7 @@ const TOOL_ICON: Record<ToolId, ReactElement> = {
 /** Nav gestion = Dashboard + outils activés + Outils + Accès. */
 function navGestion(tools: ToolId[] | null | undefined) {
   return [
-    { to: '/', label: 'Dashboard', icon: <IconDashboard /> },
+    { to: '/dashboard', label: 'Dashboard', icon: <IconDashboard /> },
     ...enabledTools(tools).map((id) => ({ to: TOOLS[id].href, label: TOOLS[id].label, icon: TOOL_ICON[id] })),
     { to: '/outils', label: 'Outils', icon: <IconTools /> },
     { to: '/access', label: 'Accès', icon: <IconUsers /> },
@@ -56,7 +56,7 @@ function navGestion(tools: ToolId[] | null | undefined) {
 }
 
 const NAV_RDP = [
-  { to: '/', label: 'Tableau de bord', icon: <IconDashboard /> },
+  { to: '/dashboard', label: 'Tableau de bord', icon: <IconDashboard /> },
   { to: '/sujet', label: '0 · Sujet', icon: <IconStar /> },
   { to: '/probleme', label: '1 · Problème', icon: <IconTarget /> },
   { to: '/ishikawa', label: '2 · Causes', icon: <IconIshikawa /> },

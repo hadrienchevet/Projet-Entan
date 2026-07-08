@@ -39,6 +39,7 @@ export default async function proxy(request: NextRequest) {
   // Le webhook Stripe est appelé sans session (serveur à serveur) → public.
   // Les pages légales (CGV / confidentialité) sont consultables sans compte.
   const isPublic =
+    pathname === '/' ||
     pathname === '/login' ||
     pathname.startsWith('/auth') ||
     pathname === '/api/stripe/webhook' ||

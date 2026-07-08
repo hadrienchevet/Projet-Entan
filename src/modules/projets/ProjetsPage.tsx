@@ -23,7 +23,7 @@ export function ProjetsPage() {
 
   const open = (meta: ProjectMeta) => {
     setCurrentProject(meta.id);
-    router.push('/');
+    router.push('/dashboard');
   };
 
   const toggleStatus = (meta: ProjectMeta) => {
