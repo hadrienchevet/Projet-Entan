@@ -7,14 +7,7 @@ import { SeatsPanel } from './SeatsPanel';
 
 /** Gestion de l'équipe = des sièges : membres, invitations, rôles. */
 export function TeamPage() {
-  const {
-    company,
-    companyMembers,
-    isCompanyAdmin,
-    inviteCompanyMember,
-    removeCompanyMember,
-    userId,
-  } = useWorkspace();
+  const { company, isCompanyAdmin, inviteCompanyMember } = useWorkspace();
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'member' | 'admin'>('member');
@@ -133,51 +126,6 @@ export function TeamPage() {
           </div>
         </div>
       )}
-
-      <div className="card">
-        <div className="card-header">
-          <h2>Membres</h2>
-        </div>
-        <div className="table-wrap">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Membre</th>
-                <th>Rôle</th>
-                <th>Statut</th>
-                {isCompanyAdmin && <th />}
-              </tr>
-            </thead>
-            <tbody>
-              {companyMembers.map((m) => (
-                <tr key={m.userId}>
-                  <td>
-                    <div className="cell-title">
-                      {m.displayName || m.email || m.userId}
-                      {m.userId === userId ? ' (vous)' : ''}
-                    </div>
-                    {m.email && <div className="cell-sub">{m.email}</div>}
-                  </td>
-                  <td>{m.role}</td>
-                  <td>{m.status}</td>
-                  {isCompanyAdmin && (
-                    <td className="actions-cell">
-                      {m.role !== 'owner' && m.userId !== userId && (
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => removeCompanyMember(m.userId)}
-                        >
-                          Retirer
-                        </button>
-                      )}
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 }

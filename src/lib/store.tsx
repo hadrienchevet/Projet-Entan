@@ -132,6 +132,12 @@ export interface CompanyMemberRow {
   displayName?: string;
 }
 
+export interface CompanyInvitationRow {
+  email: string;
+  role: CompanyRole;
+  createdAt: string;
+}
+
 
 interface ProjectMeta {
   id: Id;
@@ -169,6 +175,8 @@ interface WorkspaceState {
   company: Company | null;
   companyRole: CompanyRole | null;
   companyMembers: CompanyMemberRow[];
+  /** Invitations en attente (email + rôle + date), une par siège réservé. */
+  companyInvitations: CompanyInvitationRow[];
   seatsActive: number;
   seatsAllowed: number;
   /** Invitations en attente (chacune réserve un siège). */
@@ -334,6 +342,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [seatLimitPrompt, setSeatLimitPrompt] = useState(false);
   const [hasSeat, setHasSeat] = useState(false);
   const [seatsInvited, setSeatsInvited] = useState(0);
+  const [companyInvitations, setCompanyInvitations] = useState<CompanyInvitationRow[]>([]);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
 
@@ -373,6 +382,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   // Entreprise du compte courant (tolérant : tables fix-12 absentes = mode legacy).
   const fetchCompany = useCallback(async () => {
     setSeatsInvited(0);
+    setCompanyInvitations([]);
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -458,13 +468,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }),
     );
     // Invitations en attente (non expirées) : chacune réserve un siège.
-    const { count: invitedCount } = await supabase
+    const { data: invRows } = await supabase
       .from('company_invitations')
-      .select('id', { count: 'exact', head: true })
+      .select('email, role, created_at')
       .eq('company_id', c.id)
       .eq('status', 'pending')
-      .gt('expires_at', new Date().toISOString());
-    setSeatsInvited(invitedCount ?? 0);
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at');
+    const invs = (invRows ?? []).map((r: Record<string, unknown>) => ({
+      email: r.email as string,
+      role: r.role as CompanyRole,
+      createdAt: r.created_at as string,
+    }));
+    setCompanyInvitations(invs);
+    setSeatsInvited(invs.length);
     setCompanyChecked(true);
   }, [supabase]);
 
@@ -1856,6 +1873,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     company,
     companyRole,
     companyMembers,
+    companyInvitations,
     seatsActive: companyMembers.filter((m) => m.status === 'active').length,
     seatsAllowed: company ? (company.isComp ? Infinity : company.seats) : 0,
     seatsInvited,

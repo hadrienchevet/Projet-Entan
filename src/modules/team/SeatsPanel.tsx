@@ -2,37 +2,59 @@
 
 import Link from 'next/link';
 import { useWorkspace } from '@/lib/store';
+import { IconMail, IconPlus, IconTrash, IconUser } from '@/components/icons';
 
 /**
- * Résumé des sièges de l'entreprise : combien on en a, combien sont utilisés,
- * combien restent. Purement présentational — lit `seatsAllowed`,
- * `companyMembers` et les statuts déjà fournis par le store.
+ * Carte « Sièges » de l'entreprise (page Équipe) : combien de sièges, combien
+ * utilisés, combien libres, avec la liste des membres et des invitations.
+ * Lit `seatsAllowed`, `companyMembers`, `companyInvitations` du store.
  *
- * Convention : une invitation en attente (`seatsInvited`) réserve un siège
- * jusqu'à son acceptation ou son expiration. Le store bloque l'invitation en
- * amont quand actifs + invités atteignent la limite.
+ * Convention : une invitation en attente réserve un siège jusqu'à son
+ * acceptation ou son expiration ; le store bloque l'invitation au-delà.
  */
+
+function initials(name?: string, email?: string): string {
+  const s = (name || email || '?').trim();
+  const parts = s.split(/[\s@._-]+/).filter(Boolean);
+  const two = ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase();
+  return two || (s[0] ?? '?').toUpperCase();
+}
+
+const roleLabel = (role: string) =>
+  role === 'owner' ? 'Propriétaire' : role === 'admin' ? 'Admin' : 'Membre';
+
 export function SeatsPanel() {
-  const { company, companyMembers, seatsAllowed, seatsInvited, isCompanyAdmin } = useWorkspace();
+  const {
+    company,
+    companyMembers,
+    companyInvitations,
+    seatsAllowed,
+    seatsInvited,
+    isCompanyAdmin,
+    userId,
+    removeCompanyMember,
+  } = useWorkspace();
   if (!company) return null;
 
-  const active = companyMembers.filter((m) => m.status === 'active').length;
+  const activeMembers = companyMembers.filter((m) => m.status === 'active');
+  const active = activeMembers.length;
   const invited = seatsInvited;
   const unlimited = !Number.isFinite(seatsAllowed);
   const reserved = active + invited;
   const free = unlimited ? Infinity : Math.max(0, seatsAllowed - reserved);
-  const full = !unlimited && free === 0;
+  const noSeats = !unlimited && seatsAllowed === 0;
+  const full = !unlimited && !noSeats && free === 0;
 
-  // Pastilles individuelles pour les petites équipes ; barre au-delà.
-  const showCells = !unlimited && seatsAllowed > 0 && seatsAllowed <= 16;
-  const cells = showCells
-    ? Array.from({ length: seatsAllowed }, (_, i) =>
-        i < active ? 'u' : i < active + invited ? 'i' : 'f',
-      )
-    : [];
+  // Une case par siège (icône : actif / invité / libre) ; barre au-delà de 24.
+  const cellCount = unlimited ? 0 : Math.min(Math.max(seatsAllowed, reserved), 24);
+  const cells = Array.from({ length: cellCount }, (_, i) =>
+    i < active ? 'u' : i < reserved ? 'i' : 'f',
+  );
 
-  const pctUsed = unlimited || seatsAllowed === 0 ? 0 : (active / seatsAllowed) * 100;
-  const pctInvited = unlimited || seatsAllowed === 0 ? 0 : (invited / seatsAllowed) * 100;
+  const onRemove = (uid: string, name: string) => {
+    if (!window.confirm(`Retirer ${name} de l'entreprise ?`)) return;
+    void removeCompanyMember(uid);
+  };
 
   return (
     <div className="card">
@@ -49,49 +71,91 @@ export function SeatsPanel() {
       </div>
 
       <div className="card-body">
-        {unlimited ? (
-          <div className="seats-metric">
-            <span className="n">{active}</span>
-            <span className="d">membre(s) actif(s) · sièges illimités</span>
+        <div className="seats-metric">
+          <span className="n">{active}</span>
+          <span className="d">
+            {unlimited
+              ? 'membre(s) · sièges illimités'
+              : noSeats
+                ? 'membre(s) · aucun siège attribué'
+                : `/ ${seatsAllowed} sièges utilisés`}
+          </span>
+        </div>
+
+        {cellCount > 0 && (
+          <div className="seats-cells">
+            {cells.map((k, i) => (
+              <span key={i} className={`seats-cell ${k}`}>
+                {k === 'u' ? <IconUser /> : k === 'i' ? <IconMail /> : <IconPlus />}
+              </span>
+            ))}
           </div>
-        ) : (
-          <>
-            <div className="seats-metric">
-              <span className="n">{active}</span>
-              <span className="d">/ {seatsAllowed} sièges utilisés</span>
-            </div>
+        )}
 
-            {showCells ? (
-              <div className="seats-cells">
-                {cells.map((k, i) => (
-                  <span key={i} className={`seats-cell ${k}`} />
-                ))}
-              </div>
-            ) : (
-              <div className="seats-bar">
-                <span className="u" style={{ width: `${pctUsed}%` }} />
-                <span className="i" style={{ width: `${pctInvited}%` }} />
-              </div>
-            )}
-
-            <div className="seats-legend">
-              <span><span className="dot u" />{active} actif(s)</span>
-              {invited > 0 && <span><span className="dot i" />{invited} invité(s) — siège réservé</span>}
-              <span><span className="dot f" />{free} libre(s)</span>
-            </div>
-          </>
+        {!unlimited && (
+          <div className="seats-legend">
+            <span><span className="dot u" />{active} actif(s)</span>
+            {invited > 0 && <span><span className="dot i" />{invited} invité(s) — réservé</span>}
+            <span><span className="dot f" />{free} libre(s)</span>
+          </div>
         )}
       </div>
 
-      {!unlimited && isCompanyAdmin && (
+      <div className="seats-roster">
+        {activeMembers.map((m) => {
+          const name = m.displayName || m.email || m.userId;
+          const you = m.userId === userId;
+          return (
+            <div key={m.userId} className="seats-member">
+              <span className="seats-avatar">{initials(m.displayName, m.email)}</span>
+              <div className="seats-member-main">
+                <div className="seats-member-name">
+                  {name}
+                  {you && <span className="you"> (vous)</span>}
+                </div>
+                {m.email && <div className="seats-member-sub">{m.email}</div>}
+              </div>
+              <span className="muted" style={{ fontSize: 12 }}>{roleLabel(m.role)}</span>
+              <span className="badge done">Actif</span>
+              {isCompanyAdmin && m.role !== 'owner' && !you && (
+                <button
+                  className="icon-btn danger"
+                  aria-label={`Retirer ${name}`}
+                  onClick={() => onRemove(m.userId, name)}
+                >
+                  <IconTrash />
+                </button>
+              )}
+            </div>
+          );
+        })}
+
+        {companyInvitations.map((inv) => (
+          <div key={inv.email} className="seats-member">
+            <span className="seats-avatar inv"><IconMail /></span>
+            <div className="seats-member-main">
+              <div className="seats-member-name" style={{ color: 'var(--text-secondary)' }}>{inv.email}</div>
+              <div className="seats-member-sub">
+                invité le {new Date(inv.createdAt).toLocaleDateString('fr-FR')}
+              </div>
+            </div>
+            <span className="muted" style={{ fontSize: 12 }}>{roleLabel(inv.role)}</span>
+            <span className="badge crit-medium">Invité</span>
+          </div>
+        ))}
+      </div>
+
+      {isCompanyAdmin && (
         <div className="seats-foot">
-          <span className={full ? 'danger-text' : 'muted'}>
-            {full
-              ? 'Tous les sièges sont occupés.'
-              : `${free} siège(s) disponible(s) pour inviter votre équipe.`}
+          <span className={full || noSeats ? 'danger-text' : 'muted'}>
+            {noSeats
+              ? 'Aucun siège au plan — ajoutez-en pour votre équipe.'
+              : full
+                ? 'Tous les sièges sont occupés.'
+                : `${free} siège(s) disponible(s) pour inviter votre équipe.`}
           </span>
           <Link className="btn btn-sm" href="/abonnement">
-            {full ? 'Ajouter des sièges' : 'Voir l’abonnement'}
+            {full || noSeats ? 'Ajouter des sièges' : 'Voir l’abonnement'}
           </Link>
         </div>
       )}

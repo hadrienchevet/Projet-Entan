@@ -92,6 +92,20 @@ export const IconUsers = () => (
   </svg>
 );
 
+export const IconUser = () => (
+  <svg {...base}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M5.5 21c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5" />
+  </svg>
+);
+
+export const IconMail = () => (
+  <svg {...base}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="m3.5 7 8.5 6 8.5-6" />
+  </svg>
+);
+
 export const IconFiveWhys = () => (
   <svg {...base}>
     <circle cx="12" cy="12" r="10" />
