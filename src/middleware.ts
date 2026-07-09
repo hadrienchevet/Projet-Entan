@@ -41,6 +41,10 @@ export default async function proxy(request: NextRequest) {
   const isPublic =
     pathname === '/' ||
     pathname === '/methodes' ||
+    pathname === '/robots.txt' ||
+    pathname === '/sitemap.xml' ||
+    pathname === '/manifest.webmanifest' ||
+    pathname === '/opengraph-image' ||
     pathname === '/login' ||
     pathname.startsWith('/auth') ||
     pathname === '/api/stripe/webhook' ||
