@@ -178,9 +178,23 @@ p { margin: 0; }
 }
 
 .sidebar-user {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  transition: background 0.1s, color 0.1s;
+}
+
+.sidebar-user:hover { background: var(--hover); color: var(--text); }
+
+.sidebar-user.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
 }
 
 .sidebar-footer-row {
@@ -1923,6 +1937,40 @@ a.link:hover { text-decoration: underline; }
 .seats-member-name { font-size: 13.5px; color: var(--text); }
 .seats-member-name .you { color: var(--text-muted); }
 .seats-member-sub { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Ligne membre cliquable → ouvre le profil. */
+.seats-member-btn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; background: none; border: none; padding: 4px 6px; margin: -4px -6px; border-radius: var(--radius); font: inherit; text-align: left; text-decoration: none; color: inherit; cursor: pointer; transition: background .12s; }
+.seats-member-btn:hover { background: var(--surface-2); }
+.seats-member-btn .seats-member-main { flex: 1; }
+
+/* ── Profil d'un membre (formation / certification) ─────────────────────────── */
+.profile-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.profile-id h2 { margin: 0; font-size: 17px; }
+.profile-avatar { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; background: var(--accent-soft); color: var(--accent-text); }
+
+.cert-banner { display: flex; align-items: center; gap: 14px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }
+.cert-banner.certified { background: var(--success-soft); border-color: var(--success); }
+.cert-ic { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); }
+.cert-banner.certified .cert-ic { background: var(--success); color: #fff; }
+.cert-ic svg { width: 22px; height: 22px; }
+.cert-main { flex: 1; min-width: 0; }
+.cert-title { font-size: 15px; font-weight: 600; color: var(--text); }
+.cert-banner.certified .cert-title { color: var(--success); }
+.cert-sub { font-size: 12.5px; color: var(--text-secondary); margin-top: 1px; }
+.cert-bar { margin-top: 8px; height: 6px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.cert-bar span { display: block; height: 100%; border-radius: 999px; background: var(--accent); transition: width .5s ease; }
+.cert-banner.certified .cert-bar span { background: var(--success); }
+
+.member-badges { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.member-badge { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); }
+.member-badge.done { border-color: var(--success); background: var(--success-soft); }
+.member-badge-ic { width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); }
+.member-badge.done .member-badge-ic { background: var(--success); color: #fff; }
+.member-badge-ic svg { width: 18px; height: 18px; }
+.member-badge-main { flex: 1; min-width: 0; }
+.member-badge-name { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.member-badge-score { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+.member-badge > .badge { flex-shrink: 0; }
 
 /* ── Bandeau d'essai gratuit ───────────────────────────────────────────────── */
 .trial-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 16px 32px 0; padding: 10px 16px; background: var(--accent-soft); color: var(--accent-text); border: 1px solid var(--accent-faint); border-radius: var(--radius); font-size: 13px; font-weight: 500; }

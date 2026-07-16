@@ -73,7 +73,7 @@ export function BillingPage() {
           <span className="pay-badge">✓ Siège actif</span>
           <p style={{ color: 'var(--text-secondary)', maxWidth: 380 }}>
             Votre siège est actif{company ? ` dans « ${company.name} »` : ''}.{' '}
-            {company ? 'Invitez votre équipe via la clé de l’entreprise (page Équipe).' : ''}
+            {company ? 'Invitez votre équipe via la clé de l’organisation (page Organisation).' : ''}
           </p>
         </div>
       ) : (

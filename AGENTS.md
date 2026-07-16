@@ -7,7 +7,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 # Projet Entan — guide projet
 
 Lis ce fichier en priorité : il évite de ré-explorer le code. Détail des
-migrations dans [supabase/MIGRATIONS.md](supabase/MIGRATIONS.md).
+migrations dans [supabase/MIGRATIONS.md](supabase/MIGRATIONS.md). **Modèle cible
+Organisation / sièges / accès / profil (validé, à suivre) :
+[MODELE-ORGANISATION.md](MODELE-ORGANISATION.md).**
 
 ## Quoi / où
 - SaaS de **gestion de projet industriel** + **résolution de problèmes (RDP)**, multi-utilisateurs, temps réel.

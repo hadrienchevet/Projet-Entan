@@ -45,13 +45,12 @@ const TOOL_ICON: Record<ToolId, ReactElement> = {
   swot: <IconSwot />,
 };
 
-/** Nav gestion = Dashboard + outils activés + Outils + Accès. */
+/** Nav gestion = Dashboard + outils activés + Outils. (Accès = réglage du projet, hors nav.) */
 function navGestion(tools: ToolId[] | null | undefined) {
   return [
     { to: '/dashboard', label: 'Dashboard', icon: <IconDashboard /> },
     ...enabledTools(tools).map((id) => ({ to: TOOLS[id].href, label: TOOLS[id].label, icon: TOOL_ICON[id] })),
     { to: '/outils', label: 'Outils', icon: <IconTools /> },
-    { to: '/access', label: 'Accès', icon: <IconUsers /> },
   ];
 }
 
@@ -64,7 +63,6 @@ const NAV_RDP = [
   { to: '/capa', label: '5 · Mise en œuvre', icon: <IconCapa /> },
   { to: '/standardisation', label: '6 · Standardiser', icon: <IconLayers /> },
   { to: '/liens', label: 'Liens', icon: <IconTree /> },
-  { to: '/access', label: 'Accès', icon: <IconUsers /> },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -110,6 +108,12 @@ export function Layout({ children }: { children: ReactNode }) {
           >
             <IconFolder /> Tous les projets
           </Link>
+          <Link
+            href="/access"
+            className={`btn btn-ghost btn-sm${pathname === '/access' ? ' active' : ''}`}
+          >
+            <IconUsers /> Accès au projet
+          </Link>
         </div>
 
         <nav className="nav">
@@ -128,7 +132,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="sidebar-footer">
           <Link href="/equipe" className={`nav-link${pathname === '/equipe' ? ' active' : ''}`}>
             <IconUsers />
-            Équipe
+            Organisation
           </Link>
           <Link
             href="/abonnement"
@@ -138,9 +142,13 @@ export function Layout({ children }: { children: ReactNode }) {
             <IconStar />
             Abonnement{company?.isComp ? ' · Offert' : ''}
           </Link>
-          <div className="sidebar-user" title={userEmail ?? undefined}>
+          <Link
+            href="/compte"
+            className={`sidebar-user${pathname === '/compte' ? ' active' : ''}`}
+            title={userEmail ?? undefined}
+          >
             {userEmail ?? '...'}
-          </div>
+          </Link>
           <div className="sidebar-footer-row" style={{ alignItems: 'center' }}>
             <form action="/auth/signout" method="post" style={{ flex: 1 }}>
               <button type="submit" className="btn btn-ghost btn-sm" style={{ width: '100%' }}>

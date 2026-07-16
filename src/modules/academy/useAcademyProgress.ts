@@ -1,13 +1,21 @@
 'use client';
 
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import {
+  fetchMyAcademyProgress,
+  pushAcademyProgress,
+  upsertAcademyBadge,
+} from './academyRemote';
 
 /**
- * Progression de l'Académie, stockée localement (par navigateur) pour la V1.
- * Aucune migration Supabase : on persistera par utilisateur plus tard.
+ * Progression de l'Académie. Source synchrone = localStorage (lecture instantanée
+ * sans écart d'hydratation SSR, sync automatique entre onglets via `storage`).
  *
- * Implémenté via `useSyncExternalStore` : lecture de localStorage sans écart
- * d'hydratation SSR, et synchronisation automatique entre onglets.
+ * Depuis fix-21, la progression est AUSSI persistée dans Supabase par utilisateur :
+ * - au 1er montage connecté, on fusionne le distant avec le local puis on pousse
+ *   le résultat (migration one-shot de l'ancien localStorage) ;
+ * - chaque partie (`record`) est upsertée côté serveur, de façon tolérante.
+ * Ainsi un manager peut consulter la progression d'un membre (voir `academyRemote`).
  */
 
 export interface BadgeState {
@@ -54,29 +62,63 @@ function subscribe(cb: () => void): () => void {
   };
 }
 
+/** Écrit la progression en local (localStorage + cache) et notifie les abonnés. */
+function writeLocal(next: AcademyProgress): void {
+  try {
+    const raw = JSON.stringify(next);
+    localStorage.setItem(KEY, raw);
+    cacheRaw = raw;
+  } catch {
+    /* écriture impossible : mise à jour en mémoire uniquement */
+  }
+  cache = next;
+  listeners.forEach((l) => l());
+}
+
+/** Fusion local + distant : meilleur score, total connu, badge décroché si l'un des deux. */
+function merge(local: AcademyProgress, remote: AcademyProgress): AcademyProgress {
+  const out: AcademyProgress = { ...local };
+  for (const [setId, r] of Object.entries(remote)) {
+    const l = out[setId];
+    out[setId] = l
+      ? { best: Math.max(l.best, r.best), total: r.total || l.total, passed: l.passed || r.passed }
+      : r;
+  }
+  return out;
+}
+
+// Sync distant tenté une seule fois par session (re-tenté tant que non connecté).
+let remoteSynced = false;
+
+async function syncRemote(): Promise<void> {
+  if (remoteSynced) return;
+  const res = await fetchMyAcademyProgress();
+  if (!res) return; // non connecté : on retentera au prochain montage
+  remoteSynced = true;
+  const merged = merge(read(), res.progress);
+  writeLocal(merged);
+  // Pousse le résultat fusionné : migre l'ancien localStorage vers Supabase.
+  void pushAcademyProgress(merged);
+}
+
 export function useAcademyProgress() {
   const progress = useSyncExternalStore(subscribe, read, () => EMPTY);
+
+  useEffect(() => {
+    void syncRemote();
+  }, []);
 
   const record = useCallback((setId: string, score: number, total: number, passed: boolean) => {
     const cur = read();
     const prev = cur[setId];
-    const next: AcademyProgress = {
-      ...cur,
-      [setId]: {
-        best: prev ? Math.max(prev.best, score) : score,
-        total,
-        passed: (prev?.passed ?? false) || passed,
-      },
+    const state: BadgeState = {
+      best: prev ? Math.max(prev.best, score) : score,
+      total,
+      passed: (prev?.passed ?? false) || passed,
     };
-    try {
-      const raw = JSON.stringify(next);
-      localStorage.setItem(KEY, raw);
-      cacheRaw = raw;
-    } catch {
-      /* écriture impossible : mise à jour en mémoire uniquement */
-    }
-    cache = next;
-    listeners.forEach((l) => l());
+    writeLocal({ ...cur, [setId]: state });
+    // Persistance serveur tolérante (ne bloque jamais l'UI).
+    void upsertAcademyBadge(setId, state);
   }, []);
 
   return { progress, record };

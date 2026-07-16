@@ -31,6 +31,7 @@ export function SeatsPanel() {
     seatsInvited,
     isCompanyAdmin,
     userId,
+    trialEndsAt,
     removeCompanyMember,
   } = useWorkspace();
   if (!company) return null;
@@ -40,6 +41,8 @@ export function SeatsPanel() {
   const invited = seatsInvited;
   const unlimited = !Number.isFinite(seatsAllowed);
   const subscribed = !unlimited && seatsAllowed > 0;
+  // Accès purement via l'essai gratuit (ni offert, ni abonnement, ni clé).
+  const onTrial = !unlimited && !subscribed && !!trialEndsAt;
   const reserved = active + invited;
   const free = Math.max(0, seatsAllowed - reserved);
   const full = subscribed && free === 0;
@@ -49,11 +52,17 @@ export function SeatsPanel() {
     i < active ? 'u' : i < reserved ? 'i' : 'f',
   );
 
-  const badgeLabel = unlimited ? 'Accès offert' : subscribed ? 'Plan Équipe' : 'Accès par clé';
-  const badgeClass = unlimited ? 'done' : subscribed ? 'in_progress' : 'todo';
+  const badgeLabel = unlimited
+    ? 'Accès offert'
+    : subscribed
+      ? 'Abonnement'
+      : onTrial
+        ? 'Essai gratuit'
+        : 'Accès par clé';
+  const badgeClass = unlimited ? 'done' : subscribed || onTrial ? 'in_progress' : 'todo';
 
   const onRemove = (uid: string, name: string) => {
-    if (!window.confirm(`Retirer ${name} de l'entreprise ?`)) return;
+    if (!window.confirm(`Retirer ${name} de l'organisation ?`)) return;
     void removeCompanyMember(uid);
   };
 
@@ -104,8 +113,10 @@ export function SeatsPanel() {
         {activeMembers.map((m) => {
           const name = m.displayName || m.email || m.userId;
           const you = m.userId === userId;
-          return (
-            <div key={m.userId} className="seats-member">
+          // Consulter un profil : soi-même, ou un admin/owner (aligné sur la RLS fix-21).
+          const canOpen = isCompanyAdmin || you;
+          const identity = (
+            <>
               <span className="seats-avatar">{initials(m.displayName, m.email)}</span>
               <div className="seats-member-main">
                 <div className="seats-member-name">
@@ -114,6 +125,21 @@ export function SeatsPanel() {
                 </div>
                 {m.email && <div className="seats-member-sub">{m.email}</div>}
               </div>
+            </>
+          );
+          return (
+            <div key={m.userId} className="seats-member">
+              {canOpen ? (
+                <Link
+                  href={`/equipe/${m.userId}`}
+                  className="seats-member-btn"
+                  title="Voir le profil"
+                >
+                  {identity}
+                </Link>
+              ) : (
+                identity
+              )}
               <span className="muted" style={{ fontSize: 12 }}>{roleLabel(m.role)}</span>
               <span className="badge done">Actif</span>
               {isCompanyAdmin && m.role !== 'owner' && !you && (
@@ -154,6 +180,13 @@ export function SeatsPanel() {
                   : `${free} siège(s) disponible(s) pour inviter votre équipe.`}
               </span>
               <Link className="btn btn-sm" href="/abonnement">Gérer l’abonnement</Link>
+            </>
+          ) : onTrial ? (
+            <>
+              <span className="muted">
+                Essai gratuit en cours. Passez à un abonnement pour ajouter des sièges et inviter votre équipe.
+              </span>
+              <Link className="btn btn-sm" href="/abonnement">Voir l’abonnement</Link>
             </>
           ) : (
             <>

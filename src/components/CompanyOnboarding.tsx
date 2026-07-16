@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useWorkspace } from '@/lib/store';
 
 /**
- * Première étape pour un compte sans entreprise : créer son entreprise, ou
- * rejoindre celle de son équipe via sa clé entreprise.
+ * Première étape pour un compte sans organisation : créer son organisation, ou
+ * rejoindre celle de son équipe via sa clé.
  */
 export function CompanyOnboarding() {
   const { createCompany, joinCompany } = useWorkspace();
@@ -24,9 +24,9 @@ export function CompanyOnboarding() {
     if (!r.ok) {
       setError(
         r.error.includes('company_name_taken')
-          ? 'Une entreprise porte déjà ce nom. Rejoignez-la avec sa clé, ou choisissez un autre nom.'
+          ? 'Une organisation porte déjà ce nom. Rejoignez-la avec sa clé, ou choisissez un autre nom.'
           : r.error.includes('name_required')
-            ? 'Le nom de l’entreprise est obligatoire.'
+            ? 'Le nom de l’organisation est obligatoire.'
             : r.error.includes('seat_required')
               ? 'Activez d’abord votre siège avec une clé d’accès.'
               : r.error,
@@ -40,7 +40,7 @@ export function CompanyOnboarding() {
         <div className="card-body">
           <h1 style={{ fontSize: 22 }}>Bienvenue 👋</h1>
           <p style={{ color: 'var(--text-secondary)', margin: '8px 0 16px', lineHeight: 1.6 }}>
-            Créez votre entreprise, ou rejoignez celle de votre équipe avec sa clé.
+            Créez votre organisation, ou rejoignez celle de votre équipe avec sa clé.
           </p>
 
           <div className="segmented" style={{ marginBottom: 16 }}>
@@ -52,7 +52,7 @@ export function CompanyOnboarding() {
                 setError('');
               }}
             >
-              Créer une entreprise
+              Créer une organisation
             </button>
             <button
               type="button"
@@ -70,7 +70,7 @@ export function CompanyOnboarding() {
             {mode === 'create' ? (
               <div className="field">
                 <label htmlFor="company-name">
-                  Nom de l’entreprise <span className="req">*</span>
+                  Nom de l’organisation <span className="req">*</span>
                 </label>
                 <input
                   id="company-name"
@@ -78,13 +78,13 @@ export function CompanyOnboarding() {
                   autoFocus
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex. Mon entreprise"
+                  placeholder="Ex. Mon organisation"
                 />
               </div>
             ) : (
               <div className="field">
                 <label htmlFor="join-code">
-                  Clé de l’entreprise <span className="req">*</span>
+                  Clé de l’organisation <span className="req">*</span>
                 </label>
                 <input
                   id="join-code"
@@ -103,7 +103,7 @@ export function CompanyOnboarding() {
               disabled={pending || (mode === 'create' ? !name.trim() : !code.trim())}
               style={{ justifyContent: 'center' }}
             >
-              {pending ? '…' : mode === 'create' ? 'Créer mon entreprise' : 'Rejoindre l’entreprise'}
+              {pending ? '…' : mode === 'create' ? 'Créer mon organisation' : 'Rejoindre l’organisation'}
             </button>
           </form>
         </div>

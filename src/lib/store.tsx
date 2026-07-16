@@ -351,6 +351,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [companyInvitations, setCompanyInvitations] = useState<CompanyInvitationRow[]>([]);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
+  // Auto-création de l'organisation personnelle : ne tente qu'une fois par session.
+  const ensuredCompanyRef = useRef(false);
 
   const onError = (context: string, message: string) => {
     console.error(`[entan] ${context}:`, message);
@@ -507,9 +509,50 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [supabase, fetchCompany],
   );
 
+  // Modèle « toujours une organisation » : un compte avec un siège mais sans
+  // organisation en obtient une (personnelle) automatiquement. On rattache aussi
+  // ses éventuels projets « solo » (company_id null, legacy fix-14). Tolérant :
+  // en cas d'échec on n'empêche rien (le compte reste utilisable).
+  const ensurePersonalCompany = useCallback(async () => {
+    if (ensuredCompanyRef.current) return;
+    ensuredCompanyRef.current = true;
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        ensuredCompanyRef.current = false;
+        return;
+      }
+      const base = (
+        (user.user_metadata?.display_name as string | undefined) ||
+        user.email?.split('@')[0] ||
+        'Mon organisation'
+      ).trim();
+      // Le nom d'organisation est unique (fix-13) : sur collision, on suffixe.
+      let res = await supabase.rpc('create_company', { p_name: base });
+      if (res.error && String(res.error.message).includes('company_name_taken')) {
+        res = await supabase.rpc('create_company', { p_name: `${base} (${user.id.slice(0, 6)})` });
+      }
+      if (res.error) {
+        console.warn('[entan] auto-création organisation échouée :', res.error.message);
+        ensuredCompanyRef.current = false;
+        return;
+      }
+      const companyId = res.data as string;
+      // Rattache les projets solo (company_id null) à la nouvelle organisation.
+      await supabase.from('projects').update({ company_id: companyId }).eq('owner_id', user.id).is('company_id', null);
+      await fetchCompany();
+      await fetchProjects();
+    } catch (e) {
+      console.warn('[entan] auto-création organisation :', e);
+      ensuredCompanyRef.current = false;
+    }
+  }, [supabase, fetchCompany, fetchProjects]);
+
   const inviteCompanyMember = useCallback(
     async (email: string, role: 'admin' | 'member') => {
-      if (!company) return { ok: false as const, error: 'Aucune entreprise.' };
+      if (!company) return { ok: false as const, error: 'Aucune organisation.' };
       // Un invité en attente réserve un siège : on bloque en amont si tout est pris.
       // Uniquement quand il y a une vraie allocation (abonnement) ; en modèle par
       // clé (allocation 0), l'accès se gère par siège personnel, on ne bloque pas.
@@ -557,9 +600,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         return {
           ok: false,
           error: error.message.includes('company_not_found')
-            ? 'Aucune entreprise ne correspond à cette clé.'
+            ? 'Aucune organisation ne correspond à cette clé.'
             : error.message.includes('seat_limit_reached')
-              ? "L'entreprise n'a plus de siège disponible. Demandez à un administrateur d'en ajouter un."
+              ? "L'organisation n'a plus de siège disponible. Demandez à un administrateur d'en ajouter un."
               : error.message,
         };
       }
@@ -758,6 +801,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (ch) supabase.removeChannel(ch);
     };
   }, [supabase, userId, fetchCompany]);
+
+  // Toujours une organisation : un compte avec un siège mais sans organisation
+  // en obtient une (personnelle) automatiquement. Ne se déclenche PAS sur les
+  // routes d'invitation (/invite, /rejoindre) : elles sont hors (workspace),
+  // donc ce provider n'y est pas monté — l'acceptation d'invitation a lieu avant.
+  useEffect(() => {
+    if (companyFeature && companyChecked && userId && hasSeat && !company) {
+      void ensurePersonalCompany();
+    }
+  }, [companyFeature, companyChecked, userId, hasSeat, company, ensurePersonalCompany]);
 
   // Realtime : recharge les données du projet courant à chaque changement
   // fait par un autre membre (ou soi-même — refetch idempotent).

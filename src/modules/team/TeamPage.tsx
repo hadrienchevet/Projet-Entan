@@ -47,7 +47,7 @@ export function TeamPage() {
     <div className="page">
       <header className="page-header">
         <div>
-          <h1>Équipe</h1>
+          <h1>Organisation</h1>
           <p className="subtitle">Gérez les sièges, les membres et leurs accès.</p>
         </div>
       </header>
@@ -56,9 +56,9 @@ export function TeamPage() {
 
       <div className="card">
         <div className="card-body">
-          <h2>Clé de l’entreprise</h2>
+          <h2>Clé de l’organisation</h2>
           <p className="form-hint" style={{ marginTop: 6 }}>
-            Partagez cette clé : en la saisissant, vos collègues rejoignent le réseau de l’entreprise
+            Partagez cette clé : en la saisissant, vos collègues rejoignent votre organisation
             (sans accès automatique à vos projets — ils devront être ajoutés projet par projet).
           </p>
           <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>

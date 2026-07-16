@@ -6,8 +6,8 @@ import { IconTrash } from '@/components/icons';
 
 /**
  * Accès au projet = membres de l'ENTREPRISE ayant accès à ce projet.
- * On ajoute des personnes déjà dans l'entreprise (= des sièges). Pour inviter
- * une nouvelle personne, ça se passe dans Équipe.
+ * On ajoute des personnes déjà dans l'organisation (= des sièges). Pour inviter
+ * une nouvelle personne, ça se passe dans Organisation.
  */
 export default function AccessPage() {
   const project = useCurrentProject();
@@ -30,7 +30,7 @@ export default function AccessPage() {
     if (!r.ok) {
       setError(
         r.error.includes('user_not_in_company')
-          ? 'Cette personne n’est pas (ou plus) dans l’entreprise.'
+          ? 'Cette personne n’est pas (ou plus) dans l’organisation.'
           : r.error,
       );
     } else {
@@ -49,17 +49,17 @@ export default function AccessPage() {
       <div className="page-header">
         <div>
           <h1>Accès au projet</h1>
-          <p className="subtitle">Donnez accès à ce projet aux membres de votre entreprise.</p>
+          <p className="subtitle">Donnez accès à ce projet aux membres de votre organisation.</p>
         </div>
       </div>
 
       <div className="card">
         <div className="card-body">
-          <h2>Ajouter un membre de l’entreprise</h2>
+          <h2>Ajouter un membre de l’organisation</h2>
           {candidates.length === 0 ? (
             <p className="muted" style={{ marginTop: 8 }}>
-              Tous les membres de l’entreprise ont déjà accès. Pour inviter une nouvelle personne,
-              rendez-vous dans <strong>Équipe</strong>.
+              Tous les membres de l’organisation ont déjà accès. Pour inviter une nouvelle personne,
+              rendez-vous dans <strong>Organisation</strong>.
             </p>
           ) : (
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
@@ -86,7 +86,7 @@ export default function AccessPage() {
             </div>
           )}
           <p className="form-hint" style={{ marginTop: 12 }}>
-            Pour inviter une nouvelle personne (= occuper un siège), allez dans <strong>Équipe</strong>.
+            Pour inviter une nouvelle personne (= occuper un siège), allez dans <strong>Organisation</strong>.
           </p>
         </div>
       </div>
