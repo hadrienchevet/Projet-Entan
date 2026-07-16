@@ -13,6 +13,7 @@ export function TeamPage() {
   const [role, setRole] = useState<'member' | 'admin'>('member');
   const [error, setError] = useState('');
   const [link, setLink] = useState('');
+  const [sent, setSent] = useState('');
   const [pending, setPending] = useState(false);
 
   // Pas d'entreprise → on propose de créer / rejoindre (sans bloquer l'app).
@@ -24,14 +25,16 @@ export function TeamPage() {
     e.preventDefault();
     setError('');
     setLink('');
-    if (!email.trim()) {
+    setSent('');
+    const target = email.trim();
+    if (!target) {
       setError('Email requis.');
       return;
     }
     setPending(true);
-    const r = await inviteCompanyMember(email.trim(), role);
-    setPending(false);
+    const r = await inviteCompanyMember(target, role);
     if (!r.ok) {
+      setPending(false);
       setError(
         r.error === 'seat_limit_reached'
           ? 'Tous les sièges sont occupés. Ajoutez un siège avant d’inviter un nouveau membre.'
@@ -41,6 +44,22 @@ export function TeamPage() {
     }
     setLink(`${window.location.origin}/rejoindre/${r.token}`);
     setEmail('');
+    // Envoi de l'email d'invitation. Le lien reste affiché en secours si l'envoi échoue.
+    try {
+      const resp = await fetch('/api/invite/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: r.token }),
+      });
+      setSent(
+        resp.ok
+          ? `Email d’invitation envoyé à ${target}.`
+          : 'Invitation créée, mais l’email n’a pas pu être envoyé — partagez le lien ci-dessous.',
+      );
+    } catch {
+      setSent('Invitation créée, mais l’email n’a pas pu être envoyé — partagez le lien ci-dessous.');
+    }
+    setPending(false);
   };
 
   return (
@@ -110,6 +129,11 @@ export function TeamPage() {
             {error && (
               <div className="form-error" style={{ marginTop: 8 }}>
                 {error}
+              </div>
+            )}
+            {sent && (
+              <div className="form-hint" style={{ marginTop: 8, color: 'var(--success)' }}>
+                {sent}
               </div>
             )}
             {link && (
