@@ -211,7 +211,7 @@ export default async function LandingPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user) redirect('/dashboard');
+  if (user) redirect('/projets');
 
   const year = new Date().getFullYear();
 

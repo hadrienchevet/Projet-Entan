@@ -27,11 +27,11 @@ function isUnconfirmed(error: { code?: string; message: string }): boolean {
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const rawNext = searchParams.get('next') ?? '/';
+  const rawNext = searchParams.get('next') ?? '/projets';
   // Seuls les chemins internes SIMPLES sont autorisés (anti open-redirect) :
   // un `next` comme `//evil.com` ou `/\evil.com` passe un simple startsWith('/')
   // mais est interprété comme une URL absolue par le navigateur → on le refuse.
-  const next = /^\/(?![/\\])/.test(rawNext) ? rawNext : '/';
+  const next = /^\/(?![/\\])/.test(rawNext) ? rawNext : '/projets';
 
   const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin';
   const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>(initialMode);

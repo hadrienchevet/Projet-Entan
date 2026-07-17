@@ -3,12 +3,13 @@
 import type { ReactNode } from 'react';
 import { WorkspaceProvider, useWorkspace } from '@/lib/store';
 import { Layout } from './Layout';
-import { Onboarding } from './Onboarding';
 import { BillingPage } from '@/modules/billing/BillingPage';
 
 /**
- * Coquille de l'espace de travail :
- * chargement -> onboarding si aucun projet -> sinon layout + module courant.
+ * Coquille de l'espace de travail : chargement -> layout + page courante.
+ * Aucun projet n'est plus imposé : la destination par défaut après connexion
+ * est /projets (« Mes projets »), qui accueille aussi bien un compte tout
+ * neuf (état vide + CTA) qu'un compte avec des projets (grille habituelle).
  */
 function Shell({ children }: { children: ReactNode }) {
   const { loading, projects, needsSeat } = useWorkspace();
@@ -28,16 +29,6 @@ function Shell({ children }: { children: ReactNode }) {
       <div className="app">
         <main className="main">
           <BillingPage />
-        </main>
-      </div>
-    );
-  }
-
-  if (projects.length === 0) {
-    return (
-      <div className="app">
-        <main className="main">
-          <Onboarding />
         </main>
       </div>
     );
