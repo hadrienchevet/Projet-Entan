@@ -18,4 +18,11 @@ export const BLOG_POSTS: BlogPost[] = [
       'Ce que signifie vraiment R, A, C, I, les erreurs qui rendent une matrice RACI inutile, et un exemple complet sur un projet industriel à adapter directement.',
     date: '2026-07-17',
   },
+  {
+    slug: 'amdec-methode-exemple',
+    title: 'AMDEC : méthode, calcul de la criticité et exemple chiffré',
+    description:
+      'Comment coter Gravité, Occurrence et Détectabilité sans que ça reste subjectif, le seuil qui déclenche une action corrective, et un exemple complet sur un procédé industriel.',
+    date: '2026-07-17',
+  },
 ];

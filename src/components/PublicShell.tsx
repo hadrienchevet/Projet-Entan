@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { ReactNode } from 'react';
 
 /**
@@ -28,7 +29,7 @@ const css = `
 .pub-wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
 .pub-nav { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; }
 .pub-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: 0.02em; color: var(--text); }
-.pub-brand .mark { width: 34px; height: 34px; border-radius: 9px; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 13px; }
+.pub-logo { mix-blend-mode: multiply; }
 .pub-nav-actions { display: flex; align-items: center; gap: 10px; }
 .pub-band { text-align: center; background: var(--accent-soft); border: 1px solid var(--accent-faint); border-radius: 18px; padding: 40px 24px; margin: 40px 0; }
 .pub-band h2 { font-size: 26px; margin: 0 0 10px; }
@@ -69,7 +70,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
 
       <div className="pub-wrap">
         <nav className="pub-nav">
-          <Link href="/" className="pub-brand"><span className="mark">EN</span> ENTAN</Link>
+          <Link href="/" className="pub-brand"><Image src="/entan-logo.png" alt="" width={34} height={34} className="pub-logo" priority /> ENTAN</Link>
           <span className="pub-nav-actions">
             <Link href="/login" className="btn btn-sm">Se connecter</Link>
             <Link href="/login?mode=signup" className="btn btn-primary btn-sm">Essai gratuit</Link>
@@ -87,7 +88,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
         </div>
 
         <footer className="pub-foot">
-          <span className="pub-brand"><span className="mark">EN</span> ENTAN</span>
+          <span className="pub-brand"><Image src="/entan-logo.png" alt="" width={34} height={34} className="pub-logo" /> ENTAN</span>
           <span className="pub-foot-links">
             <Link href="/">Accueil</Link>
             <Link href="/blog">Blog</Link>

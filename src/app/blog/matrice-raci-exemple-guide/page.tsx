@@ -160,7 +160,8 @@ export default function Page() {
       <p>
         Une matrice RACI qui vit isolée dans un fichier perd vite sa valeur. L’intérêt réel apparaît
         quand chaque action du plan de projet porte directement son Responsible et son Accountable, et
-        que l’AMDEC ou le planning s’y réfèrent sans ressaisie. C’est le sujet du guide{' '}
+        que l’<Link href="/blog/amdec-methode-exemple">AMDEC</Link> ou le planning s’y réfèrent sans
+        ressaisie. C’est le sujet du guide{' '}
         <Link href="/methodes">méthodes de gestion de projet industriel</Link>, qui détaille comment RACI,
         AMDEC, planning et reporting se connectent entre eux.
       </p>
