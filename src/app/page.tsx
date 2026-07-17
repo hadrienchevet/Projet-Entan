@@ -557,6 +557,7 @@ export default async function LandingPage() {
           </span>
           <span className="lp-foot-links">
             <Link href="/methodes">Méthodes</Link>
+            <Link href="/blog">Blog</Link>
             <Link href="/login">Connexion</Link>
             <Link href="/cgv">CGV</Link>
             <Link href="/confidentialite">Confidentialité</Link>

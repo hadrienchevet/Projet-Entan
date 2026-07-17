@@ -38,6 +38,27 @@ const css = `
 .pub-foot a { color: var(--text-secondary); font-size: 13px; }
 .pub-foot a:hover { color: var(--text); }
 .pub-foot .cr { color: var(--text-muted); font-size: 13px; }
+
+/* Article de blog — typographie longue lecture */
+.pub-article { max-width: 720px; margin: 0 auto; padding: 8px 0 20px; }
+.pub-article .back { display: inline-block; font-size: 13.5px; color: var(--text-secondary); margin-bottom: 22px; }
+.pub-article .back:hover { color: var(--text); }
+.pub-article .eyebrow { display: inline-block; font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent-text); background: var(--accent-soft); border-radius: 999px; padding: 5px 14px; margin-bottom: 16px; }
+.pub-article h1 { font-family: inherit; font-size: 34px; line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 10px; }
+.pub-article .date { font-size: 13.5px; color: var(--text-muted); margin-bottom: 36px; }
+.pub-article .lead { font-size: 17px; line-height: 1.6; color: var(--text-secondary); margin: 0 0 32px; }
+.pub-article h2 { font-size: 23px; letter-spacing: -0.01em; margin: 40px 0 14px; }
+.pub-article h3 { font-size: 17px; margin: 26px 0 10px; }
+.pub-article p { font-size: 15.5px; line-height: 1.7; color: var(--text-secondary); margin: 0 0 16px; }
+.pub-article strong { color: var(--text); }
+.pub-article ul, .pub-article ol { margin: 0 0 16px; padding-left: 22px; }
+.pub-article li { font-size: 15.5px; line-height: 1.65; color: var(--text-secondary); margin-bottom: 8px; }
+.pub-article .table-wrap { overflow-x: auto; margin: 24px 0; }
+.pub-article table { width: 100%; border-collapse: collapse; min-width: 480px; }
+.pub-article th, .pub-article td { text-align: left; padding: 10px 14px; font-size: 14px; border: 1px solid var(--border); }
+.pub-article thead th { background: var(--surface-2); font-weight: 600; }
+.pub-article .callout { background: var(--accent-soft); border: 1px solid var(--accent-faint); border-radius: 12px; padding: 18px 20px; margin: 24px 0; }
+.pub-article .callout p { margin: 0; color: var(--text); font-size: 14.5px; }
 `;
 
 export function PublicShell({ children }: { children: ReactNode }) {
@@ -69,6 +90,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
           <span className="pub-brand"><span className="mark">EN</span> ENTAN</span>
           <span className="pub-foot-links">
             <Link href="/">Accueil</Link>
+            <Link href="/blog">Blog</Link>
             <Link href="/login">Connexion</Link>
             <Link href="/cgv">CGV</Link>
             <Link href="/confidentialite">Confidentialité</Link>
