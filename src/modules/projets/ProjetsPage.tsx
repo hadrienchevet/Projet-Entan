@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useWorkspace } from '@/lib/store';
 import type { Project, ProjectMeta } from '@/lib/types';
@@ -69,7 +70,7 @@ export function ProjetsPage() {
     return (
       <div className="onboarding">
         <div className="onboarding-hero">
-          <span className="logo-lg">PE</span>
+          <Image src="/entan-logo-t.png" alt="" width={64} height={64} priority />
           <h1>Bienvenue dans Projet Entan</h1>
           <p>
             L'outil tout-en-un pour le pilotage technique de vos projets industriels.

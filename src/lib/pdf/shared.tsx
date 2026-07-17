@@ -1,6 +1,7 @@
 'use client';
 
-import { View, Text, StyleSheet } from '@react-pdf/renderer';
+import { View, Text, Image, StyleSheet } from '@react-pdf/renderer';
+import { LOGO_PNG } from './logo';
 
 /**
  * Briques communes aux exports PDF (en-tête à la charte, pied de page, styles,
@@ -17,8 +18,7 @@ export const UP = '#9a3412';
 export const ps = StyleSheet.create({
   page: { paddingVertical: 26, paddingHorizontal: 28, fontSize: 8.5, fontFamily: 'Helvetica', color: INK },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-  logo: { width: 24, height: 24, borderRadius: 6, backgroundColor: ACCENT, marginRight: 8 },
-  logoText: { color: '#ffffff', fontSize: 10, fontFamily: 'Helvetica-Bold', textAlign: 'center', marginTop: 7 },
+  logo: { width: 24, height: 24, marginRight: 8 },
   title: { fontSize: 14, fontFamily: 'Helvetica-Bold' },
   subtitle: { fontSize: 8, color: MUTED, marginTop: 2 },
   statRow: { flexDirection: 'row', marginBottom: 12 },
@@ -40,7 +40,7 @@ export const ps = StyleSheet.create({
 
 export const PdfHeader = ({ title, subtitle }: { title: string; subtitle?: string }) => (
   <View style={ps.header}>
-    <View style={ps.logo}><Text style={ps.logoText}>PE</Text></View>
+    <Image src={LOGO_PNG} style={ps.logo} />
     <View>
       <Text style={ps.title}>{title}</Text>
       {subtitle ? <Text style={ps.subtitle}>{subtitle}</Text> : null}

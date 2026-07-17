@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useCurrentProject, useWorkspace } from '@/lib/store';
 import { ProjectFormModal } from './ProjectFormModal';
@@ -82,7 +83,7 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="app">
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <span className="logo">PE</span>
+          <Image src="/entan-logo-t.png" alt="" width={24} height={24} />
           Projet Entan
         </div>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
@@ -55,22 +56,7 @@ export default function ResetPasswordPage() {
       </div>
       <div className="card auth-card">
         <div className="auth-brand">
-          <span
-            className="logo-lg"
-            style={{
-              width: 40,
-              height: 40,
-              fontSize: 16,
-              borderRadius: 10,
-              background: 'var(--accent)',
-              color: '#fff',
-              display: 'grid',
-              placeItems: 'center',
-              fontWeight: 700,
-            }}
-          >
-            PE
-          </span>
+          <Image src="/entan-logo-t.png" alt="" width={44} height={44} priority />
           <h1>Nouveau mot de passe</h1>
           <p>Choisissez un nouveau mot de passe pour votre compte.</p>
         </div>

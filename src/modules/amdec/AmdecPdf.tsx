@@ -1,8 +1,9 @@
 'use client';
 
-import { Document, Page, View, Text, StyleSheet, pdf } from '@react-pdf/renderer';
+import { Document, Page, View, Text, Image, StyleSheet, pdf } from '@react-pdf/renderer';
 import type { AmdecEntry } from '@/lib/types';
 import { criticality, residualCriticality } from '@/lib/types';
+import { LOGO_PNG } from '@/lib/pdf/logo';
 
 /**
  * Export PDF d'un rapport AMDEC (vectoriel, texte sélectionnable, à la charte).
@@ -25,8 +26,7 @@ const UP = '#9a3412';
 const styles = StyleSheet.create({
   page: { paddingVertical: 26, paddingHorizontal: 28, fontSize: 8, fontFamily: 'Helvetica', color: INK },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  logo: { width: 24, height: 24, borderRadius: 6, backgroundColor: ACCENT, marginRight: 8 },
-  logoText: { color: '#ffffff', fontSize: 10, fontFamily: 'Helvetica-Bold', textAlign: 'center', marginTop: 7 },
+  logo: { width: 24, height: 24, marginRight: 8 },
   title: { fontSize: 14, fontFamily: 'Helvetica-Bold' },
   subtitle: { fontSize: 8, color: MUTED, marginTop: 2 },
   summaryRow: { flexDirection: 'row', marginBottom: 12 },
@@ -101,7 +101,7 @@ interface Plotted {
 
 const Header = ({ title, subtitle }: { title: string; subtitle: string }) => (
   <View style={styles.header}>
-    <View style={styles.logo}><Text style={styles.logoText}>PE</Text></View>
+    <Image src={LOGO_PNG} style={styles.logo} />
     <View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.subtitle}>{subtitle}</Text>

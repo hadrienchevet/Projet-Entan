@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useWorkspace } from '@/lib/store';
 
 const css = `
 .pay { max-width: 760px; margin: 0 auto; padding: 8px 16px 48px; }
 .pay-hero { text-align: center; padding: 28px 0 4px; }
-.pay-logo { width: 54px; height: 54px; border-radius: 15px; background: linear-gradient(135deg, var(--accent), var(--accent-hover)); color: #fff; display: inline-grid; place-items: center; font-weight: 800; font-size: 20px; box-shadow: var(--shadow); }
 .pay-hero h1 { font-size: 27px; letter-spacing: -0.02em; margin: 16px 0 6px; }
 .pay-hero p { color: var(--text-secondary); font-size: 15px; max-width: 460px; margin: 0 auto; line-height: 1.6; }
 .pay-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); display: flex; flex-direction: column; }
@@ -57,7 +57,7 @@ export function BillingPage() {
       <style dangerouslySetInnerHTML={{ __html: css }} />
 
       <div className="pay-hero">
-        <span className="pay-logo">PE</span>
+        <Image src="/entan-logo-t.png" alt="" width={54} height={54} />
         <h1>{hasSeat ? 'Votre siège' : 'Activez votre siège'}</h1>
         <p>
           {hasSeat

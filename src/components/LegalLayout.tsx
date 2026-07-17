@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { ReactNode } from 'react';
 
 const css = `
@@ -26,7 +27,7 @@ export function LegalLayout({ title, children }: { title: string; children: Reac
       <div className="legal-inner">
         <div className="legal-top">
           <Link href="/" className="legal-brand">
-            <span className="logo">PE</span> Projet Entan
+            <Image src="/entan-logo-t.png" alt="" width={28} height={28} /> Projet Entan
           </Link>
           <nav>
             <Link href="/cgv">CGV</Link>
