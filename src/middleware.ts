@@ -10,30 +10,40 @@ import { NextResponse, type NextRequest } from 'next/server';
 export default async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
+  // Tolérant : une env manquante ou une erreur Supabase ne doit JAMAIS mettre
+  // tout le site en 500 (MIDDLEWARE_INVOCATION_FAILED) — on traite alors la
+  // requête comme non connectée (pages publiques servies, privées → /login).
+  let user: { id: string } | null = null;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (supabaseUrl && supabaseKey) {
+    try {
+      const supabase = createServerClient(supabaseUrl, supabaseKey, {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+            response = NextResponse.next({ request });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options),
+            );
+          },
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
-          );
-        },
-      },
-    },
-  );
+      });
 
-  // Ne rien insérer entre la création du client et getUser() : c'est cet
-  // appel qui rafraîchit le token si nécessaire.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+      // Ne rien insérer entre la création du client et getUser() : c'est cet
+      // appel qui rafraîchit le token si nécessaire.
+      ({
+        data: { user },
+      } = await supabase.auth.getUser());
+    } catch (e) {
+      console.error('[proxy] session indisponible :', e);
+    }
+  } else {
+    console.error('[proxy] NEXT_PUBLIC_SUPABASE_URL / ANON_KEY manquantes');
+  }
 
   const { pathname } = request.nextUrl;
   // Le webhook Stripe est appelé sans session (serveur à serveur) → public.
