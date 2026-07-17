@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
 export const viewport: Viewport = {
@@ -24,6 +25,9 @@ export const metadata: Metadata = {
     siteName: 'Projet Entan',
     url: '/',
   },
+  verification: {
+    google: 'ewKuVw48Tlb9bZcwNzC3KOhxrYUPpIKR3kTubd_qWPA',
+  },
 };
 
 /** Applique le thème avant le premier rendu (pas de flash clair/sombre). */
@@ -39,7 +43,10 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }
