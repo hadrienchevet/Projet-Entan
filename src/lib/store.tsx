@@ -418,12 +418,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     // Fin d'essai (null si l'accès vient d'une clé/entreprise, ou si fix-20 non appliqué).
     const { data: trialEnd } = await supabase.rpc('trial_ends_at');
     setTrialEndsAt((trialEnd as string | null) ?? null);
+    // La plus RÉCEMMENT rejointe fait foi (cohérent avec current_company_id() en
+    // SQL) : si un compte a une organisation perso auto-créée (Phase 3) puis
+    // rejoint une organisation via invitation, c'est celle-ci qu'il veut voir.
     const { data: mem, error } = await supabase
       .from('company_members')
       .select('role, companies(id, name, join_code, seats, comp_seats, is_comp, status)')
       .eq('user_id', user.id)
       .eq('status', 'active')
-      .order('created_at')
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
     if (error) {
