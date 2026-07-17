@@ -70,6 +70,8 @@ export interface ProjectMeta {
   tools?: ToolId[] | null;
   /** Phase courante de la démarche RDP (0 = sujet … 6 = standardiser). */
   rdpCurrentPhase: number;
+  /** Organisation propriétaire (null = projet solo legacy, cf. fix-14). */
+  companyId?: string | null;
   project_members?: ProjectMember[];
 }
 
@@ -82,6 +84,8 @@ export interface Project {
   status: ProjectStatus;
   tools?: ToolId[] | null;
   rdpCurrentPhase: number;
+  /** Organisation propriétaire (null = projet solo legacy, cf. fix-14). */
+  companyId?: string | null;
   /** L'équipe appartient au projet : seule source de membres pour le RACI. */
   members: Member[];
   project_members?: ProjectMember[];

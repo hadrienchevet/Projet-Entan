@@ -151,6 +151,8 @@ interface ProjectMeta {
   status: ProjectStatus;
   tools?: ToolId[] | null;
   rdpCurrentPhase: number;
+  /** Organisation propriétaire (null = projet solo legacy, cf. fix-14). */
+  companyId?: string | null;
   project_members?: ProjectMember[];
   createdAt: string;
 }
@@ -381,6 +383,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       status: (r.status as ProjectStatus) ?? 'active',
       tools: (r.tools as ToolId[] | null) ?? null,
       rdpCurrentPhase: (r.rdp_current_phase as number | null) ?? 0,
+      companyId: (r.company_id as string | null) ?? null,
       project_members: (r.project_members || []).map(projectMemberFromRow),
     }));
     setMetas(list);

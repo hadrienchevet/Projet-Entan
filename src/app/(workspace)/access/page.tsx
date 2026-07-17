@@ -1,25 +1,79 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useCurrentProject, useWorkspace } from '@/lib/store';
+import { createClient } from '@/lib/supabase/client';
 import { IconTrash } from '@/components/icons';
 
+interface Candidate {
+  userId: string;
+  email?: string;
+  displayName?: string;
+}
+
+interface CompanyMemberJoinRow {
+  user_id: string;
+  profiles: { email?: string; display_name?: string } | null;
+}
+
 /**
- * Accès au projet = membres de l'ENTREPRISE ayant accès à ce projet.
- * On ajoute des personnes déjà dans l'organisation (= des sièges). Pour inviter
- * une nouvelle personne, ça se passe dans Organisation.
+ * Accès au projet = membres de l'ORGANISATION DU PROJET ayant accès à ce projet.
+ *
+ * Les candidats viennent du roster de l'organisation PROPRIÉTAIRE DU PROJET
+ * (project.companyId), pas de l'organisation « courante » du compte — un compte
+ * peut appartenir à plusieurs organisations (cf. MODELE-ORGANISATION.md :
+ * organisation perso auto-créée + organisation rejointe par invitation).
+ * Utiliser l'organisation courante proposerait des personnes qui n'appartiennent
+ * pas forcément à CETTE organisation-là, et l'ajout échouerait côté serveur
+ * (trigger enforce_project_member_company).
  */
 export default function AccessPage() {
   const project = useCurrentProject();
   const { companyMembers, addProjectMember, removeProjectMember } = useWorkspace();
+  const [projectCompanyMembers, setProjectCompanyMembers] = useState<Candidate[] | null>(null);
   const [selected, setSelected] = useState('');
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
 
+  const companyId = project?.companyId;
+
+  useEffect(() => {
+    setProjectCompanyMembers(null);
+    if (!companyId) return;
+    let alive = true;
+    const supabase = createClient();
+    supabase
+      .from('company_members')
+      .select('user_id, profiles(email, display_name)')
+      .eq('company_id', companyId)
+      .eq('status', 'active')
+      .then(({ data }) => {
+        if (!alive) return;
+        setProjectCompanyMembers(
+          ((data ?? []) as unknown as CompanyMemberJoinRow[]).map((m) => ({
+            userId: m.user_id,
+            email: m.profiles?.email,
+            displayName: m.profiles?.display_name,
+          })),
+        );
+      });
+    return () => {
+      alive = false;
+    };
+  }, [companyId]);
+
   if (!project) return null;
 
+  // Roster à utiliser : celui de l'organisation DU PROJET si elle est connue,
+  // sinon (projet solo legacy sans organisation) l'organisation courante du
+  // compte en secours — le trigger serveur ne restreint rien dans ce cas.
+  const roster: Candidate[] = companyId
+    ? (projectCompanyMembers ?? [])
+    : companyMembers.map((m) => ({ userId: m.userId, email: m.email, displayName: m.displayName }));
+
   const memberIds = new Set((project.project_members ?? []).map((pm) => pm.userId));
-  const candidates = companyMembers.filter((m) => m.status === 'active' && !memberIds.has(m.userId));
+  const candidates = roster.filter((m) => !memberIds.has(m.userId));
+  const loadingCandidates = Boolean(companyId) && projectCompanyMembers === null;
 
   const add = async () => {
     if (!selected) return;
@@ -30,7 +84,7 @@ export default function AccessPage() {
     if (!r.ok) {
       setError(
         r.error.includes('user_not_in_company')
-          ? 'Cette personne n’est pas (ou plus) dans l’organisation.'
+          ? 'Cette personne n’est pas (ou plus) dans l’organisation de ce projet.'
           : r.error,
       );
     } else {
@@ -49,14 +103,18 @@ export default function AccessPage() {
       <div className="page-header">
         <div>
           <h1>Accès au projet</h1>
-          <p className="subtitle">Donnez accès à ce projet aux membres de votre organisation.</p>
+          <p className="subtitle">Donnez accès à ce projet aux membres de son organisation.</p>
         </div>
       </div>
 
       <div className="card">
         <div className="card-body">
           <h2>Ajouter un membre de l’organisation</h2>
-          {candidates.length === 0 ? (
+          {loadingCandidates ? (
+            <p className="muted" style={{ marginTop: 8 }}>
+              Chargement des membres…
+            </p>
+          ) : candidates.length === 0 ? (
             <p className="muted" style={{ marginTop: 8 }}>
               Tous les membres de l’organisation ont déjà accès. Pour inviter une nouvelle personne,
               rendez-vous dans <strong>Organisation</strong>.
