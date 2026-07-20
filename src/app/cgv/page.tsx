@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { LegalLayout } from '@/components/LegalLayout';
 
 export const metadata: Metadata = {
-  title: 'Conditions Générales de Vente — Projet Entan',
+  title: 'Conditions Générales de Vente',
 };
 
 /**

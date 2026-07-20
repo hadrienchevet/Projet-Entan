@@ -12,17 +12,17 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://projetentan.fr'),
   title: {
-    default: 'Projet Entan — Gestion de projet industriel et résolution de problèmes',
-    template: '%s · Projet Entan',
+    default: 'ENTAN — Gestion de projet industriel et résolution de problèmes',
+    template: '%s · ENTAN',
   },
   description:
     'Pilotez vos projets industriels et vos démarches qualité en un seul outil : RACI, AMDEC, plan d’action, planning, Ishikawa, 5 pourquoi, SWOT et A3. Essai gratuit 14 jours.',
-  applicationName: 'Projet Entan',
-  authors: [{ name: 'Projet Entan' }],
+  applicationName: 'ENTAN',
+  authors: [{ name: 'ENTAN' }],
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
-    siteName: 'Projet Entan',
+    siteName: 'ENTAN',
     url: '/',
   },
   verification: {

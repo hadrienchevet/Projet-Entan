@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { LegalLayout } from '@/components/LegalLayout';
 
 export const metadata: Metadata = {
-  title: 'Accord de traitement des données (DPA) — Projet Entan',
+  title: 'Accord de traitement des données (DPA)',
 };
 
 /**

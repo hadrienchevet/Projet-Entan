@@ -55,6 +55,7 @@ export default async function proxy(request: NextRequest) {
     pathname.startsWith('/blog/') ||
     pathname === '/robots.txt' ||
     pathname === '/sitemap.xml' ||
+    pathname === '/llms.txt' ||
     pathname === '/manifest.webmanifest' ||
     pathname === '/opengraph-image' ||
     pathname === '/login' ||
