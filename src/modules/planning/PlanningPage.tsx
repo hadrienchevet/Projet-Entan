@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { memberName, useCurrentProject, useProjectActions } from '@/lib/store';
+import { memberName, useCurrentProject, useProjectActions, useWorkspace } from '@/lib/store';
 import type { Action, ActionInput, ActionStatus, Id } from '@/lib/types';
 import { STATUS_LABELS } from '@/lib/types';
 import { formatDateLong, isOverdue, todayISO, toISO } from '@/lib/date';
@@ -18,6 +18,7 @@ import { GanttView } from './GanttView';
 export function PlanningPage() {
   const project = useCurrentProject();
   const actions = useProjectActions(project?.id);
+  const { updateAction } = useWorkspace();
 
   const [view, setView] = useState<'calendar' | 'gantt' | 'list'>('calendar');
   const [statusFilter, setStatusFilter] = useState<ActionStatus | 'all'>('all');
@@ -95,7 +96,13 @@ export function PlanningPage() {
         />
       )}
       {view === 'gantt' && (
-        <GanttView actions={filtered} onSelect={setEditing} responsibleName={memberFor} />
+        <GanttView
+          actions={filtered}
+          onSelect={setEditing}
+          responsibleName={memberFor}
+          onLink={linkActions}
+          onUnlink={unlinkActions}
+        />
       )}
       {view === 'list' && (
         <ListView actions={filtered} onSelect={setEditing} responsibleName={memberFor} />
@@ -112,6 +119,23 @@ export function PlanningPage() {
 
   function memberFor(action: Action): string {
     return memberName(project, action.responsibleId);
+  }
+
+  /** Dépendance fin → début : le successeur porte la liste de ses prédécesseurs. */
+  function linkActions(predecessorId: Id, successorId: Id) {
+    const succ = actions.find((a) => a.id === successorId);
+    if (!succ) return;
+    const deps = succ.dependsOnIds ?? [];
+    if (deps.includes(predecessorId)) return;
+    void updateAction(successorId, { dependsOnIds: [...deps, predecessorId] });
+  }
+
+  function unlinkActions(predecessorId: Id, successorId: Id) {
+    const succ = actions.find((a) => a.id === successorId);
+    if (!succ) return;
+    void updateAction(successorId, {
+      dependsOnIds: (succ.dependsOnIds ?? []).filter((id) => id !== predecessorId),
+    });
   }
 }
 

@@ -31,6 +31,7 @@ export function ActionFormModal({ project, action, defaults, onClose }: Props) {
   const [dueDate, setDueDate] = useState(init.dueDate ?? '');
   const [amdecId, setAmdecId] = useState<Id>(init.amdecId ?? '');
   const [notifyEmail, setNotifyEmail] = useState(init.notifyEmail ?? false);
+  const [milestone, setMilestone] = useState(init.milestone ?? false);
   const [error, setError] = useState('');
 
   // L'email n'est possible que si le responsable a un compte rattaché.
@@ -69,6 +70,7 @@ export function ActionFormModal({ project, action, defaults, onClose }: Props) {
       dueDate: dueDate || undefined,
       amdecId: amdecId || undefined,
       notifyEmail: canEmail ? notifyEmail : false,
+      milestone,
     };
 
     if (action) {
@@ -219,6 +221,26 @@ export function ActionFormModal({ project, action, defaults, onClose }: Props) {
             <span className="form-warning">
               Fortement recommandée : sans échéance, l&apos;action n&apos;apparaît pas dans le
               calendrier.
+            </span>
+          )}
+        </div>
+
+        <div className="field span-2">
+          <label>Jalon</label>
+          <label
+            style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 400, cursor: 'pointer' }}
+          >
+            <input
+              type="checkbox"
+              checked={milestone}
+              onChange={(e) => setMilestone(e.target.checked)}
+              style={{ width: 'auto' }}
+            />
+            Marquer comme jalon — point de passage clé, affiché en losange ◆ sur le Gantt
+          </label>
+          {milestone && !dueDate && (
+            <span className="form-hint">
+              Renseignez une échéance : le jalon est positionné sur cette date.
             </span>
           )}
         </div>

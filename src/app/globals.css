@@ -822,6 +822,89 @@ textarea { resize: vertical; min-height: 64px; }
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
+/* --- Dépendances (flèches fin → début) --------------------------------------- */
+
+.gantt-body {
+  position: relative;
+  width: max-content;
+  min-width: 100%;
+}
+
+/* Lignes du corps à hauteur FIXE (52px, cf. ROW_H) : les flèches en dépendent. */
+.gantt-body .gantt-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 14px;
+}
+
+.gantt-body.linking { user-select: none; cursor: crosshair; }
+
+/* Poignée de liaison au bout de la barre, révélée au survol de la ligne. */
+.gantt-link-handle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  background: var(--surface);
+  opacity: 0;
+  cursor: crosshair;
+  z-index: 2;
+}
+.gantt-row:hover .gantt-link-handle,
+.gantt-body.linking .gantt-link-handle { opacity: 1; }
+
+.gantt-links {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.gantt-link {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+}
+.gantt-link.violated { stroke: var(--danger); }
+.gantt-link-g:hover .gantt-link { stroke: var(--accent); }
+
+/* Trait invisible plus large : zone de clic confortable pour supprimer. */
+.gantt-link-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 10;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.gantt-link-temp {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+/* Cible potentielle pendant le glisser. */
+.gantt-bar.link-target { box-shadow: 0 0 0 2px var(--accent); }
+
+/* Jalon : losange centré sur le jour de l'échéance (le `left` inline vise le
+   milieu du jour ; le translate(-50%) recentre le carré avant rotation). */
+.gantt-bar.milestone {
+  width: 14px;
+  height: 14px;
+  min-width: 0;
+  border-radius: 3px;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.legend .dot.diamond { border-radius: 2px; transform: rotate(45deg); }
+.milestone-mark { color: var(--accent); }
+
 .legend .dot {
   display: inline-block;
   width: 8px;

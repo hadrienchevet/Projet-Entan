@@ -110,6 +110,10 @@ export interface Action {
   amdecId?: Id;
   /** Rappel email au responsable le jour du démarrage (opt-in). */
   notifyEmail: boolean;
+  /** Jalon : point de passage clé, affiché en losange sur le Gantt (à l'échéance). */
+  milestone?: boolean;
+  /** Prédécesseurs (fin → début) : l'action ne devrait pas commencer avant leur fin. */
+  dependsOnIds?: Id[];
   createdAt: string;
 }
 
@@ -198,6 +202,8 @@ export interface ActionInput {
   amdecId?: Id;
   /** Rappel email au responsable au démarrage (opt-in). */
   notifyEmail?: boolean;
+  milestone?: boolean;
+  dependsOnIds?: Id[];
 }
 
 export interface AmdecInput {
@@ -252,6 +258,8 @@ export interface ActionRow {
   start_date: string | null;
   due_date: string | null;
   notify_email?: boolean;
+  is_milestone?: boolean;
+  depends_on_ids?: string[];
   created_at: string;
 }
 
@@ -308,6 +316,8 @@ export function actionFromRow(r: ActionRow): Action {
     dueDate: r.due_date ?? undefined,
     amdecId: r.amdec_item_id ?? undefined,
     notifyEmail: r.notify_email ?? false,
+    milestone: r.is_milestone ?? false,
+    dependsOnIds: r.depends_on_ids ?? [],
     createdAt: r.created_at,
   };
 }
@@ -325,6 +335,8 @@ export function actionInputToRow(input: Partial<ActionInput>): Record<string, un
   if ('dueDate' in input) row.due_date = input.dueDate ?? null;
   if ('amdecId' in input) row.amdec_item_id = input.amdecId ?? null;
   if (input.notifyEmail !== undefined) row.notify_email = input.notifyEmail;
+  if (input.milestone !== undefined) row.is_milestone = input.milestone;
+  if (input.dependsOnIds !== undefined) row.depends_on_ids = input.dependsOnIds;
   return row;
 }
 
