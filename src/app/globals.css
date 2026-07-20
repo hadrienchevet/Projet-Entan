@@ -684,6 +684,17 @@ textarea { resize: vertical; min-height: 64px; }
   flex-direction: column;
 }
 .gantt-fullscreen .gantt-scroll { flex: 1; overflow: auto; }
+
+/* Les en-têtes de dates restent visibles pendant le scroll vertical (plein écran :
+   c'est le seul cas où .gantt-scroll scrolle verticalement). Le rang des jours se
+   cale sous celui des mois (hauteur 26px, cf. .gantt-timeline.months). */
+.gantt-row.gantt-head {
+  position: sticky;
+  z-index: 3;
+  background: var(--surface);
+}
+.gantt-scroll > .gantt-head:first-child { top: 0; }
+.gantt-head + .gantt-head { top: 26px; }
 .gantt-fullscreen .gantt-undated { flex-shrink: 0; max-height: 28vh; overflow: auto; border-top: 1px solid var(--border); }
 
 .gantt-row {
