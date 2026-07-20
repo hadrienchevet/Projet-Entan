@@ -57,6 +57,32 @@ export const IconPlus = () => (
   </svg>
 );
 
+export const IconZoomIn = () => (
+  <svg {...base}>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="m20.5 20.5-4.9-4.9M11 8.5v5M8.5 11h5" />
+  </svg>
+);
+
+export const IconZoomOut = () => (
+  <svg {...base}>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="m20.5 20.5-4.9-4.9M8.5 11h5" />
+  </svg>
+);
+
+export const IconExpand = () => (
+  <svg {...base}>
+    <path d="M14 4h6v6M10 20H4v-6M20 4l-6 6M4 20l6-6" />
+  </svg>
+);
+
+export const IconCollapse = () => (
+  <svg {...base}>
+    <path d="M20 10h-6V4M4 14h6v6M14 10l6-6M10 14l-6 6" />
+  </svg>
+);
+
 export const IconEdit = () => (
   <svg {...base}>
     <path d="M16.5 4.5a2.1 2.1 0 0 1 3 3L8 19l-4 1 1-4L16.5 4.5Z" />

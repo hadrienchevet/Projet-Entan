@@ -667,6 +667,25 @@ textarea { resize: vertical; min-height: 64px; }
 
 .gantt-scroll { overflow-x: auto; }
 
+.gantt-header-tools { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+.gantt-controls { display: flex; align-items: center; gap: 2px; }
+.gantt-controls .icon-btn:disabled { opacity: 0.35; cursor: default; }
+.gantt-controls .icon-btn:disabled:hover { background: transparent; color: var(--text-muted); }
+
+/* Plein écran : la carte recouvre le viewport ; z-index sous les modales (50)
+   pour que la fiche action ouverte depuis une barre reste au-dessus. */
+.gantt-card.gantt-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+}
+.gantt-fullscreen .gantt-scroll { flex: 1; overflow: auto; }
+.gantt-fullscreen .gantt-undated { flex-shrink: 0; max-height: 28vh; overflow: auto; border-top: 1px solid var(--border); }
+
 .gantt-row {
   display: flex;
   width: max-content;

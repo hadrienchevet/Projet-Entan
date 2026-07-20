@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { Action } from '@/lib/types';
 import { addDaysISO, diffDays, formatDate, isOverdue, isoToDate, todayISO } from '@/lib/date';
 import { StatusBadge } from '@/components/Badges';
+import { IconCollapse, IconExpand, IconZoomIn, IconZoomOut } from '@/components/icons';
 
 /**
  * Diagramme de Gantt simple : une barre par action, de la date de début
@@ -11,7 +12,9 @@ import { StatusBadge } from '@/components/Badges';
  * c'est une pure vue des actions — aucune donnée propre, pas de dépendances.
  */
 
-const DAY_W = 26;
+/** Largeurs de jour (px) : dézoomer = plus de jours visibles d'un coup. */
+const ZOOM_LEVELS = [10, 14, 18, 26, 36, 48];
+const DEFAULT_ZOOM = 3;
 
 interface Props {
   actions: Action[];
@@ -25,6 +28,27 @@ function barStart(a: Action): string {
 }
 
 export function GanttView({ actions, onSelect, responsibleName }: Props) {
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM);
+  const [fullscreen, setFullscreen] = useState(false);
+  const dayW = ZOOM_LEVELS[zoom];
+  /* En dézoom fort les numéros ne tiennent plus : on ne garde que les lundis. */
+  const showAllDays = dayW >= 18;
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      // Une modale ouverte (fiche action) garde la priorité sur Échap.
+      if (e.key === 'Escape' && !document.querySelector('.modal-overlay')) setFullscreen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [fullscreen]);
+
   const dated = useMemo(
     () =>
       actions
@@ -43,7 +67,7 @@ export function GanttView({ actions, onSelect, responsibleName }: Props) {
   const today = todayISO();
   const todayIdx = diffDays(start, today);
   const todayVisible = todayIdx >= 0 && todayIdx < days;
-  const timelineWidth = days * DAY_W;
+  const timelineWidth = days * dayW;
 
   if (dated.length === 0) {
     return (
@@ -59,26 +83,56 @@ export function GanttView({ actions, onSelect, responsibleName }: Props) {
   }
 
   return (
-    <div className="card">
+    <div className={`card gantt-card${fullscreen ? ' gantt-fullscreen' : ''}`}>
       <div className="card-header">
         <h2>Gantt</h2>
-        <div className="legend">
-          <span>
-            <i className="dot" style={{ background: 'var(--accent-faint)' }} /> À faire
-          </span>
-          <span>
-            <i className="dot" style={{ background: 'var(--accent)' }} /> En cours
-          </span>
-          <span>
-            <i className="dot" style={{ background: 'var(--success)' }} /> Terminée
-          </span>
-          <span>
-            <i className="dot" style={{ background: 'var(--danger)' }} /> En retard
-          </span>
+        <div className="gantt-header-tools">
+          <div className="legend">
+            <span>
+              <i className="dot" style={{ background: 'var(--accent-faint)' }} /> À faire
+            </span>
+            <span>
+              <i className="dot" style={{ background: 'var(--accent)' }} /> En cours
+            </span>
+            <span>
+              <i className="dot" style={{ background: 'var(--success)' }} /> Terminée
+            </span>
+            <span>
+              <i className="dot" style={{ background: 'var(--danger)' }} /> En retard
+            </span>
+          </div>
+          <div className="gantt-controls">
+            <button
+              className="icon-btn"
+              onClick={() => setZoom((z) => Math.max(0, z - 1))}
+              disabled={zoom === 0}
+              title="Dézoomer — voir plus de jours"
+              aria-label="Dézoomer"
+            >
+              <IconZoomOut />
+            </button>
+            <button
+              className="icon-btn"
+              onClick={() => setZoom((z) => Math.min(ZOOM_LEVELS.length - 1, z + 1))}
+              disabled={zoom === ZOOM_LEVELS.length - 1}
+              title="Zoomer — voir moins de jours"
+              aria-label="Zoomer"
+            >
+              <IconZoomIn />
+            </button>
+            <button
+              className="icon-btn"
+              onClick={() => setFullscreen((f) => !f)}
+              title={fullscreen ? 'Quitter le plein écran (Échap)' : 'Plein écran'}
+              aria-label={fullscreen ? 'Quitter le plein écran' : 'Plein écran'}
+            >
+              {fullscreen ? <IconCollapse /> : <IconExpand />}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="gantt-scroll" style={{ '--day-w': `${DAY_W}px` } as CSSProperties}>
+      <div className="gantt-scroll" style={{ '--day-w': `${dayW}px` } as CSSProperties}>
         <div className="gantt-row gantt-head">
           <div className="gantt-label corner">Action</div>
           <div className="gantt-timeline months" style={{ width: timelineWidth }}>
@@ -86,7 +140,7 @@ export function GanttView({ actions, onSelect, responsibleName }: Props) {
               <div
                 key={m.label}
                 className="gantt-month"
-                style={{ left: m.startIdx * DAY_W, width: m.span * DAY_W }}
+                style={{ left: m.startIdx * dayW, width: m.span * dayW }}
               >
                 {m.label}
               </div>
@@ -108,7 +162,7 @@ export function GanttView({ actions, onSelect, responsibleName }: Props) {
                     isToday ? ' today' : ''
                   }`}
                 >
-                  {iso.slice(8)}
+                  {showAllDays || dow === 1 || isToday ? iso.slice(8) : ''}
                 </span>
               );
             })}
@@ -129,11 +183,11 @@ export function GanttView({ actions, onSelect, responsibleName }: Props) {
               </div>
               <div className="gantt-timeline" style={{ width: timelineWidth }}>
                 {todayVisible && (
-                  <div className="gantt-today" style={{ left: todayIdx * DAY_W }} />
+                  <div className="gantt-today" style={{ left: todayIdx * dayW }} />
                 )}
                 <button
                   className={`gantt-bar ${state}`}
-                  style={{ left: startIdx * DAY_W + 2, width: span * DAY_W - 4 }}
+                  style={{ left: startIdx * dayW + 2, width: span * dayW - 4 }}
                   title={`${a.title} — ${
                     a.startDate ? `${formatDate(s)} → ` : ''
                   }${formatDate(a.dueDate)} (${responsibleName(a)})`}
@@ -147,7 +201,7 @@ export function GanttView({ actions, onSelect, responsibleName }: Props) {
       </div>
 
       {undated.length > 0 && (
-        <div>
+        <div className="gantt-undated">
           <div className="day-group-title">Sans échéance — non positionnables sur le Gantt</div>
           {undated.map((a) => (
             <div key={a.id} className="list-row">
