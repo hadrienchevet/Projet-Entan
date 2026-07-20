@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -21,8 +22,8 @@ import { IconCollapse, IconExpand, IconZoomIn, IconZoomOut } from '@/components/
  */
 
 /** Largeurs de jour (px) : dézoomer = plus de jours visibles d'un coup. */
-const ZOOM_LEVELS = [10, 14, 18, 26, 36, 48];
-const DEFAULT_ZOOM = 3;
+const ZOOM_LEVELS = [5, 8, 10, 14, 18, 26, 36, 48];
+const DEFAULT_ZOOM = 5;
 /** Largeur de la colonne des libellés — doit suivre `.gantt-label` (CSS). */
 const LABEL_W = 230;
 /** Hauteur fixe des lignes du corps : indispensable pour tracer les flèches. */
@@ -52,6 +53,7 @@ export function GanttView({ actions, onSelect, responsibleName, onLink, onUnlink
     null,
   );
   const bodyRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const dayW = ZOOM_LEVELS[zoom];
   /* En dézoom fort les numéros ne tiennent plus : on ne garde que les lundis. */
   const showAllDays = dayW >= 18;
@@ -85,6 +87,24 @@ export function GanttView({ actions, onSelect, responsibleName, onLink, onUnlink
 
   const { start, days } = useMemo(() => computeRange(dated), [dated]);
   const months = useMemo(() => monthSegments(start, days), [start, days]);
+
+  /* Zoom initial auto : la plus grande largeur de jour qui fait tenir tout le
+     projet dans la largeur visible (sur grand écran : vue d'ensemble d'emblée).
+     Une seule fois, dès que les données sont là — le zoom manuel reprend ensuite la main. */
+  const fitted = useRef(false);
+  useLayoutEffect(() => {
+    if (fitted.current || dated.length === 0 || !scrollRef.current) return;
+    fitted.current = true;
+    const avail = scrollRef.current.clientWidth - LABEL_W;
+    let idx = 0;
+    for (let i = ZOOM_LEVELS.length - 1; i >= 0; i--) {
+      if (days * ZOOM_LEVELS[i] <= avail) {
+        idx = i;
+        break;
+      }
+    }
+    setZoom(idx);
+  }, [dated.length, days]);
 
   const today = todayISO();
   const todayIdx = diffDays(start, today);
@@ -249,7 +269,11 @@ export function GanttView({ actions, onSelect, responsibleName, onLink, onUnlink
         </div>
       </div>
 
-      <div className="gantt-scroll" style={{ '--day-w': `${dayW}px` } as CSSProperties}>
+      <div
+        className="gantt-scroll"
+        ref={scrollRef}
+        style={{ '--day-w': `${dayW}px` } as CSSProperties}
+      >
         <div className="gantt-row gantt-head">
           <div className="gantt-label corner">Action</div>
           <div className="gantt-timeline months" style={{ width: timelineWidth }}>

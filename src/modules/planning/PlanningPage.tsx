@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { memberName, useCurrentProject, useProjectActions, useWorkspace } from '@/lib/store';
 import type { Action, ActionInput, ActionStatus, Id } from '@/lib/types';
 import { STATUS_LABELS } from '@/lib/types';
-import { formatDateLong, isOverdue, todayISO, toISO } from '@/lib/date';
+import { addDaysISO, diffDays, formatDateLong, isOverdue, todayISO, toISO } from '@/lib/date';
 import { StatusBadge } from '@/components/Badges';
 import { IconPlus } from '@/components/icons';
 import { ActionFormModal } from '@/modules/actions/ActionFormModal';
@@ -34,7 +34,7 @@ export function PlanningPage() {
     .filter((a) => memberFilter === 'all' || a.responsibleId === memberFilter);
 
   return (
-    <div className="page">
+    <div className="page page-wide">
       <div className="page-header">
         <div>
           <h1>Planning</h1>
@@ -121,13 +121,26 @@ export function PlanningPage() {
     return memberName(project, action.responsibleId);
   }
 
-  /** Dépendance fin → début : le successeur porte la liste de ses prédécesseurs. */
+  /** Dépendance fin → début : le successeur porte la liste de ses prédécesseurs
+   *  et vient se caler juste après la fin du prédécesseur (durée conservée). */
   function linkActions(predecessorId: Id, successorId: Id) {
     const succ = actions.find((a) => a.id === successorId);
-    if (!succ) return;
+    const pred = actions.find((a) => a.id === predecessorId);
+    if (!succ || !pred) return;
     const deps = succ.dependsOnIds ?? [];
     if (deps.includes(predecessorId)) return;
-    void updateAction(successorId, { dependsOnIds: [...deps, predecessorId] });
+    const patch: Partial<ActionInput> = { dependsOnIds: [...deps, predecessorId] };
+    if (pred.dueDate && succ.dueDate) {
+      const newStart = addDaysISO(pred.dueDate, 1);
+      if (succ.milestone) {
+        patch.dueDate = newStart;
+      } else {
+        const s = succ.startDate && succ.startDate <= succ.dueDate ? succ.startDate : succ.dueDate;
+        patch.startDate = newStart;
+        patch.dueDate = addDaysISO(newStart, diffDays(s, succ.dueDate));
+      }
+    }
+    void updateAction(successorId, patch);
   }
 
   function unlinkActions(predecessorId: Id, successorId: Id) {

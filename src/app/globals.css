@@ -6,6 +6,9 @@
 --------------------------------------------------------------------------- */
 
 :root {
+  /* Gabarit de contenu des pages : assez large pour occuper un grand écran
+     (1920 : sidebar + page ≈ plein écran), plafonné pour les ultra-larges. */
+  --page-max: 1600px;
   --bg: #faf9f5;
   --surface: #ffffff;
   --surface-2: #ece9e0;
@@ -213,7 +216,7 @@ p { margin: 0; }
 
 .page {
   width: 100%;
-  max-width: 1100px;
+  max-width: var(--page-max);
   margin: 0 auto;
   padding: 28px 32px 60px;
   display: flex;
@@ -662,6 +665,10 @@ textarea { resize: vertical; min-height: 64px; }
   border-radius: 3px;
 }
 .cal-overflow:hover { background: var(--border); color: var(--text); }
+
+/* Pages larges (planning/Gantt) : aucune limite — la timeline profite de
+   chaque pixel, même au-delà du gabarit standard (--page-max). */
+.page.page-wide { max-width: none; }
 
 /* --- Gantt -------------------------------------------------------------------- */
 
@@ -1949,7 +1956,7 @@ a.link:hover { text-decoration: underline; }
 .frise-legend .dot.todo { background: var(--border-strong); }
 
 /* ── Académie (mini-jeux de prise en main) ─────────────────────────────────── */
-.acad-tabbar { max-width: 1100px; margin: 0 auto; padding: 20px 32px 0; }
+.acad-tabbar { max-width: var(--page-max); margin: 0 auto; padding: 20px 32px 0; }
 .acad-tabs { display: inline-flex; gap: 4px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 4px; }
 .acad-tab { display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; font-weight: 500; padding: 7px 16px; border-radius: 999px; cursor: pointer; }
 .acad-tab svg { width: 15px; height: 15px; }
