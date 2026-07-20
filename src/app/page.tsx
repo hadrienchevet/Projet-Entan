@@ -514,8 +514,8 @@ export default async function LandingPage() {
           <h2 data-reveal>Un tarif simple, par utilisateur</h2>
           <div className="lp-price" data-reveal>
             <div className="free">Essai gratuit — 14 jours</div>
-            <div className="price">0 €<small> / sans carte</small></div>
-            <div className="then">puis 19 € / utilisateur / mois</div>
+            <div className="price">0 €<small> / sans carte bancaire</small></div>
+            <div className="then">Tarif par utilisateur communiqué avant la fin de votre essai — jamais de prélèvement surprise.</div>
             <ul>
               <li>Accès complet à tous les outils</li>
               <li>Projets illimités, toute l’équipe</li>
@@ -523,7 +523,7 @@ export default async function LandingPage() {
               <li>Résiliable à tout moment</li>
             </ul>
             <Link href="/login?mode=signup" className="btn btn-primary">Démarrer gratuitement</Link>
-            <div className="founder">Offre fondateur : −40 % à vie pour les premiers utilisateurs.</div>
+            <div className="founder">Les tout premiers utilisateurs bénéficient d’un tarif préférentiel.</div>
           </div>
         </div>
       </section>
