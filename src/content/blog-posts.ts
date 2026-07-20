@@ -12,6 +12,13 @@ export type BlogPost = {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'meilleur-logiciel-gestion-projet-industriel',
+    title: 'Meilleur logiciel de gestion de projet industriel : comparatif 2026',
+    description:
+      'Excel, MS Project, Monday, Jira, Notion ou un outil spécialisé : comparatif honnête des solutions pour piloter un projet industriel, avec les critères qui comptent vraiment (AMDEC, RACI, revues de projet) et un guide de choix selon votre situation.',
+    date: '2026-07-20',
+  },
+  {
     slug: 'matrice-raci-exemple-guide',
     title: 'Matrice RACI : définition, exemple concret et modèle à utiliser',
     description:
