@@ -176,6 +176,8 @@ const TOOLS: ToolGuide[] = [
 const FLOW = ['SWOT', 'AMDEC', 'Actions', 'RACI', 'Planning', 'Coûts', 'A3'];
 
 const css = `
+.page-header h1 .ic { color: var(--accent); display: inline-flex; }
+.page-header h1 .ic svg { width: 22px; height: 22px; flex-shrink: 0; }
 .guide h2 { font-size: 18px; margin: 0 0 4px; }
 .guide .lead { color: var(--text-secondary); margin: 0 0 16px; line-height: 1.7; }
 .guide-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
@@ -259,7 +261,7 @@ export function HelpPage({
       <div className="page-header">
         <div>
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <IconHelp /> {title}
+            <span className="ic"><IconHelp /></span> {title}
           </h1>
           <p className="subtitle">{subtitle}</p>
         </div>
