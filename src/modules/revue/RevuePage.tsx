@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   memberName,
   useCurrentProject,
@@ -10,8 +11,9 @@ import {
   useRevueDecisions,
   useWorkspace,
 } from '@/lib/store';
-import type { Action, AmdecEntry, ActionStatus, Id, Revue, RevueSnapshot } from '@/lib/types';
-import { STATUS_LABELS, criticality, criticalityLevel } from '@/lib/types';
+import type { Action, AmdecEntry, ActionStatus, Id, Project, Revue, RevueSnapshot } from '@/lib/types';
+import { STATUS_LABELS, criticality, criticalityLevel, residualCriticality } from '@/lib/types';
+import { todayISO, diffDays, formatDate, isOverdue } from '@/lib/date';
 import { Modal } from '@/components/Modal';
 import { IconPlus, IconTrash } from '@/components/icons';
 
@@ -75,6 +77,204 @@ function DeltaChips({ delta, hasPrevious }: { delta: Delta; hasPrevious: boolean
   );
 }
 
+/* --- Points d'attention (briefing de pilotage) ------------------------------ */
+/**
+ * Croise planning + actions + risques pour signaler ce qui mérite l'attention
+ * du chef de projet — calculé à partir des données existantes, sans saisie.
+ */
+
+type AttentionSeverity = 'high' | 'medium';
+
+interface Attention {
+  key: string;
+  severity: AttentionSeverity;
+  tag: string;
+  title: string;
+  detail: string;
+  href: string;
+  sortKey: number;
+}
+
+/** Fenêtre (en jours) pour « échéance imminente ». */
+const SOON_WINDOW_DAYS = 15;
+
+function computeAttentions(
+  actions: Action[],
+  amdecs: AmdecEntry[],
+  project: Project,
+  lastClosed: Revue | null,
+): Attention[] {
+  const today = todayISO();
+  const items: Attention[] = [];
+
+  for (const a of actions) {
+    // Retards : échéance passée, pas terminée.
+    if (isOverdue(a.dueDate, a.status)) {
+      const lateDays = -diffDays(today, a.dueDate!);
+      items.push({
+        key: `late-${a.id}`,
+        severity: 'high',
+        tag: 'Retard',
+        title: a.title,
+        detail: `${memberName(project, a.responsibleId)} · en retard de ${lateDays} j (échéance ${formatDate(a.dueDate)})`,
+        href: '/actions',
+        sortKey: 1000 + lateDays,
+      });
+      continue;
+    }
+    // Échéances imminentes : dans la fenêtre, pas terminée.
+    if (a.status !== 'done' && a.dueDate) {
+      const d = diffDays(today, a.dueDate);
+      if (d >= 0 && d <= SOON_WINDOW_DAYS) {
+        const when = d === 0 ? "aujourd'hui" : d === 1 ? 'demain' : `dans ${d} j`;
+        items.push({
+          key: `soon-${a.id}`,
+          severity: d <= 3 ? 'high' : 'medium',
+          tag: 'Échéance',
+          title: a.title,
+          detail: `${memberName(project, a.responsibleId)} · ${when} (${formatDate(a.dueDate)})`,
+          href: '/actions',
+          sortKey: 200 - d,
+        });
+      }
+    }
+  }
+
+  // Risques critiques (criticité ≥ seuil « élevé ») sans plan d'action, ou à re-coter.
+  for (const r of amdecs) {
+    const score = criticality(r);
+    if (criticalityLevel(score) !== 'high') continue;
+    const linked = actions.filter((a) => a.amdecId === r.id);
+    if (linked.length === 0) {
+      items.push({
+        key: `risk-noplan-${r.id}`,
+        severity: 'high',
+        tag: 'Risque',
+        title: `${r.element} — ${r.failureMode}`,
+        detail: `Criticité ${score} · aucune action corrective`,
+        href: '/amdec',
+        sortKey: 500 + score,
+      });
+    } else if (linked.every((a) => a.status === 'done') && residualCriticality(r) === null) {
+      items.push({
+        key: `risk-recote-${r.id}`,
+        severity: 'medium',
+        tag: 'Risque',
+        title: `${r.element} — ${r.failureMode}`,
+        detail: `Criticité ${score} · actions terminées, criticité résiduelle à réévaluer`,
+        href: '/amdec',
+        sortKey: 300 + score,
+      });
+    }
+  }
+
+  // Jalons menacés : un jalon non terminé dont des prérequis (dépendances) sont
+  // en retard, ou planifiés après lui.
+  for (const m of actions) {
+    if (!m.milestone || m.status === 'done') continue;
+    const prereqIds = m.dependsOnIds ?? [];
+    if (prereqIds.length === 0) continue;
+    const openPrereqs = actions.filter((a) => prereqIds.includes(a.id) && a.status !== 'done');
+    const blocking = openPrereqs.filter(
+      (p) => isOverdue(p.dueDate, p.status) || (!!m.dueDate && !!p.dueDate && p.dueDate > m.dueDate),
+    );
+    if (blocking.length === 0) continue;
+    const soon = m.dueDate ? diffDays(today, m.dueDate) : null;
+    const urgent = blocking.some((p) => isOverdue(p.dueDate, p.status)) || (soon !== null && soon <= SOON_WINDOW_DAYS);
+    items.push({
+      key: `milestone-${m.id}`,
+      severity: urgent ? 'high' : 'medium',
+      tag: 'Jalon',
+      title: m.title,
+      detail: `${blocking.length} action(s) prérequise(s) en retard ou non terminée(s)${m.dueDate ? ` · jalon le ${formatDate(m.dueDate)}` : ''}`,
+      href: '/planning',
+      sortKey: 700 + (soon !== null ? Math.max(0, 60 - soon) : 0),
+    });
+  }
+
+  // Surcharge : un responsable avec beaucoup d'actions à traiter sous 7 jours
+  // (retards inclus).
+  const load = new Map<Id, number>();
+  for (const a of actions) {
+    if (a.status === 'done' || !a.dueDate) continue;
+    if (diffDays(today, a.dueDate) <= 7) load.set(a.responsibleId, (load.get(a.responsibleId) ?? 0) + 1);
+  }
+  for (const [memberId, count] of load) {
+    if (count < 4) continue;
+    items.push({
+      key: `overload-${memberId}`,
+      severity: count >= 6 ? 'high' : 'medium',
+      tag: 'Surcharge',
+      title: memberName(project, memberId),
+      detail: `${count} actions à traiter cette semaine (retards inclus)`,
+      href: '/actions',
+      sortKey: 400 + count,
+    });
+  }
+
+  // Vitesse : avancement au point mort depuis la dernière revue (≥ 7 j d'écart).
+  if (lastClosed?.snapshot && lastClosed.closedAt) {
+    const prevPct = lastClosed.snapshot.planningPct ?? 0;
+    const doneNow = actions.filter((a) => a.status === 'done').length;
+    const nowPct = actions.length ? Math.round((doneNow / actions.length) * 100) : 0;
+    const daysSince = diffDays(lastClosed.closedAt.slice(0, 10), today);
+    const stalled = nowPct - prevPct <= 0 && nowPct < 100 && actions.some((a) => a.status !== 'done');
+    if (stalled && daysSince >= 7) {
+      const deltaPct = nowPct - prevPct;
+      items.push({
+        key: 'velocity-stalled',
+        severity: daysSince >= 14 ? 'high' : 'medium',
+        tag: 'Avancement',
+        title: 'Avancement au point mort',
+        detail: `${deltaPct === 0 ? '+0' : deltaPct} pt depuis la dernière revue (il y a ${daysSince} j)`,
+        href: '/dashboard',
+        sortKey: 350,
+      });
+    }
+  }
+
+  const rank = (s: AttentionSeverity) => (s === 'high' ? 0 : 1);
+  return items.sort((a, b) => rank(a.severity) - rank(b.severity) || b.sortKey - a.sortKey);
+}
+
+function AttentionsPanel({ items }: { items: Attention[] }) {
+  const high = items.filter((i) => i.severity === 'high').length;
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card-header">
+        <strong>Points d’attention</strong>
+        <span className="row-sub">
+          {items.length === 0
+            ? 'rien à signaler'
+            : `${items.length} point${items.length > 1 ? 's' : ''}${high ? ` · ${high} urgent${high > 1 ? 's' : ''}` : ''}`}
+        </span>
+      </div>
+      {items.length === 0 ? (
+        <div className="empty">
+          <p>Rien à signaler — pas de retard, d’échéance imminente ni de risque critique non traité.</p>
+        </div>
+      ) : (
+        items.map((i) => (
+          <div key={i.key} className="list-row" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span className={`badge ${i.severity === 'high' ? 'overdue' : 'crit-medium'}`} style={{ flexShrink: 0 }}>
+              {i.tag}
+            </span>
+            <div className="row-main" style={{ flex: 1 }}>
+              <div className="row-title" style={{ whiteSpace: 'normal' }}>
+                {i.title}
+              </div>
+              <div className="row-sub">{i.detail}</div>
+            </div>
+            <Link href={i.href} className="btn btn-sm" style={{ flexShrink: 0 }}>
+              Voir
+            </Link>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 /* --- Page (aiguillage landing / animation) ---------------------------------- */
 
 export function RevuePage() {
@@ -93,6 +293,7 @@ export function RevuePage() {
   const closed = revues.filter((r) => r.status === 'cloturee');
   const last = lastClosedRevue(revues);
   const delta = computeDelta(actions, amdecs, last);
+  const attentions = computeAttentions(actions, amdecs, project, last);
   const crRevue = revues.find((r) => r.id === crRevueId) ?? null;
 
   const launch = () => {
@@ -105,8 +306,8 @@ export function RevuePage() {
         <div>
           <h1>Revue de projet</h1>
           <p className="subtitle">
-            Anime ta réunion d’avancement depuis l’outil : actions, risques et décisions se mettent à jour en direct,
-            et le compte-rendu est généré à la clôture.
+            Ton briefing de pilotage : ce qui mérite ton attention maintenant, calculé depuis ton planning, tes
+            actions et tes risques. Lance une revue pour le dérouler en réunion.
           </p>
         </div>
         <div className="header-actions">
@@ -116,6 +317,8 @@ export function RevuePage() {
         </div>
       </div>
 
+      <AttentionsPanel items={attentions} />
+
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-header">
           <strong>Depuis la dernière revue</strong>
@@ -123,9 +326,6 @@ export function RevuePage() {
         </div>
         <div className="card-body">
           <DeltaChips delta={delta} hasPrevious={!!last} />
-          <p className="form-hint" style={{ marginTop: 12 }}>
-            Tout est prêt : lance la revue pour dérouler ces points en réunion, sans rien préparer.
-          </p>
         </div>
       </div>
 
@@ -256,6 +456,8 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
           </button>
         </div>
       </div>
+
+      <AttentionsPanel items={computeAttentions(actions, amdecs, project, last)} />
 
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-header">
