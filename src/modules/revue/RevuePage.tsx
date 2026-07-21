@@ -15,6 +15,7 @@ import type { Action, AmdecEntry, ActionStatus, Id, Project, Revue, RevueSnapsho
 import { STATUS_LABELS, criticality, criticalityLevel, residualCriticality } from '@/lib/types';
 import { todayISO, diffDays, formatDate, isOverdue } from '@/lib/date';
 import { Modal } from '@/components/Modal';
+import { CriticalityBadge } from '@/components/Badges';
 import { IconPlus, IconTrash } from '@/components/icons';
 
 /* --- Dates ------------------------------------------------------------------ */
@@ -275,6 +276,117 @@ function AttentionsPanel({ items }: { items: Attention[] }) {
   );
 }
 
+/* --- Arbre risques → actions correctives (réduction de la criticité) -------- */
+
+/** Met en avant la criticité avant → après réduction + barre de progression. */
+function RiskReduction({
+  initial,
+  residual,
+  hasActions,
+}: {
+  initial: number;
+  residual: number | null;
+  hasActions: boolean;
+}) {
+  const reduction = residual != null ? Math.round((1 - residual / initial) * 100) : 0;
+  return (
+    <div style={{ marginTop: 6, width: '100%' }}>
+      <div className="tree-badges" style={{ flexWrap: 'wrap' }}>
+        <CriticalityBadge score={initial} />
+        <span style={{ color: 'var(--text-muted)', fontSize: 11 }} aria-hidden="true">
+          →
+        </span>
+        {residual != null ? (
+          <>
+            <CriticalityBadge score={residual} />
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                color: reduction > 0 ? 'var(--success)' : 'var(--text-muted)',
+              }}
+            >
+              {reduction > 0 ? `−${reduction} %` : '±0 %'}
+            </span>
+          </>
+        ) : (
+          <span className="badge" style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}>
+            après : {hasActions ? 'à évaluer' : 'à traiter'}
+          </span>
+        )}
+      </div>
+      <div className="cost-bar" style={{ marginTop: 6 }} title={`Réduction de la criticité : ${reduction} %`}>
+        <span
+          className="cost-bar-fill"
+          style={{ width: `${Math.max(0, Math.min(reduction, 100))}%`, background: 'var(--success)' }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function RisksTree({
+  amdecs,
+  actions,
+  project,
+  cutoff,
+}: {
+  amdecs: AmdecEntry[];
+  actions: Action[];
+  project: Project;
+  cutoff?: string;
+}) {
+  const risks = [...amdecs].sort((a, b) => criticality(b) - criticality(a));
+  if (risks.length === 0) {
+    return (
+      <div className="empty">
+        <p>Aucun risque AMDEC saisi.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="tree-wrap">
+      <div className="tree">
+        <ul>
+          {risks.map((r) => {
+            const linked = actions.filter((a) => a.amdecId === r.id);
+            const isNew = cutoff ? r.createdAt > cutoff : false;
+            return (
+              <li key={r.id}>
+                <div className="tree-card" data-kind="risk" style={{ width: 340, maxWidth: 340 }}>
+                  <span className="tree-kind">Risque AMDEC{isNew ? ' · nouveau' : ''}</span>
+                  <span className="tree-label">
+                    {r.element} — {r.failureMode}
+                  </span>
+                  <span className="tree-sub">cause : {r.cause}</span>
+                  <RiskReduction
+                    initial={criticality(r)}
+                    residual={residualCriticality(r)}
+                    hasActions={linked.length > 0}
+                  />
+                </div>
+                {linked.length > 0 && (
+                  <ul>
+                    {linked.map((a) => (
+                      <li key={a.id}>
+                        <div className="tree-card" data-kind="action">
+                          <span className="tree-kind">Action · {STATUS_LABELS[a.status]}</span>
+                          <span className="tree-label">{a.title}</span>
+                          <span className="tree-sub">{memberName(project, a.responsibleId)}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 /* --- Page (aiguillage landing / animation) ---------------------------------- */
 
 export function RevuePage() {
@@ -403,7 +515,6 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
   const sortedActions = [...actions].sort(
     (a, b) => actionRank(a, today) - actionRank(b, today) || (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999'),
   );
-  const sortedRisks = [...amdecs].sort((a, b) => criticality(b) - criticality(a)).slice(0, 8);
   const cutoff = last?.closedAt;
 
   const addQuick = () => {
@@ -544,35 +655,13 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
         )}
       </div>
 
-      {/* Risques */}
+      {/* Risques — arbre risque → actions correctives, réduction de la criticité */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-header">
           <strong>Risques</strong>
-          <span className="row-sub">criticité décroissante</span>
+          <span className="row-sub">criticité avant → après réduction</span>
         </div>
-        {sortedRisks.length === 0 ? (
-          <div className="empty">
-            <p>Aucun risque AMDEC saisi.</p>
-          </div>
-        ) : (
-          sortedRisks.map((r) => {
-            const score = criticality(r);
-            const lvl = criticalityLevel(score);
-            const isNew = cutoff ? r.createdAt > cutoff : false;
-            return (
-              <div key={r.id} className="list-row" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div className="row-main" style={{ flex: 1 }}>
-                  <div className="row-title" style={{ whiteSpace: 'normal' }}>
-                    {r.element} — {r.failureMode}
-                  </div>
-                  <div className="row-sub">{r.cause}</div>
-                </div>
-                {isNew && <span className="badge source">Nouveau</span>}
-                <span className={`badge crit-${lvl}`}>Criticité {score}</span>
-              </div>
-            );
-          })
-        )}
+        <RisksTree amdecs={amdecs} actions={actions} project={project} cutoff={cutoff} />
       </div>
 
       {/* Décisions captées */}
