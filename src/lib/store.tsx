@@ -85,6 +85,12 @@ import type {
   RdpSubject,
   RdpSubjectInput,
   RdpSubjectRow,
+  Revue,
+  RevueDecision,
+  RevueRow,
+  RevueDecisionRow,
+  RevueSnapshot,
+  RevueType,
 } from '@/lib/types';
 import {
   actionFromRow,
@@ -109,6 +115,8 @@ import {
   rdpProblemInputToRow,
   rdpSolutionFromRow,
   rdpSubjectFromRow,
+  revueFromRow,
+  revueDecisionFromRow,
 } from '@/lib/types';
 
 export type Result = { ok: true } | { ok: false; error: string };
@@ -175,6 +183,8 @@ interface WorkspaceState {
   rdpProblem: RdpProblem | null;
   rdpIndicators: RdpIndicator[];
   rdpSolutions: RdpSolution[];
+  revues: Revue[];
+  revueDecisions: RevueDecision[];
 
   /** Entreprise (tenant) du compte courant + sièges. */
   company: Company | null;
@@ -241,6 +251,13 @@ interface WorkspaceState {
   /** Journal d'activité (notifications in-app). */
   activityEvents: ActivityEvent[];
   logActivity: (projectId: Id, type: ActivityType, summary: string, entity?: string) => Promise<void>;
+
+  /** Mode revue de projet (réunions d'avancement animées depuis l'outil). */
+  startRevue: (projectId: Id, title: string, type?: RevueType) => Promise<Id>;
+  closeRevue: (id: Id, snapshot: RevueSnapshot) => Promise<void>;
+  deleteRevue: (id: Id) => Promise<void>;
+  addRevueDecision: (revueId: Id, projectId: Id, content: string) => Promise<void>;
+  deleteRevueDecision: (id: Id) => Promise<void>;
 
   addMember: (projectId: Id, input: MemberInput) => Promise<void>;
   updateMember: (projectId: Id, memberId: Id, patch: Partial<MemberInput>) => Promise<void>;
@@ -340,6 +357,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [costItems, setCostItems] = useState<CostItem[]>([]);
   const [swotItems, setSwotItems] = useState<SwotItem[]>([]);
   const [a3Report, setA3Report] = useState<A3Report | null>(null);
+  const [revues, setRevues] = useState<Revue[]>([]);
+  const [revueDecisions, setRevueDecisions] = useState<RevueDecision[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<Id | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
   const [companyRole, setCompanyRole] = useState<CompanyRole | null>(null);
@@ -707,6 +726,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         .order('created_at', { ascending: false })
         .limit(50);
       setActivityEvents(!ae.error ? ((ae.data ?? []) as ActivityEventRow[]).map(activityEventFromRow) : []);
+
+      // Revues de projet + décisions (tolérant : tables fix-29 absentes = listes vides).
+      const rv = await supabase
+        .from('revues')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+      setRevues(!rv.error ? ((rv.data ?? []) as RevueRow[]).map(revueFromRow) : []);
+      const rd = await supabase
+        .from('revue_decisions')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at');
+      setRevueDecisions(!rd.error ? ((rd.data ?? []) as RevueDecisionRow[]).map(revueDecisionFromRow) : []);
     },
     [supabase],
   );
@@ -833,7 +866,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       const filter = `project_id=eq.${currentProjectId}`;
       let ch = supabase.channel(`project-${currentProjectId}`);
-      for (const table of ['members', 'actions', 'amdec_items', 'five_why_analyses', 'five_why_levels', 'ishikawa_analyses', 'ishikawa_causes', 'capa_actions', 'rdp_subjects', 'rdp_problem', 'rdp_indicators', 'rdp_solutions', 'dashboard_layouts', 'cost_items', 'swot_items', 'a3_reports', 'activity_events']) {
+      for (const table of ['members', 'actions', 'amdec_items', 'five_why_analyses', 'five_why_levels', 'ishikawa_analyses', 'ishikawa_causes', 'capa_actions', 'rdp_subjects', 'rdp_problem', 'rdp_indicators', 'rdp_solutions', 'dashboard_layouts', 'cost_items', 'swot_items', 'a3_reports', 'activity_events', 'revues', 'revue_decisions']) {
         ch = ch.on(
           'postgres_changes',
           { event: '*', schema: 'public', table, filter },
@@ -873,6 +906,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setCostItems([]);
       setSwotItems([]);
       setA3Report(null);
+      setRevues([]);
+      setRevueDecisions([]);
       void fetchProjectData(id);
     },
     [fetchProjectData],
@@ -1888,6 +1923,73 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [supabase],
   );
 
+  /* --- Revues de projet --------------------------------------------------- */
+
+  const startRevue = useCallback(
+    async (projectId: Id, title: string, type: RevueType = 'equipe'): Promise<Id> => {
+      const id = uid();
+      const createdAt = new Date().toISOString();
+      setRevues((s) => [
+        { id, projectId, title, type, status: 'en_cours', snapshot: null, createdAt },
+        ...s,
+      ]);
+      const { error } = await supabase
+        .from('revues')
+        .insert({ id, project_id: projectId, title, revue_type: type, status: 'en_cours' });
+      if (error) console.warn('[entan] revue non créée :', error.message);
+      return id;
+    },
+    [supabase],
+  );
+
+  const closeRevue = useCallback(
+    async (id: Id, snapshot: RevueSnapshot) => {
+      const closedAt = new Date().toISOString();
+      setRevues((s) =>
+        s.map((r) => (r.id === id ? { ...r, status: 'cloturee', snapshot, closedAt } : r)),
+      );
+      const { error } = await supabase
+        .from('revues')
+        .update({ status: 'cloturee', snapshot, closed_at: closedAt })
+        .eq('id', id);
+      if (error) console.warn('[entan] revue non clôturée :', error.message);
+    },
+    [supabase],
+  );
+
+  const deleteRevue = useCallback(
+    async (id: Id) => {
+      setRevues((s) => s.filter((r) => r.id !== id));
+      setRevueDecisions((s) => s.filter((d) => d.revueId !== id));
+      const { error } = await supabase.from('revues').delete().eq('id', id);
+      if (error) console.warn('[entan] revue non supprimée :', error.message);
+    },
+    [supabase],
+  );
+
+  const addRevueDecision = useCallback(
+    async (revueId: Id, projectId: Id, content: string) => {
+      const id = uid();
+      const createdAt = new Date().toISOString();
+      const authorName = members.find((m) => m.userId === userId)?.name || userEmail || 'Un membre';
+      setRevueDecisions((s) => [...s, { id, revueId, projectId, content, authorName, createdAt }]);
+      const { error } = await supabase
+        .from('revue_decisions')
+        .insert({ id, revue_id: revueId, project_id: projectId, content, author_name: authorName });
+      if (error) console.warn('[entan] décision non enregistrée :', error.message);
+    },
+    [supabase, members, userId, userEmail],
+  );
+
+  const deleteRevueDecision = useCallback(
+    async (id: Id) => {
+      setRevueDecisions((s) => s.filter((d) => d.id !== id));
+      const { error } = await supabase.from('revue_decisions').delete().eq('id', id);
+      if (error) console.warn('[entan] décision non supprimée :', error.message);
+    },
+    [supabase],
+  );
+
   const addSwotItem = useCallback(
     async (projectId: Id, quadrant: SwotItem['quadrant'], text: string) => {
       const id = uid();
@@ -1983,6 +2085,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     saveA3Report,
     activityEvents,
     logActivity,
+    revues,
+    revueDecisions,
+    startRevue,
+    closeRevue,
+    deleteRevue,
+    addRevueDecision,
+    deleteRevueDecision,
     addMember,
     updateMember,
     removeMember,
@@ -2086,6 +2195,22 @@ export function useProjectAmdecs(projectId: Id | undefined): AmdecEntry[] {
   const { amdecs } = useWorkspace();
   if (!projectId) return [];
   return amdecs.filter((a) => a.projectId === projectId);
+}
+
+/** Revues du projet courant (les plus récentes d'abord). */
+export function useProjectRevues(projectId: Id | undefined): Revue[] {
+  const { revues } = useWorkspace();
+  if (!projectId) return [];
+  return revues.filter((r) => r.projectId === projectId);
+}
+
+/** Décisions captées d'une revue (dans l'ordre chronologique). */
+export function useRevueDecisions(revueId: Id | undefined): RevueDecision[] {
+  const { revueDecisions } = useWorkspace();
+  if (!revueId) return [];
+  return revueDecisions
+    .filter((d) => d.revueId === revueId)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
 export function memberName(project: Project | null, id: Id | undefined): string {

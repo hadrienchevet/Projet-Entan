@@ -25,6 +25,7 @@ import {
   IconPlanning,
   IconPlus,
   IconRaci,
+  IconRevue,
   IconStar,
   IconTarget,
   IconTools,
@@ -40,6 +41,7 @@ const TOOL_ICON: Record<ToolId, ReactElement> = {
   amdec: <IconAmdec />,
   actions: <IconActions />,
   planning: <IconPlanning />,
+  revue: <IconRevue />,
   liens: <IconTree />,
   couts: <IconCost />,
   a3: <IconA3 />,
@@ -74,6 +76,13 @@ export function Layout({ children }: { children: ReactNode }) {
   const [creating, setCreating] = useState(false);
   const nav = currentProject?.projectType === 'rdp' ? NAV_RDP : navGestion(currentProject?.tools);
 
+  // Aucun projet courant → on masque la nav d'outils (elle mène à des pages
+  // vides) et on met en avant la création de projet. Les pages hors-projet
+  // (mes projets, compte, organisation, abonnement, aide) restent accessibles.
+  const hasProject = !!currentProject;
+  const PROJECT_OPTIONAL_ROUTES = ['/projets', '/compte', '/equipe', '/abonnement', '/help'];
+  const showEmptyState = !hasProject && !PROJECT_OPTIONAL_ROUTES.includes(pathname);
+
   // Essai gratuit en cours → bandeau « J-X » (null si accès par clé/entreprise).
   const trialDaysLeft = trialEndsAt
     ? Math.ceil((new Date(trialEndsAt).getTime() - new Date().getTime()) / 86_400_000)
@@ -87,48 +96,68 @@ export function Layout({ children }: { children: ReactNode }) {
           Projet Entan
         </div>
 
-        <div className="project-switcher">
-          <label>Projet</label>
-          <select
-            value={currentProjectId ?? ''}
-            onChange={(e) => setCurrentProject(e.target.value)}
-            aria-label="Changer de projet"
-          >
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          <button className="btn btn-ghost btn-sm" onClick={() => setCreating(true)}>
-            <IconPlus /> Nouveau projet
-          </button>
-          <Link
-            href="/projets"
-            className={`btn btn-ghost btn-sm${pathname === '/projets' ? ' active' : ''}`}
-          >
-            <IconFolder /> Tous les projets
-          </Link>
-          <Link
-            href="/access"
-            className={`btn btn-ghost btn-sm${pathname === '/access' ? ' active' : ''}`}
-          >
-            <IconUsers /> Accès au projet
-          </Link>
-        </div>
+        {hasProject ? (
+          <>
+            <div className="project-switcher">
+              <label>Projet</label>
+              <select
+                value={currentProjectId ?? ''}
+                onChange={(e) => setCurrentProject(e.target.value)}
+                aria-label="Changer de projet"
+              >
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              <button className="btn btn-ghost btn-sm" onClick={() => setCreating(true)}>
+                <IconPlus /> Nouveau projet
+              </button>
+              <Link
+                href="/projets"
+                className={`btn btn-ghost btn-sm${pathname === '/projets' ? ' active' : ''}`}
+              >
+                <IconFolder /> Tous les projets
+              </Link>
+              <Link
+                href="/access"
+                className={`btn btn-ghost btn-sm${pathname === '/access' ? ' active' : ''}`}
+              >
+                <IconUsers /> Accès au projet
+              </Link>
+            </div>
 
-        <nav className="nav">
-          {nav.map((item) => (
-            <Link
-              key={item.to}
-              href={item.to}
-              className={`nav-link${pathname === item.to ? ' active' : ''}`}
+            <nav className="nav">
+              {nav.map((item) => (
+                <Link
+                  key={item.to}
+                  href={item.to}
+                  className={`nav-link${pathname === item.to ? ' active' : ''}`}
+                >
+                  {item.icon}
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </>
+        ) : (
+          <div className="project-switcher">
+            <button
+              className="btn btn-primary"
+              onClick={() => setCreating(true)}
+              style={{ justifyContent: 'center' }}
             >
-              {item.icon}
-              {item.label}
+              <IconPlus /> Nouveau projet
+            </button>
+            <Link
+              href="/projets"
+              className={`btn btn-ghost btn-sm${pathname === '/projets' ? ' active' : ''}`}
+            >
+              <IconFolder /> Tous les projets
             </Link>
-          ))}
-        </nav>
+          </div>
+        )}
 
         <div className="sidebar-footer">
           <Link href="/equipe" className={`nav-link${pathname === '/equipe' ? ' active' : ''}`}>
@@ -193,11 +222,44 @@ export function Layout({ children }: { children: ReactNode }) {
             <Link href="/abonnement" className="btn btn-sm">Activer mon siège</Link>
           </div>
         )}
-        {children}
+        {showEmptyState ? (
+          <NoProjectEmptyState hasProjects={projects.length > 0} onCreate={() => setCreating(true)} />
+        ) : (
+          children
+        )}
       </main>
 
       {creating && <ProjectFormModal onClose={() => setCreating(false)} />}
       <UpgradePrompt />
+    </div>
+  );
+}
+
+/** Écran d'accueil quand aucun projet n'est ouvert : met en avant la création. */
+function NoProjectEmptyState({ hasProjects, onCreate }: { hasProjects: boolean; onCreate: () => void }) {
+  return (
+    <div className="onboarding">
+      <div className="onboarding-hero">
+        <div className="feature-icon" aria-hidden="true">
+          <IconFolder />
+        </div>
+        <h1>{hasProjects ? 'Aucun projet sélectionné' : 'Créez votre premier projet'}</h1>
+        <p>
+          {hasProjects
+            ? 'Choisissez un projet pour retrouver son planning, ses actions, ses risques et ses revues.'
+            : 'Un projet réunit votre planning, vos actions, vos risques et vos revues — tout au même endroit.'}
+        </p>
+      </div>
+      <div className="onboarding-actions">
+        <button className="btn btn-primary" onClick={onCreate}>
+          <IconPlus /> Nouveau projet
+        </button>
+        {hasProjects && (
+          <Link href="/projets" className="btn">
+            Voir mes projets
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

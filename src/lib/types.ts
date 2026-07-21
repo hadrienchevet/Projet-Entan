@@ -1062,3 +1062,97 @@ export function activityEventFromRow(r: ActivityEventRow): ActivityEvent {
     createdAt: r.created_at,
   };
 }
+
+/* --- Mode revue de projet --------------------------------------------------- */
+
+export type RevueType = 'equipe' | 'copil' | 'jalon';
+export type RevueStatus = 'en_cours' | 'cloturee';
+
+export const REVUE_TYPE_LABELS: Record<RevueType, string> = {
+  equipe: 'Revue d’équipe',
+  copil: 'COPIL',
+  jalon: 'Revue de jalon',
+};
+
+/**
+ * Instantané figé à la clôture d'une revue — base du calcul du « delta depuis
+ * la dernière revue » à la revue suivante (pas de timestamp de complétion sur
+ * les actions, donc on compare l'état courant à ce snapshot).
+ */
+export interface RevueSnapshot {
+  /** Actions terminées au moment de la clôture. */
+  doneActionIds: Id[];
+  /** Nombre total d'actions à la clôture. */
+  totalActions: number;
+  /** Nombre d'AMDEC à la clôture. */
+  amdecCount: number;
+  /** Avancement planning (% d'actions terminées) à la clôture. */
+  planningPct: number;
+}
+
+/** Une revue de projet = une réunion d'avancement (préparée, animée, clôturée). */
+export interface Revue {
+  id: Id;
+  projectId: Id;
+  title: string;
+  type: RevueType;
+  status: RevueStatus;
+  /** Instantané figé à la clôture (null tant que la revue est en cours). */
+  snapshot?: RevueSnapshot | null;
+  closedAt?: string;
+  createdAt: string;
+}
+
+/** Décision captée en direct pendant une revue. */
+export interface RevueDecision {
+  id: Id;
+  revueId: Id;
+  projectId: Id;
+  content: string;
+  authorName: string;
+  createdAt: string;
+}
+
+export interface RevueRow {
+  id: string;
+  project_id: string;
+  title: string;
+  revue_type: RevueType;
+  status: RevueStatus;
+  snapshot: RevueSnapshot | null;
+  closed_at: string | null;
+  created_at: string;
+}
+
+export interface RevueDecisionRow {
+  id: string;
+  revue_id: string;
+  project_id: string;
+  content: string;
+  author_name: string;
+  created_at: string;
+}
+
+export function revueFromRow(r: RevueRow): Revue {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    title: r.title,
+    type: r.revue_type ?? 'equipe',
+    status: r.status ?? 'en_cours',
+    snapshot: r.snapshot ?? null,
+    closedAt: r.closed_at ?? undefined,
+    createdAt: r.created_at,
+  };
+}
+
+export function revueDecisionFromRow(r: RevueDecisionRow): RevueDecision {
+  return {
+    id: r.id,
+    revueId: r.revue_id,
+    projectId: r.project_id,
+    content: r.content,
+    authorName: r.author_name,
+    createdAt: r.created_at,
+  };
+}
