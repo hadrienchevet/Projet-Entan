@@ -81,7 +81,9 @@ export function DashboardGrid() {
 
   const save = (next: WidgetInstance[]) => void setDashboardWidgets(project.id, next);
   const remove = (i: number) => save(layout.filter((_, k) => k !== i));
-  const add = (id: WidgetId) => { save([...layout, { id }]); setAdding(false); };
+  // On garde le volet ouvert après un ajout (le widget disparaît du catalogue),
+  // pour pouvoir en ajouter plusieurs à la suite.
+  const add = (id: WidgetId) => save([...layout, { id }]);
   const setSetting = (i: number, key: string, val: number) =>
     save(layout.map((w, k) => (k === i ? { ...w, settings: { ...w.settings, [key]: val } } : w)));
   const toggleWidth = (i: number) =>
@@ -139,19 +141,54 @@ export function DashboardGrid() {
       )}
 
       {editing && adding && (
-        <div className="card widget-picker">
-          {available.length === 0 ? (
-            <p className="muted" style={{ fontSize: 13 }}>Tous les widgets disponibles sont déjà affichés.</p>
-          ) : (
-            available.map((id) => (
-              <button key={id} className="widget-picker-item" onClick={() => add(id)}>
-                <span className="widget-picker-title">{WIDGETS[id].title}</span>
-                <span className="widget-picker-desc">{WIDGETS[id].description}</span>
-                <span className="widget-picker-add"><IconPlus /></span>
+        <>
+          <div className="drawer-backdrop" onClick={() => setAdding(false)} />
+          <aside className="widget-drawer" role="dialog" aria-label="Ajouter un widget">
+            <div className="widget-drawer-header">
+              <h2>Ajouter un widget</h2>
+              <button className="icon-btn" onClick={() => setAdding(false)} aria-label="Fermer le volet">
+                <IconClose />
               </button>
-            ))
-          )}
-        </div>
+            </div>
+            <div className="widget-drawer-body">
+              {available.length === 0 ? (
+                <p className="muted" style={{ fontSize: 13 }}>Tous les widgets disponibles sont déjà affichés.</p>
+              ) : (
+                available.map((id) => {
+                  const Comp = WIDGET_COMPONENTS[id];
+                  return (
+                    <div
+                      key={id}
+                      className="widget-thumb-item"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => add(id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          add(id);
+                        }
+                      }}
+                      title={WIDGETS[id].description}
+                    >
+                      <div className="widget-thumb">
+                        <div className="widget-thumb-scale">
+                          {Comp && <Comp project={project} instance={{ id }} />}
+                        </div>
+                      </div>
+                      <span className="widget-thumb-title">
+                        {WIDGETS[id].title}
+                        <span className="widget-thumb-add">
+                          <IconPlus /> Ajouter
+                        </span>
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </aside>
+        </>
       )}
 
       <DndContext
