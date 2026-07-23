@@ -1002,6 +1002,11 @@ textarea { resize: vertical; min-height: 64px; }
 .auth-tabs .segmented { width: 100%; }
 .auth-tabs .segmented button { flex: 1; }
 
+.auth-divider { display: flex; align-items: center; gap: 10px; margin: 2px 0; }
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.auth-divider span { font-size: 12px; color: var(--text-muted); }
+.btn-google svg { width: 18px; height: 18px; }
+
 /* --- Divers -------------------------------------------------------------------------- */
 
 .muted { color: var(--text-muted); }
