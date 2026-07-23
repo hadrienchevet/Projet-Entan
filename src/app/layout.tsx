@@ -19,6 +19,12 @@ export const metadata: Metadata = {
     'Pilotez vos projets industriels et vos démarches qualité en un seul outil : RACI, AMDEC, plan d’action, planning, Ishikawa, 5 pourquoi, SWOT et A3. Essai gratuit 14 jours.',
   applicationName: 'ENTAN',
   authors: [{ name: 'ENTAN' }],
+  // Icône sous un nouveau nom de fichier, en plus de app/icon.png et
+  // app/favicon.ico (inchangés) : Google Search met en cache très longtemps
+  // le favicon par nom de fichier, un nouveau nom force une réévaluation.
+  icons: {
+    icon: [{ url: '/entan-icon-2026.png', type: 'image/png', sizes: '256x256' }],
+  },
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
