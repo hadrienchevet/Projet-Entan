@@ -194,41 +194,6 @@ const ACTIONS: ChallengeSet = {
   ],
 };
 
-const PLANNING: ChallengeSet = {
-  id: 'planning',
-  tool: 'planning',
-  title: 'Planning — en retard ou dans les temps ?',
-  tagline: 'Terminée l’emporte sur la date ; sinon, échéance passée = retard.',
-  passThreshold: 0.875,
-  buckets: [
-    { id: 'late', label: 'En retard', hint: 'échéance dépassée', tone: 'danger' },
-    { id: 'ontime', label: 'Dans les temps', hint: 'à venir', tone: 'accent' },
-    { id: 'done', label: 'Terminée', hint: 'close', tone: 'success' },
-  ],
-  items: [
-    { id: 'pl1', prompt: 'Échéance dépassée de 3 jours · statut En cours', answer: 'late', why: 'Échéance passée et non terminée : en retard.' },
-    { id: 'pl2', prompt: 'Échéance dans 5 jours · statut À faire', answer: 'ontime', why: 'Échéance à venir et pas encore due : dans les temps.' },
-    { id: 'pl3', prompt: 'Statut Terminée · échéance hier', answer: 'done', why: 'Statut terminé : l’action est close, quelle que soit la date.' },
-    { id: 'pl4', prompt: 'Échéance dépassée d’une semaine · statut À faire', answer: 'late', why: 'Échéance passée et non terminée : en retard.' },
-    { id: 'pl5', prompt: 'Échéance dans 2 jours · statut En cours', answer: 'ontime', why: 'Échéance à venir et pas encore due : dans les temps.' },
-    { id: 'pl6', prompt: 'Statut Terminée · échéance la semaine dernière', answer: 'done', why: 'Statut terminé : l’action est close, quelle que soit la date.' },
-    { id: 'pl7', prompt: 'Échéance aujourd’hui · statut À faire', answer: 'ontime', why: 'Le jour même n’est pas dépassé : encore dans les temps.' },
-    { id: 'pl8', prompt: 'Échéance dépassée de 1 jour · statut En cours', answer: 'late', why: 'Échéance passée et non terminée : en retard.' },
-    { id: 'pl9', prompt: 'Statut Terminée · livrée en avance', answer: 'done', why: 'Statut terminé : l’action est close, quelle que soit la date.' },
-    { id: 'pl10', prompt: 'Échéance dans 10 jours · statut À faire', answer: 'ontime', why: 'Échéance à venir et pas encore due : dans les temps.' },
-    { id: 'pl11', prompt: 'Échéance dépassée de 5 jours · statut À faire', answer: 'late', why: 'Échéance passée et non terminée : en retard.' },
-    { id: 'pl12', prompt: 'Statut Terminée · échéance dans 3 jours', answer: 'done', why: 'Statut terminé : l’action est close, quelle que soit la date.' },
-    { id: 'pl13', prompt: 'Échéance dans 1 jour · statut En cours', answer: 'ontime', why: 'Échéance à venir et pas encore due : dans les temps.' },
-    { id: 'pl14', prompt: 'Échéance dépassée de 2 semaines · statut En cours', answer: 'late', why: 'Échéance passée et non terminée : en retard.' },
-    { id: 'pl15', prompt: 'Statut Terminée · échéance dépassée', answer: 'done', why: 'Statut terminé : l’action est close, quelle que soit la date.' },
-    { id: 'pl16', prompt: 'Échéance dans 4 jours · statut À faire', answer: 'ontime', why: 'Échéance à venir et pas encore due : dans les temps.' },
-    { id: 'pl17', prompt: 'Échéance dépassée hier · statut À faire', answer: 'late', why: 'Échéance passée et non terminée : en retard.' },
-    { id: 'pl18', prompt: 'Statut Terminée · échéance aujourd’hui', answer: 'done', why: 'Statut terminé : l’action est close, quelle que soit la date.' },
-    { id: 'pl19', prompt: 'Échéance dans 7 jours · statut En cours', answer: 'ontime', why: 'Échéance à venir et pas encore due : dans les temps.' },
-    { id: 'pl20', prompt: 'Échéance dépassée de 4 jours · statut À faire', answer: 'late', why: 'Échéance passée et non terminée : en retard.' },
-  ],
-};
-
 const ISHIKAWA: ChallengeSet = {
   id: 'ishikawa',
   tool: 'ishikawa',
@@ -266,88 +231,19 @@ const ISHIKAWA: ChallengeSet = {
   ],
 };
 
-const CINQ_POURQUOI: ChallengeSet = {
-  id: 'cinq-pourquoi',
-  tool: 'cinq-pourquoi',
-  title: '5 Pourquoi — symptôme ou cause racine ?',
-  tagline: 'Descendre du symptôme visible jusqu’à la cause à traiter.',
-  passThreshold: 0.875,
-  buckets: [
-    { id: 'symptome', label: 'Symptôme', hint: 'effet visible', tone: 'warning' },
-    { id: 'inter', label: 'Cause intermédiaire', hint: 'a encore une cause', tone: 'neutral' },
-    { id: 'racine', label: 'Cause racine', hint: 'à traiter', tone: 'success' },
-  ],
-  items: [
-    { id: 'cp1', prompt: 'Le client a reçu sa commande avec 3 jours de retard', answer: 'symptome', why: 'C’est l’effet visible, pas une cause : un symptôme.' },
-    { id: 'cp2', prompt: 'La ligne de production s’est arrêtée ce matin', answer: 'symptome', why: 'C’est l’effet visible, pas une cause : un symptôme.' },
-    { id: 'cp3', prompt: 'Le taux de rebut a doublé cette semaine', answer: 'symptome', why: 'C’est l’effet visible, pas une cause : un symptôme.' },
-    { id: 'cp4', prompt: 'Une réclamation qualité a été ouverte', answer: 'symptome', why: 'C’est l’effet visible, pas une cause : un symptôme.' },
-    { id: 'cp5', prompt: 'Le produit a été livré non conforme', answer: 'symptome', why: 'C’est l’effet visible, pas une cause : un symptôme.' },
-    { id: 'cp6', prompt: 'La commande n’est pas partie à temps', answer: 'symptome', why: 'C’est l’effet visible, pas une cause : un symptôme.' },
-    { id: 'cp7', prompt: 'Un incident a été déclaré sur le poste 3', answer: 'symptome', why: 'C’est l’effet visible, pas une cause : un symptôme.' },
-    { id: 'cp8', prompt: 'La pièce nécessaire n’était pas en stock', answer: 'inter', why: 'Cette cause a elle-même une cause : intermédiaire, continue à demander « pourquoi ».' },
-    { id: 'cp9', prompt: 'Le roulement a cédé en cours de production', answer: 'inter', why: 'Cette cause a elle-même une cause : intermédiaire, continue à demander « pourquoi ».' },
-    { id: 'cp10', prompt: 'L’opérateur a monté la mauvaise référence', answer: 'inter', why: 'Cette cause a elle-même une cause : intermédiaire, continue à demander « pourquoi ».' },
-    { id: 'cp11', prompt: 'Le contrôle final n’a pas détecté le défaut', answer: 'inter', why: 'Cette cause a elle-même une cause : intermédiaire, continue à demander « pourquoi ».' },
-    { id: 'cp12', prompt: 'La commande fournisseur est partie en retard', answer: 'inter', why: 'Cette cause a elle-même une cause : intermédiaire, continue à demander « pourquoi ».' },
-    { id: 'cp13', prompt: 'Le réglage machine était incorrect', answer: 'inter', why: 'Cette cause a elle-même une cause : intermédiaire, continue à demander « pourquoi ».' },
-    { id: 'cp14', prompt: 'Aucune procédure de réapprovisionnement n’existe', answer: 'racine', why: 'Cause profonde et actionnable : la racine à traiter.' },
-    { id: 'cp15', prompt: 'Le plan de maintenance préventive n’a jamais été mis en place', answer: 'racine', why: 'Cause profonde et actionnable : la racine à traiter.' },
-    { id: 'cp16', prompt: 'Les opérateurs ne sont pas formés à la vérification des références', answer: 'racine', why: 'Cause profonde et actionnable : la racine à traiter.' },
-    { id: 'cp17', prompt: 'Il n’existe pas de standard de contrôle qualité', answer: 'racine', why: 'Cause profonde et actionnable : la racine à traiter.' },
-    { id: 'cp18', prompt: 'Le seuil de réapprovisionnement n’a jamais été défini', answer: 'racine', why: 'Cause profonde et actionnable : la racine à traiter.' },
-    { id: 'cp19', prompt: 'Aucun système d’alerte de stock n’est en place', answer: 'racine', why: 'Cause profonde et actionnable : la racine à traiter.' },
-    { id: 'cp20', prompt: 'La polyvalence des équipes n’est pas organisée', answer: 'racine', why: 'Cause profonde et actionnable : la racine à traiter.' },
-  ],
-};
-
-const A3: ChallengeSet = {
-  id: 'a3',
-  tool: 'a3',
-  title: 'Charte A3 — dans quelle case ?',
-  tagline: 'Contexte, situation, objectifs, analyse, plan ou suivi ?',
-  passThreshold: 0.875,
-  buckets: [
-    { id: 'contexte', label: 'Contexte', hint: 'l’enjeu', tone: 'neutral' },
-    { id: 'situation', label: 'Situation', hint: 'état des lieux', tone: 'neutral' },
-    { id: 'objectifs', label: 'Objectifs', hint: 'la cible', tone: 'neutral' },
-    { id: 'analyse', label: 'Analyse', hint: 'les causes', tone: 'neutral' },
-    { id: 'plan', label: 'Plan d’action', hint: 'les actions', tone: 'neutral' },
-    { id: 'suivi', label: 'Suivi', hint: 'les résultats', tone: 'neutral' },
-  ],
-  items: [
-    { id: 'a1', prompt: 'Cette ligne représente 40 % du chiffre d’affaires', answer: 'contexte', why: 'Pourquoi ce sujet et son enjeu : Contexte.' },
-    { id: 'a2', prompt: 'Le sujet a été priorisé par la direction en janvier', answer: 'contexte', why: 'Pourquoi ce sujet et son enjeu : Contexte.' },
-    { id: 'a3', prompt: 'Les arrêts machine pèsent sur la satisfaction client', answer: 'contexte', why: 'Pourquoi ce sujet et son enjeu : Contexte.' },
-    { id: 'a4', prompt: 'Aujourd’hui, on compte 12 arrêts par semaine', answer: 'situation', why: 'L’état des lieux chiffré d’aujourd’hui : Situation.' },
-    { id: 'a5', prompt: 'Le taux de rebut actuel est de 8 %', answer: 'situation', why: 'L’état des lieux chiffré d’aujourd’hui : Situation.' },
-    { id: 'a6', prompt: 'Les délais de livraison atteignent 15 jours', answer: 'situation', why: 'L’état des lieux chiffré d’aujourd’hui : Situation.' },
-    { id: 'a7', prompt: 'L’état des lieux révèle 3 pannes récurrentes', answer: 'situation', why: 'L’état des lieux chiffré d’aujourd’hui : Situation.' },
-    { id: 'a8', prompt: 'Réduire les arrêts de 50 % d’ici juin', answer: 'objectifs', why: 'La cible à atteindre : Objectifs.' },
-    { id: 'a9', prompt: 'Passer le taux de rebut sous 3 %', answer: 'objectifs', why: 'La cible à atteindre : Objectifs.' },
-    { id: 'a10', prompt: 'Ramener le délai de livraison à 7 jours', answer: 'objectifs', why: 'La cible à atteindre : Objectifs.' },
-    { id: 'a11', prompt: 'L’Ishikawa pointe un défaut de maintenance', answer: 'analyse', why: 'La recherche des causes : Analyse.' },
-    { id: 'a12', prompt: 'Les 5 pourquoi mènent à l’absence de procédure', answer: 'analyse', why: 'La recherche des causes : Analyse.' },
-    { id: 'a13', prompt: 'L’AMDEC identifie le convoyeur comme critique', answer: 'analyse', why: 'La recherche des causes : Analyse.' },
-    { id: 'a14', prompt: 'La cause racine est un manque de formation', answer: 'analyse', why: 'La recherche des causes : Analyse.' },
-    { id: 'a15', prompt: 'Former les opérateurs avant fin mai — resp. Claire', answer: 'plan', why: 'Les actions, responsables et échéances : Plan d’action.' },
-    { id: 'a16', prompt: 'Mettre en place la maintenance préventive — resp. Marc', answer: 'plan', why: 'Les actions, responsables et échéances : Plan d’action.' },
-    { id: 'a17', prompt: 'Rédiger le standard de contrôle — échéance 30/06', answer: 'plan', why: 'Les actions, responsables et échéances : Plan d’action.' },
-    { id: 'a18', prompt: 'Suivre l’indicateur d’arrêts chaque semaine', answer: 'suivi', why: 'La mesure des résultats dans le temps : Suivi.' },
-    { id: 'a19', prompt: 'Mesurer l’écart entre objectif et résultat', answer: 'suivi', why: 'La mesure des résultats dans le temps : Suivi.' },
-    { id: 'a20', prompt: 'Vérifier l’efficacité des actions à 3 mois', answer: 'suivi', why: 'La mesure des résultats dans le temps : Suivi.' },
-  ],
-};
+/**
+ * Planning, 5 Pourquoi et Charte A3 sont passés en QCM (voir `quizzes.ts`) :
+ * un classement par panier n'y testait pas grand-chose (règle triviale pour
+ * Planning, frontière floue et subjective pour 5 Pourquoi entre cause
+ * intermédiaire et cause racine).
+ */
 
 /** Catalogue des jeux disponibles (les outils absents apparaissent « Bientôt »). */
 export const CHALLENGE_SETS: Partial<Record<AcademyToolId, ChallengeSet>> = {
   swot: SWOT,
   raci: RACI,
   actions: ACTIONS,
-  planning: PLANNING,
   ishikawa: ISHIKAWA,
-  'cinq-pourquoi': CINQ_POURQUOI,
-  a3: A3,
 };
 
 export function challengeSet(tool: AcademyToolId): ChallengeSet | undefined {

@@ -20,9 +20,11 @@ import {
   type AcademyToolId,
 } from './challenges';
 import { AMDEC_BUILDER } from './amdecBuilder';
+import { quizSet } from './quizzes';
 import { useAcademyProgress } from './useAcademyProgress';
 import { ClassifyGame } from './ClassifyGame';
 import { AmdecBuilderGame } from './AmdecBuilderGame';
+import { QuizGame } from './QuizGame';
 
 const ICONS: Record<AcademyToolId, ReactNode> = {
   swot: <IconSwot />,
@@ -40,11 +42,11 @@ export function AcademyPanel() {
   const { progress, record } = useAcademyProgress();
   const [active, setActive] = useState<AcademyToolId | null>(null);
 
-  // AMDEC a sa propre mécanique (constructeur de ligne) ; les autres passent
-  // par le moteur de classement.
-  const isPlayable = (t: AcademyToolId) => Boolean(challengeSet(t)) || t === 'amdec';
+  // AMDEC a sa propre mécanique (constructeur de ligne) ; certains outils
+  // passent par un QCM (quizzes.ts) ; les autres par le moteur de classement.
+  const isPlayable = (t: AcademyToolId) => Boolean(challengeSet(t)) || Boolean(quizSet(t)) || t === 'amdec';
   const taglineOf = (t: AcademyToolId) =>
-    challengeSet(t)?.tagline ?? (t === 'amdec' ? AMDEC_BUILDER.tagline : 'Mini-jeu en préparation.');
+    challengeSet(t)?.tagline ?? quizSet(t)?.tagline ?? (t === 'amdec' ? AMDEC_BUILDER.tagline : 'Mini-jeu en préparation.');
   const playable = ACADEMY_TOOL_ORDER.filter(isPlayable);
   const mastered = playable.filter((t) => progress[t]?.passed).length;
 
@@ -68,6 +70,19 @@ export function AcademyPanel() {
             key={set.id}
             set={set}
             onFinish={(score, total, passed) => record(set.id, score, total, passed)}
+            onExit={() => setActive(null)}
+          />
+        </div>
+      );
+    }
+    const quiz = quizSet(active);
+    if (quiz) {
+      return (
+        <div className="page">
+          <QuizGame
+            key={quiz.id}
+            set={quiz}
+            onFinish={(score, total, passed) => record(quiz.id, score, total, passed)}
             onExit={() => setActive(null)}
           />
         </div>

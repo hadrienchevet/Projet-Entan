@@ -2035,6 +2035,18 @@ a.link:hover { text-decoration: underline; }
 .acad-bucket.wrong { box-shadow: 0 0 0 2px var(--danger); }
 .acad-bucket.dim { opacity: 0.45; }
 
+.acad-choices { display: flex; flex-direction: column; gap: 8px; }
+.acad-choice { display: flex; align-items: center; gap: 12px; text-align: left; font: inherit; padding: 12px 14px; background: var(--surface-2); color: var(--text); border: 1px solid transparent; border-radius: var(--radius); cursor: pointer; transition: transform .08s, box-shadow .12s, opacity .12s, background .12s; }
+.acad-choice:hover:not(:disabled) { background: var(--stripe); transform: translateY(-1px); }
+.acad-choice:disabled { cursor: default; }
+.acad-choice-letter { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+.acad-choice-label { font-size: 14px; line-height: 1.4; }
+.acad-choice.correct { box-shadow: 0 0 0 2px var(--success); background: var(--success-soft); }
+.acad-choice.correct .acad-choice-letter { background: var(--success); color: #fff; }
+.acad-choice.wrong { box-shadow: 0 0 0 2px var(--danger); background: var(--danger-soft); }
+.acad-choice.wrong .acad-choice-letter { background: var(--danger); color: #fff; }
+.acad-choice.dim { opacity: 0.45; }
+
 .acad-feedback { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding: 12px 14px; border-radius: var(--radius); font-size: 13.5px; line-height: 1.5; }
 .acad-feedback.ok { background: var(--success-soft); color: var(--success); }
 .acad-feedback.ko { background: var(--danger-soft); color: var(--danger); }
