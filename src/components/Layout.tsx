@@ -70,7 +70,7 @@ const NAV_RDP = [
 
 export function Layout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { projects, currentProjectId, setCurrentProject, userEmail, company, trialEndsAt } =
+  const { projects, currentProjectId, setCurrentProject, userEmail, company, trialEndsAt, isFounder } =
     useWorkspace();
   const currentProject = useCurrentProject();
   const [creating, setCreating] = useState(false);
@@ -210,17 +210,27 @@ export function Layout({ children }: { children: ReactNode }) {
       </aside>
 
       <main className="main">
-        {trialDaysLeft !== null && trialDaysLeft >= 0 && (
-          <div className="trial-banner">
+        {isFounder ? (
+          <div className="trial-banner founder">
             <span>
               <IconStar />
-              Essai gratuit —{' '}
-              {trialDaysLeft <= 0
-                ? 'dernier jour'
-                : `${trialDaysLeft} jour${trialDaysLeft > 1 ? 's' : ''} restant${trialDaysLeft > 1 ? 's' : ''}`}
+              Accès fondateur · offert — merci de faire partie des premiers.
             </span>
-            <Link href="/abonnement" className="btn btn-sm">Activer mon siège</Link>
           </div>
+        ) : (
+          trialDaysLeft !== null &&
+          trialDaysLeft >= 0 && (
+            <div className="trial-banner">
+              <span>
+                <IconStar />
+                Essai gratuit —{' '}
+                {trialDaysLeft <= 0
+                  ? 'dernier jour'
+                  : `${trialDaysLeft} jour${trialDaysLeft > 1 ? 's' : ''} restant${trialDaysLeft > 1 ? 's' : ''}`}
+              </span>
+              <Link href="/abonnement" className="btn btn-sm">Activer mon siège</Link>
+            </div>
+          )
         )}
         {showEmptyState ? (
           <NoProjectEmptyState hasProjects={projects.length > 0} onCreate={() => setCreating(true)} />

@@ -213,6 +213,8 @@ interface WorkspaceState {
   hasSeat: boolean;
   /** Fin de l'essai gratuit (ISO) si l'accès repose sur l'essai, sinon null. */
   trialEndsAt: string | null;
+  /** Accès fondateur : early access offert, non expirant (fix-30). */
+  isFounder: boolean;
   /** Connecté, fonctionnalité dispo, mais pas de siège → écran clé. */
   needsSeat: boolean;
   refreshCompany: () => Promise<void>;
@@ -368,6 +370,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [seatLimitPrompt, setSeatLimitPrompt] = useState(false);
   const [hasSeat, setHasSeat] = useState(false);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
+  const [isFounder, setIsFounder] = useState(false);
   const [seatsInvited, setSeatsInvited] = useState(0);
   const [companyInvitations, setCompanyInvitations] = useState<CompanyInvitationRow[]>([]);
 
@@ -414,6 +417,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setSeatsInvited(0);
     setCompanyInvitations([]);
     setTrialEndsAt(null);
+    setIsFounder(false);
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -440,6 +444,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     // Fin d'essai (null si l'accès vient d'une clé/entreprise, ou si fix-20 non appliqué).
     const { data: trialEnd } = await supabase.rpc('trial_ends_at');
     setTrialEndsAt((trialEnd as string | null) ?? null);
+    // Accès fondateur (fix-30). RPC absente = false (tolérant).
+    const { data: founder } = await supabase.rpc('is_founder');
+    setIsFounder(founder === true);
     // La plus RÉCEMMENT rejointe fait foi (cohérent avec current_company_id() en
     // SQL) : si un compte a une organisation perso auto-créée (Phase 3) puis
     // rejoint une organisation via invitation, c'est celle-ci qu'il veut voir.
@@ -2057,6 +2064,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     companyActivated: company ? company.isComp || company.seats >= 1 : false,
     hasSeat,
     trialEndsAt,
+    isFounder,
     needsSeat: companyFeature && companyChecked && !!userId && !hasSeat,
     createCompany,
     inviteCompanyMember,

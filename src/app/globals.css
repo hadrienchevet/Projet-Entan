@@ -2129,3 +2129,4 @@ a.link:hover { text-decoration: underline; }
 .trial-banner svg { width: 15px; height: 15px; vertical-align: -2px; margin-right: 6px; }
 .trial-banner .btn { background: var(--accent); border-color: var(--accent); color: #fff; }
 .trial-banner .btn:hover { background: var(--accent-hover); }
+.trial-banner.founder { justify-content: center; text-align: center; background: var(--success-soft); color: var(--success); border-color: transparent; }
