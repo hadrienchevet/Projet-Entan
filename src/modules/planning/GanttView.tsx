@@ -13,6 +13,7 @@ import type { Action, Id } from '@/lib/types';
 import { addDaysISO, diffDays, formatDate, isOverdue, isoToDate, todayISO } from '@/lib/date';
 import { StatusBadge } from '@/components/Badges';
 import { IconCollapse, IconExpand, IconZoomIn, IconZoomOut } from '@/components/icons';
+import { useCursorPresence } from '@/lib/useCursorPresence';
 
 /**
  * Diagramme de Gantt : une barre par action, de la date de début (ou de
@@ -30,12 +31,21 @@ const LABEL_W = 230;
 const ROW_H = 52;
 
 interface Props {
+  projectId: Id;
   actions: Action[];
   onSelect: (a: Action) => void;
   responsibleName: (a: Action) => string;
   /** Crée une dépendance : `successorId` ne démarre qu'après la fin de `predecessorId`. */
   onLink: (predecessorId: Id, successorId: Id) => void;
   onUnlink: (predecessorId: Id, successorId: Id) => void;
+}
+
+/** Position sémantique (pas en pixels) : reconvertie avec le zoom/la géométrie LOCALE de chaque viewer. */
+interface CursorPayload {
+  dateISO: string;
+  fracInDay: number;
+  actionId: Id | null;
+  rowFracY: number;
 }
 
 /** Début de barre : date de début si cohérente, sinon l'échéance (barre d'un jour).
@@ -45,7 +55,8 @@ function barStart(a: Action): string {
   return a.startDate && a.startDate <= a.dueDate! ? a.startDate : a.dueDate!;
 }
 
-export function GanttView({ actions, onSelect, responsibleName, onLink, onUnlink }: Props) {
+export function GanttView({ projectId, actions, onSelect, responsibleName, onLink, onUnlink }: Props) {
+  const { others: remoteCursors, reportCursor } = useCursorPresence<CursorPayload>(projectId, 'gantt');
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [fullscreen, setFullscreen] = useState(false);
   /** Glisser de liaison en cours : point courant en coordonnées de la timeline. */
@@ -127,6 +138,25 @@ export function GanttView({ actions, onSelect, responsibleName, onLink, onUnlink
     });
     return m;
   }, [dated, start, dayW]);
+
+  /** Curseur en direct : coordonnées sémantiques (date + action la plus proche), pas des pixels bruts —
+   *  chaque viewer les reconvertit avec son propre zoom/filtres via `geo` au rendu. */
+  const handleCursorMove = (e: ReactMouseEvent) => {
+    const body = bodyRef.current;
+    if (!body) return;
+    const r = body.getBoundingClientRect();
+    const localX = e.clientX - r.left - LABEL_W;
+    const localY = e.clientY - r.top;
+    const dayIdx = localX / dayW;
+    const rowIndex = Math.floor(localY / ROW_H);
+    const nearest = dated[rowIndex];
+    reportCursor({
+      dateISO: addDaysISO(start, Math.floor(dayIdx)),
+      fracInDay: dayIdx - Math.floor(dayIdx),
+      actionId: nearest?.id ?? null,
+      rowFracY: nearest ? (localY - rowIndex * ROW_H) / ROW_H : 0.5,
+    });
+  };
 
   /* Liens affichables : prédécesseur et successeur tous deux positionnés. */
   const links = useMemo(() => {
@@ -310,7 +340,11 @@ export function GanttView({ actions, onSelect, responsibleName, onLink, onUnlink
           </div>
         </div>
 
-        <div className={`gantt-body${drag ? ' linking' : ''}`} ref={bodyRef}>
+        <div
+          className={`gantt-body${drag ? ' linking' : ''}`}
+          ref={bodyRef}
+          onMouseMove={handleCursorMove}
+        >
           {dated.map((a) => {
             const s = barStart(a);
             const startIdx = diffDays(start, s);
@@ -429,6 +463,50 @@ export function GanttView({ actions, onSelect, responsibleName, onLink, onUnlink
               />
             )}
           </svg>
+
+          {/* Curseurs des autres membres présents — reconvertis avec la géométrie LOCALE
+              (zoom + filtres de ce viewer) : masqués si l'action référencée n'est pas visible ici. */}
+          {remoteCursors.map((c) => {
+            if (!c.payload) return null;
+            const { dateISO, fracInDay, actionId, rowFracY } = c.payload;
+            if (!actionId || !geo.has(actionId)) return null;
+            const x = (diffDays(start, dateISO) + fracInDay) * dayW;
+            const g = geo.get(actionId)!;
+            const y = g.y - ROW_H / 2 + rowFracY * ROW_H;
+            return (
+              <div
+                key={c.userId}
+                className="gantt-cursor"
+                style={{
+                  position: 'absolute',
+                  left: LABEL_W + x,
+                  top: y,
+                  pointerEvents: 'none',
+                  zIndex: 20,
+                  transition: 'left 100ms linear, top 100ms linear',
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16">
+                  <path d="M1 1l5.5 13 2-5.5L14 6.5 1 1z" fill={c.color} />
+                </svg>
+                <span
+                  style={{
+                    background: c.color,
+                    color: '#fff',
+                    fontSize: 11,
+                    padding: '1px 6px',
+                    borderRadius: 4,
+                    whiteSpace: 'nowrap',
+                    marginLeft: 14,
+                    marginTop: -4,
+                    display: 'inline-block',
+                  }}
+                >
+                  {c.name}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 

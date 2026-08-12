@@ -97,6 +97,7 @@ export function PlanningPage() {
       )}
       {view === 'gantt' && (
         <GanttView
+          projectId={project.id}
           actions={filtered}
           onSelect={setEditing}
           responsibleName={memberFor}
