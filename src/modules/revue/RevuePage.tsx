@@ -755,10 +755,7 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
     return (
       <div className="revue-presenter">
         <div className="revue-presenter-topbar">
-          <div>
-            <strong>{revue.title}</strong>
-            <span className="row-sub"> · {SECTIONS[activeSection].label}</span>
-          </div>
+          <span className="revue-live">{revue.title}</span>
           <div className="header-actions">
             <button className="btn btn-sm" onClick={() => setPresenterMode(false)}>
               Quitter la présentation
@@ -771,13 +768,15 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
 
         <div className="revue-presenter-body">
           <nav className="revue-toc">
+            <div className="revue-toc-label">Ordre du jour</div>
             {SECTIONS.map((s, i) => (
               <button
                 key={s.key}
-                className={`revue-toc-item${i === activeSection ? ' active' : ''}`}
+                className={`revue-toc-item${i === activeSection ? ' active' : ''}${i < activeSection ? ' done' : ''}`}
                 onClick={() => setActiveSection(i)}
               >
-                <span>{s.label}</span>
+                <span className="revue-toc-step">{i + 1}</span>
+                <span className="revue-toc-name">{s.label}</span>
                 {sectionBadges[i].value > 0 && (
                   <span className={`badge ${sectionBadges[i].tone}`}>{sectionBadges[i].value}</span>
                 )}
@@ -785,9 +784,11 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
             ))}
           </nav>
 
-          {/* `key` : remonte le contenu à chaque section → l'animation d'entrée rejoue. */}
-          <div className="revue-slide" key={activeSection}>
-            {blocks[activeSection]}
+          <div className="revue-slide">
+            {/* `key` : remonte le contenu à chaque section → l'animation d'entrée rejoue. */}
+            <div className="revue-slide-inner" key={activeSection}>
+              {blocks[activeSection]}
+            </div>
           </div>
         </div>
 
@@ -799,8 +800,10 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
           >
             ← Précédent
           </button>
-          <span className="row-sub">
-            {activeSection + 1} / {SECTIONS.length}
+          <span className="revue-presenter-dots" aria-hidden="true">
+            {SECTIONS.map((s, i) => (
+              <i key={s.key} className={i === activeSection ? 'on' : ''} />
+            ))}
           </span>
           <button
             className="btn btn-sm"
