@@ -41,7 +41,7 @@ function Quadrant({ items, q, last }: { items: SwotItem[]; q: (typeof SWOT_QUADR
 function SwotReport({ projectName, items }: { projectName: string; items: SwotItem[] }) {
   const [forces, faiblesses, opportunites, menaces] = SWOT_QUADRANTS;
   return (
-    <Document title={`SWOT - ${projectName}`} author="Projet Entan">
+    <Document title={`SWOT - ${projectName}`} author="ENTAN">
       <Page size="A4" style={ps.page}>
         <PdfHeader
           title={`SWOT — ${projectName}`}

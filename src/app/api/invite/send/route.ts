@@ -22,14 +22,14 @@ function renderHtml(
   <div style="max-width:480px;margin:0 auto;padding:32px 24px;">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
       <tr>
-        <td valign="middle"><img src="${logo}" width="36" height="36" alt="Projet Entan" style="display:block;border:0;border-radius:9px;" /></td>
-        <td valign="middle" style="padding-left:10px;"><strong style="font-size:16px;color:#1f1e1b;">Projet Entan</strong></td>
+        <td valign="middle"><img src="${logo}" width="36" height="36" alt="ENTAN" style="display:block;border:0;border-radius:9px;" /></td>
+        <td valign="middle" style="padding-left:10px;"><strong style="font-size:16px;color:#1f1e1b;">ENTAN</strong></td>
       </tr>
     </table>
     <p style="font-size:15px;line-height:1.6;color:#5d5c56;">Bonjour,</p>
     <p style="font-size:15px;line-height:1.6;color:#5d5c56;">
       <strong>${inviterName}</strong> vous invite à rejoindre l'organisation
-      « ${orgName} » sur Projet Entan, en tant que <strong>${roleLabel}</strong>.
+      « ${orgName} » sur ENTAN, en tant que <strong>${roleLabel}</strong>.
     </p>
     <p style="margin:24px 0;">
       <a href="${joinUrl}" style="display:inline-block;background:#c15f3c;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">Rejoindre l'organisation</a>
@@ -37,7 +37,7 @@ function renderHtml(
     <p style="font-size:12.5px;color:#9d9a8f;line-height:1.6;margin-top:24px;">
       Ou copiez ce lien : <br /><span style="color:#5d5c56;">${joinUrl}</span>
     </p>
-    <p style="font-size:12.5px;color:#9d9a8f;margin-top:16px;">Vous recevez cet email car quelqu'un vous a invité·e sur Projet Entan. Si vous ne vous attendiez pas à cette invitation, ignorez ce message.</p>
+    <p style="font-size:12.5px;color:#9d9a8f;margin-top:16px;">Vous recevez cet email car quelqu'un vous a invité·e sur ENTAN. Si vous ne vous attendiez pas à cette invitation, ignorez ce message.</p>
   </div>
 </body></html>`;
 }
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
     body: JSON.stringify({
       from,
       to: [inv.email as string],
-      subject: `${inviterName} vous invite dans « ${orgName} » sur Projet Entan`,
+      subject: `${inviterName} vous invite dans « ${orgName} » sur ENTAN`,
       html: renderHtml(orgName, inviterName, roleLabel, joinUrl, siteUrl),
     }),
   });

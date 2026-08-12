@@ -37,28 +37,28 @@ function content(actionType: string): { subject: string; intro: string; cta: str
   switch (actionType) {
     case 'recovery':
       return {
-        subject: 'Réinitialisez votre mot de passe — Projet Entan',
+        subject: 'Réinitialisez votre mot de passe — ENTAN',
         intro: 'Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le bouton ci-dessous pour en définir un nouveau.',
         cta: 'Choisir un nouveau mot de passe',
       };
     case 'magiclink':
       return {
-        subject: 'Votre lien de connexion — Projet Entan',
-        intro: 'Voici votre lien de connexion à Projet Entan.',
+        subject: 'Votre lien de connexion — ENTAN',
+        intro: 'Voici votre lien de connexion à ENTAN.',
         cta: 'Se connecter',
       };
     case 'email_change':
     case 'email_change_new':
       return {
-        subject: 'Confirmez votre nouvelle adresse email — Projet Entan',
+        subject: 'Confirmez votre nouvelle adresse email — ENTAN',
         intro: 'Confirmez votre nouvelle adresse email pour la rattacher à votre compte.',
         cta: 'Confirmer mon adresse',
       };
     case 'signup':
     default:
       return {
-        subject: 'Confirmez votre adresse email — Projet Entan',
-        intro: 'Bienvenue sur Projet Entan ! Confirmez votre adresse email pour activer votre compte.',
+        subject: 'Confirmez votre adresse email — ENTAN',
+        intro: 'Bienvenue sur ENTAN ! Confirmez votre adresse email pour activer votre compte.',
         cta: 'Confirmer mon adresse',
       };
   }
@@ -71,9 +71,9 @@ function renderHtml(intro: string, cta: string, link: string): string {
   <div style="max-width:480px;margin:0 auto;padding:32px 24px;">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
       <tr>
-        <td valign="middle"><img src="${logoUrl}" width="36" height="36" alt="Projet Entan" style="display:block;border:0;border-radius:9px;" /></td>
+        <td valign="middle"><img src="${logoUrl}" width="36" height="36" alt="ENTAN" style="display:block;border:0;border-radius:9px;" /></td>
         <td valign="middle" style="padding-left:10px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-          <strong style="font-size:16px;color:#1f1e1b;">Projet Entan</strong>
+          <strong style="font-size:16px;color:#1f1e1b;">ENTAN</strong>
         </td>
       </tr>
     </table>

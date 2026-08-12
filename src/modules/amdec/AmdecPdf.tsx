@@ -111,7 +111,7 @@ const Header = ({ title, subtitle }: { title: string; subtitle: string }) => (
 
 const Footer = () => (
   <View style={styles.footer} fixed>
-    <Text>Généré par Projet Entan — projetentan.fr</Text>
+    <Text>Généré par ENTAN — projetentan.fr</Text>
     <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
   </View>
 );
@@ -186,7 +186,7 @@ function AmdecReport({
   );
 
   return (
-    <Document title={`AMDEC - ${projectName}`} author="Projet Entan">
+    <Document title={`AMDEC - ${projectName}`} author="ENTAN">
       {opts.table && (
         <Page size="A4" orientation="landscape" style={styles.page}>
           <Header title={`Rapport AMDEC — ${projectName}`} subtitle={subtitle} />

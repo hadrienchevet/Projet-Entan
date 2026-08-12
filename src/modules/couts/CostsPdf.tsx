@@ -22,7 +22,7 @@ function CostsReport({ projectName, items }: { projectName: string; items: CostI
   const variance = actual - planned;
   const consumption = planned > 0 ? Math.round((actual / planned) * 100) : 0;
   return (
-    <Document title={`Couts - ${projectName}`} author="Projet Entan">
+    <Document title={`Couts - ${projectName}`} author="ENTAN">
       <Page size="A4" style={ps.page}>
         <PdfHeader title={`Suivi des coûts — ${projectName}`} subtitle={`Budget prévu vs coût réel · ${todayFr()}`} />
         <View style={ps.statRow}>

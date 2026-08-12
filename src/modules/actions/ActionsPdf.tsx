@@ -26,7 +26,7 @@ function namesOf(members: Member[], ids: string[]): string {
 function ActionsReport({ projectName, actions, members }: { projectName: string; actions: Action[]; members: Member[] }) {
   const count = (s: Action['status']) => actions.filter((a) => a.status === s).length;
   return (
-    <Document title={`Plan d'actions - ${projectName}`} author="Projet Entan">
+    <Document title={`Plan d'actions - ${projectName}`} author="ENTAN">
       <Page size="A4" orientation="landscape" style={ps.page}>
         <PdfHeader title={`Plan d'actions — ${projectName}`} subtitle={`Suivi RACI des actions · ${todayFr()}`} />
         <View style={ps.statRow}>

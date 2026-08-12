@@ -266,7 +266,7 @@ export function RevueCrView({ revue, projectName, onClose }: { revue: Revue; pro
           </Section>
 
           <p className="revue-cr-foot">
-            Compte-rendu généré par Projet Entan · document figé à la clôture, le {frDateTime(revue.closedAt)}.
+            Compte-rendu généré par ENTAN · document figé à la clôture, le {frDateTime(revue.closedAt)}.
           </p>
         </div>
       </div>

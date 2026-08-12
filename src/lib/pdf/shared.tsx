@@ -50,7 +50,7 @@ export const PdfHeader = ({ title, subtitle }: { title: string; subtitle?: strin
 
 export const PdfFooter = () => (
   <View style={ps.footer} fixed>
-    <Text>Généré par Projet Entan — projetentan.fr</Text>
+    <Text>Généré par ENTAN — projetentan.fr</Text>
     <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
   </View>
 );

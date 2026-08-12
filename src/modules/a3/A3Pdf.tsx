@@ -48,7 +48,7 @@ function A3Doc({
   const nameOf = (id?: string) => (id ? members.find((m) => m.id === id)?.name ?? '—' : '—');
 
   return (
-    <Document title={`Charte A3 - ${projectName}`} author="Projet Entan">
+    <Document title={`Charte A3 - ${projectName}`} author="ENTAN">
       <Page size="A4" style={ps.page}>
         <PdfHeader title={`Charte A3 — ${projectName}`} subtitle={`Cadrage du problème, analyse et plan d'action · ${todayFr()}`} />
 

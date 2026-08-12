@@ -74,8 +74,8 @@ function renderHtml(
   <div style="max-width:620px;margin:0 auto;padding:32px 24px;">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
       <tr>
-        <td valign="middle"><img src="${logo}" width="36" height="36" alt="Projet Entan" style="display:block;border:0;border-radius:9px;" /></td>
-        <td valign="middle" style="padding-left:10px;"><strong style="font-size:16px;">Projet Entan</strong></td>
+        <td valign="middle"><img src="${logo}" width="36" height="36" alt="ENTAN" style="display:block;border:0;border-radius:9px;" /></td>
+        <td valign="middle" style="padding-left:10px;"><strong style="font-size:16px;">ENTAN</strong></td>
       </tr>
     </table>
 
