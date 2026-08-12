@@ -51,6 +51,15 @@ export const IconPlanning = () => (
   </svg>
 );
 
+export const IconMyActions = () => (
+  <svg {...base}>
+    <circle cx="8" cy="7" r="3" />
+    <path d="M3 20c.6-3.2 2.6-5 5-5s4.4 1.8 5 5" />
+    <path d="M15 8.5 16.5 10 20 6" />
+    <path d="M15 15.5 16.5 17 20 13" />
+  </svg>
+);
+
 export const IconRevue = () => (
   <svg {...base}>
     <rect x="3" y="4" width="18" height="12" rx="1.5" />

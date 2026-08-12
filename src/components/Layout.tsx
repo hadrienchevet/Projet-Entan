@@ -22,6 +22,7 @@ import {
   IconIshikawa,
   IconLayers,
   IconLogout,
+  IconMyActions,
   IconPlanning,
   IconPlus,
   IconRaci,
@@ -80,7 +81,7 @@ export function Layout({ children }: { children: ReactNode }) {
   // vides) et on met en avant la création de projet. Les pages hors-projet
   // (mes projets, compte, organisation, abonnement, aide) restent accessibles.
   const hasProject = !!currentProject;
-  const PROJECT_OPTIONAL_ROUTES = ['/projets', '/compte', '/equipe', '/abonnement', '/help'];
+  const PROJECT_OPTIONAL_ROUTES = ['/projets', '/compte', '/equipe', '/abonnement', '/help', '/mes-actions'];
   const showEmptyState = !hasProject && !PROJECT_OPTIONAL_ROUTES.includes(pathname);
 
   // Essai gratuit en cours → bandeau « J-X » (null si accès par clé/entreprise).
@@ -160,6 +161,10 @@ export function Layout({ children }: { children: ReactNode }) {
         )}
 
         <div className="sidebar-footer">
+          <Link href="/mes-actions" className={`nav-link${pathname === '/mes-actions' ? ' active' : ''}`}>
+            <IconMyActions />
+            Mes actions
+          </Link>
           <Link href="/equipe" className={`nav-link${pathname === '/equipe' ? ' active' : ''}`}>
             <IconUsers />
             Organisation
