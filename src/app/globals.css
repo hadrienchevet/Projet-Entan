@@ -1024,7 +1024,9 @@ a.link:hover { text-decoration: underline; }
 
 /* --- Dashboard (mêmes composants que les autres modules) ------------------------- */
 
-.page-header .header-actions { display: flex; align-items: center; gap: 10px; }
+/* Rangée de boutons d'en-tête — vaut partout (en-tête de page, barre du
+   présentateur de revue, du compte-rendu…) : sans ça les boutons se collent. */
+.header-actions { display: flex; align-items: center; gap: 10px; }
 
 .card-title-group { display: flex; align-items: center; gap: 8px; }
 
