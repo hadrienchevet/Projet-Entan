@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   memberName,
@@ -486,6 +486,14 @@ export function RevuePage() {
 
 const STATUS_ORDER: ActionStatus[] = ['todo', 'in_progress', 'done'];
 
+/** Sommaire du mode présentateur : une section = un sujet déroulé en réunion. */
+const SECTIONS = [
+  { key: 'synthese', label: 'Synthèse' },
+  { key: 'actions', label: 'Actions' },
+  { key: 'risques', label: 'Risques' },
+  { key: 'decisions', label: 'Décisions' },
+] as const;
+
 function actionRank(a: Action, today: string): number {
   if (a.status !== 'done' && a.dueDate && a.dueDate < today) return 0; // en retard d'abord
   if (a.status === 'in_progress') return 1;
@@ -505,6 +513,33 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
   const [newTitle, setNewTitle] = useState('');
   const [newResp, setNewResp] = useState('');
   const [newDue, setNewDue] = useState('');
+  /** Plein écran « présentateur » par défaut : une revue s'ouvre en mode réunion. */
+  const [presenterMode, setPresenterMode] = useState(true);
+  const [activeSection, setActiveSection] = useState(0);
+
+  useEffect(() => {
+    if (!presenterMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      // Une modale ouverte (fiche action) garde la priorité sur le clavier.
+      if (document.querySelector('.modal-overlay')) return;
+      if (e.key === 'Escape') {
+        setPresenterMode(false);
+        return;
+      }
+      // Les flèches servent à la saisie quand on écrit une action / une décision.
+      const el = document.activeElement;
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return;
+      if (e.key === 'ArrowRight') setActiveSection((i) => Math.min(SECTIONS.length - 1, i + 1));
+      if (e.key === 'ArrowLeft') setActiveSection((i) => Math.max(0, i - 1));
+    };
+    window.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [presenterMode]);
 
   if (!project) return null;
 
@@ -549,26 +584,22 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
     onClosed(revue.id);
   };
 
-  return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>{revue.title}</h1>
-          <p className="subtitle">Revue en cours — mets à jour en direct, puis clôture pour générer le compte-rendu.</p>
-        </div>
-        <div className="header-actions">
-          <button
-            className="btn btn-danger"
-            onClick={() => {
-              if (window.confirm('Clôturer la revue et générer le compte-rendu ?')) void close();
-            }}
-          >
-            Clôturer la revue
-          </button>
-        </div>
-      </div>
+  const confirmClose = () => {
+    if (window.confirm('Clôturer la revue et générer le compte-rendu ?')) void close();
+  };
 
-      <AttentionsPanel items={computeAttentions(actions, amdecs, project, last)} />
+  const attentions = computeAttentions(actions, amdecs, project, last);
+  /* Compteurs du sommaire : dérivés des données déjà chargées, rien de nouveau. */
+  const sectionBadges = [
+    { value: attentions.filter((i) => i.severity === 'high').length, tone: 'overdue' },
+    { value: delta.late.length, tone: 'overdue' },
+    { value: amdecs.filter((r) => criticalityLevel(criticality(r)) === 'high').length, tone: 'crit-medium' },
+    { value: decisions.length, tone: '' },
+  ];
+
+  const syntheseBlock = (
+    <>
+      <AttentionsPanel items={attentions} />
 
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-header">
@@ -579,7 +610,11 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
           <DeltaChips delta={delta} hasPrevious={!!last} />
         </div>
       </div>
+    </>
+  );
 
+  const actionsBlock = (
+    <>
       {/* Actions — retards d'abord */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-header">
@@ -654,7 +689,11 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
           </div>
         )}
       </div>
+    </>
+  );
 
+  const risquesBlock = (
+    <>
       {/* Risques — arbre risque → actions correctives, réduction de la criticité */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-header">
@@ -663,7 +702,11 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
         </div>
         <RisksTree amdecs={amdecs} actions={actions} project={project} cutoff={cutoff} />
       </div>
+    </>
+  );
 
+  const decisionsBlock = (
+    <>
       {/* Décisions captées */}
       <div className="card">
         <div className="card-header">
@@ -703,6 +746,95 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
           </button>
         </div>
       </div>
+    </>
+  );
+
+  const blocks = [syntheseBlock, actionsBlock, risquesBlock, decisionsBlock];
+
+  if (presenterMode) {
+    return (
+      <div className="revue-presenter">
+        <div className="revue-presenter-topbar">
+          <div>
+            <strong>{revue.title}</strong>
+            <span className="row-sub"> · {SECTIONS[activeSection].label}</span>
+          </div>
+          <div className="header-actions">
+            <button className="btn btn-sm" onClick={() => setPresenterMode(false)}>
+              Quitter la présentation
+            </button>
+            <button className="btn btn-danger btn-sm" onClick={confirmClose}>
+              Clôturer la revue
+            </button>
+          </div>
+        </div>
+
+        <div className="revue-presenter-body">
+          <nav className="revue-toc">
+            {SECTIONS.map((s, i) => (
+              <button
+                key={s.key}
+                className={`revue-toc-item${i === activeSection ? ' active' : ''}`}
+                onClick={() => setActiveSection(i)}
+              >
+                <span>{s.label}</span>
+                {sectionBadges[i].value > 0 && (
+                  <span className={`badge ${sectionBadges[i].tone}`}>{sectionBadges[i].value}</span>
+                )}
+              </button>
+            ))}
+          </nav>
+
+          {/* `key` : remonte le contenu à chaque section → l'animation d'entrée rejoue. */}
+          <div className="revue-slide" key={activeSection}>
+            {blocks[activeSection]}
+          </div>
+        </div>
+
+        <div className="revue-presenter-nav">
+          <button
+            className="btn btn-sm"
+            disabled={activeSection === 0}
+            onClick={() => setActiveSection((i) => Math.max(0, i - 1))}
+          >
+            ← Précédent
+          </button>
+          <span className="row-sub">
+            {activeSection + 1} / {SECTIONS.length}
+          </span>
+          <button
+            className="btn btn-sm"
+            disabled={activeSection === SECTIONS.length - 1}
+            onClick={() => setActiveSection((i) => Math.min(SECTIONS.length - 1, i + 1))}
+          >
+            Suivant →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h1>{revue.title}</h1>
+          <p className="subtitle">Revue en cours — mets à jour en direct, puis clôture pour générer le compte-rendu.</p>
+        </div>
+        <div className="header-actions">
+          <button className="btn" onClick={() => { setActiveSection(0); setPresenterMode(true); }}>
+            Reprendre la présentation
+          </button>
+          <button className="btn btn-danger" onClick={confirmClose}>
+            Clôturer la revue
+          </button>
+        </div>
+      </div>
+
+      {syntheseBlock}
+      {actionsBlock}
+      {risquesBlock}
+      {decisionsBlock}
     </div>
   );
 }
