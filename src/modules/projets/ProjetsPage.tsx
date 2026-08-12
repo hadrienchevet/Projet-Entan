@@ -71,7 +71,7 @@ export function ProjetsPage() {
       <div className="onboarding">
         <div className="onboarding-hero">
           <Image src="/entan-logo-t.png" alt="" width={64} height={64} priority />
-          <h1>Bienvenue dans Projet Entan</h1>
+          <h1>Bienvenue dans ENTAN</h1>
           <p>
             L'outil tout-en-un pour le pilotage technique de vos projets industriels.
             Centralisez vos données pour une vision claire et une exécution sans faille.

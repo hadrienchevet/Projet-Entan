@@ -271,7 +271,7 @@ export function HelpPage({
         <div className="card">
           <div className="card-body">
             <h2 style={{ marginBottom: 4 }}>Visite guidée en vidéo</h2>
-            <p className="lead">Une vue d’ensemble de Projet Entan en quelques minutes.</p>
+            <p className="lead">Une vue d’ensemble d’ENTAN en quelques minutes.</p>
             <div
               style={{
                 aspectRatio: '16/9',
@@ -313,7 +313,7 @@ export function HelpPage({
             Mener un projet industriel, c’est jongler avec quatre exigences à la fois : <strong>cadrer</strong>{' '}
             la situation, <strong>répartir</strong> clairement les responsabilités, <strong>anticiper</strong>{' '}
             les risques, puis <strong>exécuter</strong> en tenant les délais et le budget. Chaque outil
-            ci-dessous répond à l’une de ces exigences. La force de Projet Entan, c’est qu’ils ne sont pas
+            ci-dessous répond à l’une de ces exigences. La force d’ENTAN, c’est qu’ils ne sont pas
             cloisonnés : ils partagent un <strong>modèle de données unique</strong>, où chaque information n’est
             saisie qu’une seule fois.
           </p>
@@ -414,7 +414,7 @@ export function HelpPage({
             Et la résolution de problèmes (RDP) ?
           </h2>
           <p className="lead" style={{ marginBottom: 0 }}>
-            Au-delà de la gestion de projet, Projet Entan propose un second mode : la{' '}
+            Au-delà de la gestion de projet, ENTAN propose un second mode : la{' '}
             <strong>Résolution de Problèmes</strong>, une démarche structurée en 7 phases (sujet, QQOQCP,
             Ishikawa 5M, 5 Pourquoi, matrice de décision, PDCA, standardisation). Quand un projet bute sur un
             problème de fond, on bascule en mode RDP pour le traiter à la racine plutôt qu’en surface.

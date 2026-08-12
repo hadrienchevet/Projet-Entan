@@ -94,7 +94,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <aside className="sidebar">
         <div className="sidebar-brand">
           <Image src="/entan-logo-t.png" alt="" width={24} height={24} />
-          Projet Entan
+          ENTAN
         </div>
 
         {hasProject ? (

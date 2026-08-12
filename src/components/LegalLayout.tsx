@@ -27,7 +27,7 @@ export function LegalLayout({ title, children }: { title: string; children: Reac
       <div className="legal-inner">
         <div className="legal-top">
           <Link href="/" className="legal-brand">
-            <Image src="/entan-logo-t.png" alt="" width={28} height={28} /> Projet Entan
+            <Image src="/entan-logo-t.png" alt="" width={28} height={28} /> ENTAN
           </Link>
           <nav>
             <Link href="/cgv">CGV</Link>

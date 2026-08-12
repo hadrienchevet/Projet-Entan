@@ -173,7 +173,7 @@ function LoginForm() {
       <div className="card auth-card">
         <div className="auth-brand">
           <Image src="/entan-logo-t.png" alt="" width={44} height={44} priority />
-          <h1>Projet Entan</h1>
+          <h1>ENTAN</h1>
           <p>
             Pilotez vos projets industriels : gestion de projet ou résolution de problèmes — en
             équipe et en temps réel.

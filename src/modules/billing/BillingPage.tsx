@@ -64,7 +64,7 @@ export function BillingPage() {
             ? 'Votre accès est actif.'
             : trialOver
               ? 'Votre essai gratuit de 14 jours est terminé. Activez votre siège avec une clé d’accès (l’abonnement en ligne arrivera bientôt).'
-              : 'Pour accéder à Projet Entan, activez votre siège avec votre clé d’accès (1 clé = 1 siège).'}
+              : 'Pour accéder à ENTAN, activez votre siège avec votre clé d’accès (1 clé = 1 siège).'}
         </p>
       </div>
 
