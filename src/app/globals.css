@@ -2211,26 +2211,72 @@ a.link:hover { text-decoration: underline; }
 .revue-toc-item.done .revue-toc-step { background: var(--success-soft); color: var(--success); }
 .revue-toc-item .revue-toc-name { flex: 1; }
 
+/* Durée de réunion + repère de la revue précédente, dans la barre du haut. */
+.revue-presenter-topbar .revue-meta {
+  display: flex; align-items: center; gap: 14px; margin-left: 16px;
+  font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums;
+}
+.revue-presenter-topbar .revue-timer { display: inline-flex; align-items: center; gap: 6px; }
+
 /* Scène : le contenu d'un sujet, centré et aéré. */
 .revue-slide { flex: 1; overflow-y: auto; padding: 40px 48px 56px; }
 .revue-slide-inner { max-width: 1040px; margin: 0 auto; animation: fadeInUp 0.35s ease-out both; }
 
-/* Les cartes deviennent des blocs de scène : plus de chrome empilé, du souffle.
-   Le titre du 1er bloc fait office de titre de scène (pas de doublon avec le
-   sommaire), les blocs suivants sont des sous-parties. */
+/* Titre de scène + accroche chiffrée (le chiffre qui compte, en clair). */
+.revue-slide-head { margin-bottom: 24px; }
+.revue-slide-head h2 {
+  font-family: var(--font-serif); font-size: 29px; font-weight: 600;
+  letter-spacing: -0.02em; line-height: 1.15;
+}
+.revue-slide-head p { color: var(--text-muted); font-size: 15px; margin-top: 7px; }
+
+/* Les cartes deviennent des blocs de scène : plus de chrome empilé, du souffle. */
 .revue-slide .card { border: none; box-shadow: none; background: transparent; margin-bottom: 34px; }
 .revue-slide .card:last-child { margin-bottom: 0; }
 .revue-slide .card > .card-header {
   padding: 0 4px 14px; background: transparent; align-items: baseline;
   border-bottom: 1px solid var(--border-strong);
 }
-.revue-slide .card:first-child > .card-header strong {
-  font-family: var(--font-serif); font-size: 29px; font-weight: 600;
-  letter-spacing: -0.02em; line-height: 1.15;
-}
-.revue-slide .card:not(:first-child) > .card-header strong { font-size: 18px; font-weight: 600; }
+.revue-slide .card > .card-header strong { font-size: 18px; font-weight: 600; }
 .revue-slide .card > .card-header .row-sub { font-size: 14px; color: var(--text-muted); }
 .revue-slide .card > .card-body { padding: 18px 4px 0; }
+
+/* Bandeau de chiffres en tête de scène : les stat-cards gardent leur surface
+   (la règle « cartes aplaties » ci-dessus ne doit pas les vider). */
+.revue-slide .kpi-row { margin-bottom: 26px; }
+.revue-slide .kpi-row > .card {
+  background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow);
+  margin-bottom: 0; padding: 16px 14px; gap: 4px;
+}
+.revue-slide .kpi-row .stat-value { font-size: 30px; }
+.revue-slide .kpi-row .stat-label { font-size: 12.5px; }
+/* Ligne de tendance sous le chiffre (ex. « +8 pts depuis le 29 juil. »). */
+.revue-stat-sub { font-size: 11.5px; font-weight: 500; color: var(--text-muted); }
+.revue-stat-sub.up { color: var(--success); }
+.revue-stat-sub.down { color: var(--danger); }
+
+/* Frise d'avancement en tête de scène. */
+.revue-slide .progress-card {
+  background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow);
+  padding: 16px 18px; margin-bottom: 30px;
+}
+.revue-slide .frise { height: 16px; }
+.revue-slide .frise-legend { font-size: 13px; }
+
+/* Groupes d'actions (en retard / cette semaine / …) : donne le rythme de la revue. */
+.revue-group { margin-top: 22px; }
+.revue-group:first-of-type { margin-top: 10px; }
+.revue-group-head {
+  display: flex; align-items: center; gap: 9px; padding: 0 4px 8px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--text-muted);
+}
+.revue-group-head .revue-group-count {
+  font-variant-numeric: tabular-nums; background: var(--surface-2);
+  color: var(--text-secondary); border-radius: 99px; padding: 1px 8px; font-size: 11px;
+}
+.revue-group.urgent .revue-group-head { color: var(--danger); }
+.revue-group.urgent .revue-group-count { background: var(--danger-soft); color: var(--danger); }
 
 /* Échelle « projeté » : lisible depuis le fond de la salle. */
 .revue-slide .list-row { padding: 15px 4px; gap: 16px; }

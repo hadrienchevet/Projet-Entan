@@ -17,6 +17,7 @@ import { todayISO, diffDays, formatDate, isOverdue } from '@/lib/date';
 import { Modal } from '@/components/Modal';
 import { CriticalityBadge } from '@/components/Badges';
 import { IconPlus, IconTrash } from '@/components/icons';
+import { dayLabel } from '@/modules/dashboard/widgets/_util';
 
 /* --- Dates ------------------------------------------------------------------ */
 
@@ -494,13 +495,6 @@ const SECTIONS = [
   { key: 'decisions', label: 'Décisions' },
 ] as const;
 
-function actionRank(a: Action, today: string): number {
-  if (a.status !== 'done' && a.dueDate && a.dueDate < today) return 0; // en retard d'abord
-  if (a.status === 'in_progress') return 1;
-  if (a.status === 'todo') return 2;
-  return 3; // terminées en dernier
-}
-
 function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) => void }) {
   const project = useCurrentProject();
   const actions = useProjectActions(project?.id);
@@ -516,6 +510,13 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
   /** Plein écran « présentateur » par défaut : une revue s'ouvre en mode réunion. */
   const [presenterMode, setPresenterMode] = useState(true);
   const [activeSection, setActiveSection] = useState(0);
+  /** Horloge de réunion : rafraîchie chaque minute pour la durée écoulée. */
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     if (!presenterMode) return;
@@ -546,11 +547,12 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
   const today = todayStr();
   const last = lastClosedRevue(revues, revue.id);
   const delta = computeDelta(actions, amdecs, last);
-
-  const sortedActions = [...actions].sort(
-    (a, b) => actionRank(a, today) - actionRank(b, today) || (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999'),
-  );
   const cutoff = last?.closedAt;
+
+  const elapsedMin = Math.max(0, Math.round((now - new Date(revue.createdAt).getTime()) / 60_000));
+  const elapsedLabel =
+    elapsedMin < 60 ? `${elapsedMin} min` : `${Math.floor(elapsedMin / 60)} h ${String(elapsedMin % 60).padStart(2, '0')}`;
+  const sinceLast = last?.closedAt ? diffDays(last.closedAt.slice(0, 10), today) : null;
 
   const addQuick = () => {
     if (!newTitle.trim() || !newResp) return;
@@ -589,78 +591,214 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
   };
 
   const attentions = computeAttentions(actions, amdecs, project, last);
-  /* Compteurs du sommaire : dérivés des données déjà chargées, rien de nouveau. */
+
+  /* --- Statistiques de la revue (toutes dérivées des données déjà chargées) --- */
+  const open = actions.filter((a) => a.status !== 'done');
+  const doneCount = actions.length - open.length;
+  const inProgressCount = actions.filter((a) => a.status === 'in_progress').length;
+  const todoCount = actions.length - doneCount - inProgressCount;
+  const lateList = open
+    .filter((a) => a.dueDate && a.dueDate < today)
+    .sort((a, b) => a.dueDate!.localeCompare(b.dueDate!));
+  const weekList = open
+    .filter((a) => a.dueDate && a.dueDate >= today && diffDays(today, a.dueDate) <= 7)
+    .sort((a, b) => a.dueDate!.localeCompare(b.dueDate!));
+  const laterList = open
+    .filter((a) => a.dueDate && diffDays(today, a.dueDate) > 7)
+    .sort((a, b) => a.dueDate!.localeCompare(b.dueDate!));
+  const undatedList = open.filter((a) => !a.dueDate);
+  const avgLateDays = lateList.length
+    ? Math.round(lateList.reduce((s, a) => s + -diffDays(today, a.dueDate!), 0) / lateList.length)
+    : 0;
+
+  const effectiveCrit = (r: AmdecEntry) => residualCriticality(r) ?? criticality(r);
+  const criticalRisks = amdecs.filter((r) => criticalityLevel(effectiveCrit(r)) === 'high');
+  const risksNoPlan = amdecs.filter((r) => !actions.some((a) => a.amdecId === r.id));
+  const reducedRisks = amdecs.filter((r) => residualCriticality(r) !== null);
+  const avgReduction = reducedRisks.length
+    ? Math.round(
+        (reducedRisks.reduce((s, r) => s + (1 - residualCriticality(r)! / criticality(r)), 0) /
+          reducedRisks.length) *
+          100,
+      )
+    : 0;
+  const createdDuringRevue = actions.filter((a) => a.createdAt > revue.createdAt).length;
+
+  /* Compteurs du sommaire : ce qui mérite l'attention dans chaque section. */
   const sectionBadges = [
     { value: attentions.filter((i) => i.severity === 'high').length, tone: 'overdue' },
-    { value: delta.late.length, tone: 'overdue' },
-    { value: amdecs.filter((r) => criticalityLevel(criticality(r)) === 'high').length, tone: 'crit-medium' },
+    { value: lateList.length, tone: 'overdue' },
+    { value: criticalRisks.length, tone: 'crit-medium' },
     { value: decisions.length, tone: '' },
   ];
 
+  const pct = (n: number) => (actions.length ? `${(n / actions.length) * 100}%` : '0%');
+
   const syntheseBlock = (
     <>
-      <AttentionsPanel items={attentions} />
-
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-header">
-          <strong>Depuis la dernière revue</strong>
-          <span className="row-sub">{last ? frDate(last.closedAt) : 'Première revue'}</span>
+      <div className="kpi-row kpi-row-4">
+        <div className="card stat-card">
+          <div className="stat-value">{delta.planningPct} %</div>
+          <div className="stat-label">Avancement</div>
+          {delta.prevPct != null ? (
+            <div className={`revue-stat-sub ${delta.planningPct >= delta.prevPct ? 'up' : 'down'}`}>
+              {delta.planningPct >= delta.prevPct ? '+' : ''}
+              {delta.planningPct - delta.prevPct} pts depuis le {frDate(last?.closedAt)}
+            </div>
+          ) : (
+            <div className="revue-stat-sub">première revue</div>
+          )}
         </div>
-        <div className="card-body">
-          <DeltaChips delta={delta} hasPrevious={!!last} />
+        <div className="card stat-card">
+          <div className="stat-value">{delta.newlyDone.length}</div>
+          <div className="stat-label">Terminées depuis la dernière revue</div>
+          <div className="revue-stat-sub">sur {actions.length} action(s)</div>
+        </div>
+        <div className="card stat-card">
+          <div className="stat-value" style={lateList.length ? { color: 'var(--danger)' } : undefined}>
+            {lateList.length}
+          </div>
+          <div className="stat-label">En retard</div>
+          <div className={`revue-stat-sub${lateList.length ? ' down' : ''}`}>
+            {lateList.length ? `retard moyen ${avgLateDays} j` : 'aucun retard'}
+          </div>
+        </div>
+        <div className="card stat-card">
+          <div className="stat-value" style={criticalRisks.length ? { color: 'var(--danger)' } : undefined}>
+            {criticalRisks.length}
+          </div>
+          <div className="stat-label">Risque(s) critique(s)</div>
+          <div className="revue-stat-sub">sur {amdecs.length} risque(s) suivi(s)</div>
         </div>
       </div>
+
+      {actions.length > 0 && (
+        <div className="card progress-card">
+          <div className="progress-head">
+            <span className="progress-title">Avancement du plan d’action</span>
+            <span className="progress-pct">{delta.planningPct}&nbsp;%</span>
+          </div>
+          <div className="frise" role="img" aria-label={`${delta.planningPct}% terminé`}>
+            <span className="frise-seg done" style={{ width: pct(doneCount) }} />
+            <span className="frise-seg in_progress" style={{ width: pct(inProgressCount) }} />
+          </div>
+          <div className="frise-legend">
+            <span>
+              <i className="dot done" /> Terminée · {doneCount}
+            </span>
+            <span>
+              <i className="dot in_progress" /> En cours · {inProgressCount}
+            </span>
+            <span>
+              <i className="dot todo" /> À faire · {todoCount}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <AttentionsPanel items={attentions} />
     </>
   );
 
+  /** Une ligne d'action : échéance relative (J−6 / J+2) + statut modifiable en direct. */
+  const actionRow = (a: Action) => {
+    const isNew = cutoff ? a.createdAt > cutoff : false;
+    const late = isOverdue(a.dueDate, a.status);
+    const soon = !late && a.dueDate && diffDays(today, a.dueDate) <= 7;
+    return (
+      <div key={a.id} className="list-row" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="row-main" style={{ flex: 1 }}>
+          <div className="row-title" style={{ whiteSpace: 'normal' }}>
+            {a.title}
+            {isNew && (
+              <span className="badge source" style={{ marginLeft: 8 }}>
+                Nouveau
+              </span>
+            )}
+          </div>
+          <div className="row-sub">
+            {memberName(project, a.responsibleId)}
+            {a.dueDate ? ` · échéance ${frDate(a.dueDate)}` : ''}
+          </div>
+        </div>
+        {a.dueDate && a.status !== 'done' && (
+          <span className={`date-chip${late ? ' danger' : soon ? ' warning' : ''}`}>
+            {dayLabel(a.dueDate, today)}
+          </span>
+        )}
+        <div className="segmented">
+          {STATUS_ORDER.map((s) => (
+            <button key={s} className={a.status === s ? 'active' : ''} onClick={() => void setActionStatus(a.id, s)}>
+              {STATUS_LABELS[s]}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  /** Groupe d'actions : masqué s'il est vide — la revue ne montre que ce qui existe. */
+  const actionGroup = (key: string, label: string, list: Action[], urgent = false) =>
+    list.length === 0 ? null : (
+      <div key={key} className={`revue-group${urgent ? ' urgent' : ''}`}>
+        <div className="revue-group-head">
+          {label}
+          <span className="revue-group-count">{list.length}</span>
+        </div>
+        {list.map(actionRow)}
+      </div>
+    );
+
   const actionsBlock = (
     <>
-      {/* Actions — retards d'abord */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-header">
-          <strong>Actions</strong>
-          <span className="row-sub">retards en premier</span>
-        </div>
-        {sortedActions.length === 0 ? (
-          <div className="empty">
-            <p>Aucune action pour l’instant. Ajoute-en une ci-dessous.</p>
+      <div className="kpi-row kpi-row-4">
+        <div className="card stat-card">
+          <div className="stat-value" style={lateList.length ? { color: 'var(--danger)' } : undefined}>
+            {lateList.length}
           </div>
-        ) : (
-          sortedActions.map((a) => {
-            const isLate = a.status !== 'done' && a.dueDate && a.dueDate < today;
-            const isNew = cutoff ? a.createdAt > cutoff : false;
-            return (
-              <div key={a.id} className="list-row" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div className="row-main" style={{ flex: 1 }}>
-                  <div className="row-title" style={{ whiteSpace: 'normal' }}>
-                    {a.title}
-                    {isNew && (
-                      <span className="badge source" style={{ marginLeft: 8 }}>
-                        Nouveau
-                      </span>
-                    )}
-                  </div>
-                  <div className="row-sub">
-                    {memberName(project, a.responsibleId)}
-                    {a.dueDate ? ` · échéance ${frDate(a.dueDate)}` : ''}
-                  </div>
-                </div>
-                {isLate && <span className="date-chip danger">En retard</span>}
-                <div className="segmented">
-                  {STATUS_ORDER.map((s) => (
-                    <button
-                      key={s}
-                      className={a.status === s ? 'active' : ''}
-                      onClick={() => void setActionStatus(a.id, s)}
-                    >
-                      {STATUS_LABELS[s]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })
-        )}
+          <div className="stat-label">En retard</div>
+          <div className={`revue-stat-sub${lateList.length ? ' down' : ''}`}>
+            {lateList.length ? `retard moyen ${avgLateDays} j` : 'rien à rattraper'}
+          </div>
+        </div>
+        <div className="card stat-card">
+          <div className="stat-value">{weekList.length}</div>
+          <div className="stat-label">Cette semaine</div>
+          <div className="revue-stat-sub">échéance ≤ 7 j</div>
+        </div>
+        <div className="card stat-card">
+          <div className="stat-value">{laterList.length}</div>
+          <div className="stat-label">Plus tard</div>
+          <div className="revue-stat-sub">
+            {undatedList.length ? `+ ${undatedList.length} sans échéance` : 'toutes datées'}
+          </div>
+        </div>
+        <div className="card stat-card">
+          <div className="stat-value" style={doneCount ? { color: 'var(--success)' } : undefined}>
+            {doneCount}
+          </div>
+          <div className="stat-label">Terminées</div>
+          <div className={`revue-stat-sub${delta.newlyDone.length ? ' up' : ''}`}>
+            {delta.newlyDone.length ? `+${delta.newlyDone.length} depuis la dernière revue` : 'aucune depuis la dernière revue'}
+          </div>
+        </div>
+      </div>
+
+      {open.length === 0 && doneCount === 0 ? (
+        <div className="empty">
+          <p>Aucune action pour l’instant. Ajoute-en une ci-dessous.</p>
+        </div>
+      ) : (
+        <>
+          {actionGroup('late', 'En retard', lateList, true)}
+          {actionGroup('week', 'Cette semaine', weekList)}
+          {actionGroup('later', 'Plus tard', laterList)}
+          {actionGroup('undated', 'Sans échéance', undatedList)}
+        </>
+      )}
+
+      <div className="revue-group">
+        <div className="revue-group-head">Ajouter une action</div>
         <div className="list-row" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <input
             type="text"
@@ -684,9 +822,9 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
           </button>
         </div>
         {project.members.length === 0 && (
-          <div className="card-body">
-            <p className="form-hint">Ajoute d’abord des membres à l’équipe (menu RACI ou Accès) pour assigner une action.</p>
-          </div>
+          <p className="form-hint" style={{ padding: '10px 4px' }}>
+            Ajoute d’abord des membres à l’équipe (menu RACI ou Accès) pour assigner une action.
+          </p>
         )}
       </div>
     </>
@@ -694,10 +832,43 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
 
   const risquesBlock = (
     <>
+      <div className="kpi-row kpi-row-4">
+        <div className="card stat-card">
+          <div className="stat-value">{amdecs.length}</div>
+          <div className="stat-label">Risques suivis</div>
+          <div className="revue-stat-sub">
+            {delta.newRisks.length ? `+${delta.newRisks.length} depuis la dernière revue` : 'aucun nouveau'}
+          </div>
+        </div>
+        <div className="card stat-card">
+          <div className="stat-value" style={criticalRisks.length ? { color: 'var(--danger)' } : undefined}>
+            {criticalRisks.length}
+          </div>
+          <div className="stat-label">Critiques</div>
+          <div className={`revue-stat-sub${criticalRisks.length ? ' down' : ''}`}>criticité après actions</div>
+        </div>
+        <div className="card stat-card">
+          <div className="stat-value" style={risksNoPlan.length ? { color: 'var(--danger)' } : undefined}>
+            {risksNoPlan.length}
+          </div>
+          <div className="stat-label">Sans plan d’action</div>
+          <div className="revue-stat-sub">{risksNoPlan.length ? 'à traiter en revue' : 'tous couverts'}</div>
+        </div>
+        <div className="card stat-card">
+          <div className="stat-value" style={avgReduction > 0 ? { color: 'var(--success)' } : undefined}>
+            {avgReduction > 0 ? `−${avgReduction} %` : '—'}
+          </div>
+          <div className="stat-label">Réduction moyenne</div>
+          <div className="revue-stat-sub">
+            {reducedRisks.length ? `sur ${reducedRisks.length} risque(s) recoté(s)` : 'aucun risque recoté'}
+          </div>
+        </div>
+      </div>
+
       {/* Risques — arbre risque → actions correctives, réduction de la criticité */}
-      <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card">
         <div className="card-header">
-          <strong>Risques</strong>
+          <strong>Risques et actions correctives</strong>
           <span className="row-sub">criticité avant → après réduction</span>
         </div>
         <RisksTree amdecs={amdecs} actions={actions} project={project} cutoff={cutoff} />
@@ -707,11 +878,29 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
 
   const decisionsBlock = (
     <>
+      <div className="kpi-row">
+        <div className="card stat-card">
+          <div className="stat-value">{decisions.length}</div>
+          <div className="stat-label">Décisions captées</div>
+          <div className="revue-stat-sub">pendant cette revue</div>
+        </div>
+        <div className="card stat-card">
+          <div className="stat-value">{createdDuringRevue}</div>
+          <div className="stat-label">Actions créées</div>
+          <div className="revue-stat-sub">assignées en séance</div>
+        </div>
+        <div className="card stat-card">
+          <div className="stat-value">{elapsedLabel}</div>
+          <div className="stat-label">Durée de la revue</div>
+          <div className="revue-stat-sub">depuis {frDateTime(revue.createdAt)}</div>
+        </div>
+      </div>
+
       {/* Décisions captées */}
       <div className="card">
         <div className="card-header">
           <strong>Décisions captées</strong>
-          <span className="row-sub">{decisions.length}</span>
+          <span className="row-sub">horodatées, reprises dans le compte-rendu</span>
         </div>
         {decisions.map((d) => (
           <div key={d.id} className="list-row" style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -751,11 +940,37 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
 
   const blocks = [syntheseBlock, actionsBlock, risquesBlock, decisionsBlock];
 
+  /* Accroche de chaque scène : une phrase qui porte le chiffre qui compte. */
+  const slideIntros = [
+    last?.closedAt
+      ? `Où en est le projet, et ce qui a bougé depuis le ${frDate(last.closedAt)}.`
+      : 'Où en est le projet — première revue, rien à comparer pour l’instant.',
+    `${actions.length} action(s)${lateList.length ? ` · ${lateList.length} en retard à traiter en priorité` : ' · aucun retard'}${weekList.length ? ` · ${weekList.length} arrive(nt) cette semaine` : ''}.`,
+    amdecs.length
+      ? `${amdecs.length} risque(s) suivi(s)${criticalRisks.length ? ` · ${criticalRisks.length} encore critique(s)` : ' · aucun critique'}${risksNoPlan.length ? ` · ${risksNoPlan.length} sans plan d’action` : ''}.`
+      : 'Aucun risque AMDEC saisi pour ce projet.',
+    'Ce qui a été tranché aujourd’hui — repris tel quel dans le compte-rendu.',
+  ];
+
   if (presenterMode) {
     return (
       <div className="revue-presenter">
         <div className="revue-presenter-topbar">
-          <span className="revue-live">{revue.title}</span>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span className="revue-live">{revue.title}</span>
+            <span className="revue-meta">
+              <span className="revue-timer">⏱ {elapsedLabel}</span>
+              {last?.closedAt && (
+                <>
+                  <span>·</span>
+                  <span>
+                    Dernière revue : {frDate(last.closedAt)}
+                    {sinceLast != null ? ` (il y a ${sinceLast} j)` : ''}
+                  </span>
+                </>
+              )}
+            </span>
+          </div>
           <div className="header-actions">
             <button className="btn btn-sm" onClick={() => setPresenterMode(false)}>
               Quitter la présentation
@@ -787,6 +1002,10 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
           <div className="revue-slide">
             {/* `key` : remonte le contenu à chaque section → l'animation d'entrée rejoue. */}
             <div className="revue-slide-inner" key={activeSection}>
+              <div className="revue-slide-head">
+                <h2>{SECTIONS[activeSection].label}</h2>
+                <p>{slideIntros[activeSection]}</p>
+              </div>
               {blocks[activeSection]}
             </div>
           </div>
