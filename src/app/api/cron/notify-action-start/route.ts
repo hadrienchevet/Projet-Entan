@@ -45,7 +45,7 @@ export async function GET(request: Request) {
   }
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) return NextResponse.json({ error: 'RESEND_API_KEY manquant.' }, { status: 500 });
-  const from = process.env.RESEND_FROM ?? 'Projet Entan <onboarding@resend.dev>';
+  const from = process.env.RESEND_FROM ?? 'ENTAN <onboarding@resend.dev>';
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://projetentan.fr').replace(/\/$/, '');
 
   const admin = createAdminClient();

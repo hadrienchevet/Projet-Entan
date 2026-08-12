@@ -121,7 +121,7 @@ export async function POST(request: Request) {
 
   const link = buildVerifyUrl(payload.email_data);
   const { subject, intro, cta } = content(payload.email_data.email_action_type);
-  const from = process.env.RESEND_FROM ?? 'Projet Entan <onboarding@resend.dev>';
+  const from = process.env.RESEND_FROM ?? 'ENTAN <onboarding@resend.dev>';
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
