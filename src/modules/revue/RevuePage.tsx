@@ -11,13 +11,22 @@ import {
   useRevueDecisions,
   useWorkspace,
 } from '@/lib/store';
-import type { Action, AmdecEntry, ActionStatus, Id, Project, Revue, RevueSnapshot } from '@/lib/types';
+import type {
+  Action,
+  AmdecEntry,
+  ActionStatus,
+  Id,
+  Project,
+  Revue,
+  RevueActionLine,
+  RevueSnapshot,
+} from '@/lib/types';
 import { STATUS_LABELS, criticality, criticalityLevel, residualCriticality } from '@/lib/types';
 import { todayISO, diffDays, formatDate, isOverdue } from '@/lib/date';
-import { Modal } from '@/components/Modal';
 import { CriticalityBadge } from '@/components/Badges';
 import { IconPlus, IconTrash } from '@/components/icons';
 import { dayLabel } from '@/modules/dashboard/widgets/_util';
+import { RevueCrView } from './RevueCrView';
 
 /* --- Dates ------------------------------------------------------------------ */
 
@@ -478,7 +487,9 @@ export function RevuePage() {
         )}
       </div>
 
-      {crRevue && <CrModal revue={crRevue} onClose={() => setCrRevueId(null)} />}
+      {crRevue && (
+        <RevueCrView revue={crRevue} projectName={project.name} onClose={() => setCrRevueId(null)} />
+      )}
     </div>
   );
 }
@@ -501,12 +512,24 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
   const amdecs = useProjectAmdecs(project?.id);
   const revues = useProjectRevues(project?.id);
   const decisions = useRevueDecisions(revue.id);
-  const { setActionStatus, addAction, addRevueDecision, deleteRevueDecision, closeRevue } = useWorkspace();
+  const {
+    setActionStatus,
+    addAction,
+    addRevueDecision,
+    deleteRevueDecision,
+    closeRevue,
+    updateRevueSnapshot,
+    userId,
+    userEmail,
+  } = useWorkspace();
 
   const [decisionText, setDecisionText] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [newResp, setNewResp] = useState('');
   const [newDue, setNewDue] = useState('');
+  const [addingGuest, setAddingGuest] = useState(false);
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
   /** Plein écran « présentateur » par défaut : une revue s'ouvre en mode réunion. */
   const [presenterMode, setPresenterMode] = useState(true);
   const [activeSection, setActiveSection] = useState(0);
@@ -575,12 +598,58 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
     setDecisionText('');
   };
 
+  /* --- Présents (persistés au fil de la réunion, cf. updateRevueSnapshot) --- */
+  const participantIds = revue.snapshot?.participantIds ?? [];
+  const guests = revue.snapshot?.guests ?? [];
+
+  const toggleParticipant = (id: Id) => {
+    const next = participantIds.includes(id)
+      ? participantIds.filter((x) => x !== id)
+      : [...participantIds, id];
+    void updateRevueSnapshot(revue.id, { participantIds: next });
+  };
+
+  const addGuest = () => {
+    const name = guestName.trim();
+    if (!name) return;
+    const email = guestEmail.trim();
+    void updateRevueSnapshot(revue.id, {
+      guests: [...guests, { id: crypto.randomUUID(), name, email: email || undefined }],
+    });
+    setGuestName('');
+    setGuestEmail('');
+    setAddingGuest(false);
+  };
+
+  const removeGuest = (id: Id) =>
+    void updateRevueSnapshot(revue.id, { guests: guests.filter((g) => g.id !== id) });
+
   const close = async () => {
+    const line = (a: Action): RevueActionLine => ({
+      title: a.title,
+      responsible: memberName(project, a.responsibleId),
+      dueDate: a.dueDate,
+    });
+    /* Snapshot enrichi : le CR se lira uniquement ici, donc tout ce qu'il doit
+       montrer est gelé maintenant (libellés compris). */
     const snapshot: RevueSnapshot = {
       doneActionIds: delta.doneNow.map((a) => a.id),
       totalActions: actions.length,
       amdecCount: amdecs.length,
       planningPct: delta.planningPct,
+      // Même règle de nom que les décisions captées (cf. addRevueDecision).
+      closedByName: project.members.find((m) => m.userId === userId)?.name || userEmail || undefined,
+      durationMin: elapsedMin,
+      prevRevueAt: last?.closedAt,
+      prevPlanningPct: delta.prevPct ?? undefined,
+      createdActions: actions.filter((a) => a.createdAt > revue.createdAt).map(line),
+      doneSince: delta.newlyDone.map(line),
+      lateActions: lateList.map(line),
+      openRisks: criticalRisks.map((r) => ({
+        label: `${r.element} — ${r.failureMode}`,
+        score: effectiveCrit(r),
+        hasPlan: actions.some((a) => a.amdecId === r.id),
+      })),
     };
     await closeRevue(revue.id, snapshot);
     onClosed(revue.id);
@@ -634,8 +703,87 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
 
   const pct = (n: number) => (actions.length ? `${(n / actions.length) * 100}%` : '0%');
 
+  const attendeeCount = participantIds.length + guests.length;
+
   const syntheseBlock = (
     <>
+      {/* Tour de table d'ouverture — figé dans le compte-rendu. */}
+      <div className="card">
+        <div className="card-header">
+          <strong>Présents</strong>
+          <span className="row-sub">
+            {attendeeCount === 0 ? 'personne de coché' : `${attendeeCount} personne(s)`}
+          </span>
+        </div>
+        <div className="card-body">
+          <div className="revue-attendees">
+            {project.members.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                className={`revue-attendee${participantIds.includes(m.id) ? ' on' : ''}`}
+                onClick={() => toggleParticipant(m.id)}
+                aria-pressed={participantIds.includes(m.id)}
+              >
+                {m.name}
+              </button>
+            ))}
+            {guests.map((g) => (
+              <span key={g.id} className="revue-attendee on guest">
+                {g.name}
+                {g.email ? <em>{g.email}</em> : null}
+                <button
+                  type="button"
+                  className="revue-attendee-x"
+                  onClick={() => removeGuest(g.id)}
+                  aria-label={`Retirer ${g.name}`}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+            {!addingGuest && (
+              <button type="button" className="revue-attendee add" onClick={() => setAddingGuest(true)}>
+                <IconPlus /> Invité
+              </button>
+            )}
+          </div>
+
+          {addingGuest && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                placeholder="Nom de l’invité"
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addGuest()}
+                autoFocus
+                style={{ flex: '1 1 200px', width: 'auto' }}
+              />
+              <input
+                type="text"
+                placeholder="Email (facultatif)"
+                value={guestEmail}
+                onChange={(e) => setGuestEmail(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addGuest()}
+                style={{ flex: '1 1 220px', width: 'auto' }}
+              />
+              <button className="btn btn-sm btn-primary" onClick={addGuest} disabled={!guestName.trim()}>
+                Ajouter
+              </button>
+              <button className="btn btn-sm" onClick={() => setAddingGuest(false)}>
+                Annuler
+              </button>
+            </div>
+          )}
+          {project.members.length === 0 && guests.length === 0 && (
+            <p className="form-hint" style={{ marginTop: 10 }}>
+              Aucun membre dans l’équipe — ajoutez-en via RACI ou Accès, ou notez un invité.
+            </p>
+          )}
+        </div>
+      </div>
+
       <div className="kpi-row kpi-row-4">
         <div className="card stat-card">
           <div className="stat-value">{delta.planningPct} %</div>
@@ -1058,56 +1206,5 @@ function RevueAnimation({ revue, onClosed }: { revue: Revue; onClosed: (id: Id) 
       {risquesBlock}
       {decisionsBlock}
     </div>
-  );
-}
-
-/* --- Compte-rendu (revue clôturée) ------------------------------------------ */
-
-function CrModal({ revue, onClose }: { revue: Revue; onClose: () => void }) {
-  const decisions = useRevueDecisions(revue.id);
-  const snap = revue.snapshot;
-  return (
-    <Modal
-      title={`Compte-rendu · ${revue.title}`}
-      onClose={onClose}
-      footer={
-        <button className="btn" onClick={onClose}>
-          Fermer
-        </button>
-      }
-    >
-      <p className="row-sub">Clôturée le {frDateTime(revue.closedAt)}</p>
-      <div className="stat-row" style={{ margin: '12px 0' }}>
-        <div className="card stat-card">
-          <div className="stat-value">{snap?.doneActionIds.length ?? 0}</div>
-          <div className="stat-label">Actions terminées</div>
-        </div>
-        <div className="card stat-card">
-          <div className="stat-value">{snap?.planningPct ?? 0} %</div>
-          <div className="stat-label">Avancement planning</div>
-        </div>
-        <div className="card stat-card">
-          <div className="stat-value">{snap?.amdecCount ?? 0}</div>
-          <div className="stat-label">Risques suivis</div>
-        </div>
-      </div>
-      <h3 style={{ fontSize: 15, margin: '8px 0' }}>Décisions</h3>
-      {decisions.length === 0 ? (
-        <p className="row-sub">Aucune décision captée pendant cette revue.</p>
-      ) : (
-        decisions.map((d) => (
-          <div key={d.id} className="list-row">
-            <div className="row-main">
-              <div className="row-title" style={{ whiteSpace: 'normal' }}>
-                {d.content}
-              </div>
-              <div className="row-sub">
-                {frDateTime(d.createdAt)} · {d.authorName}
-              </div>
-            </div>
-          </div>
-        ))
-      )}
-    </Modal>
   );
 }

@@ -1088,6 +1088,45 @@ export interface RevueSnapshot {
   amdecCount: number;
   /** Avancement planning (% d'actions terminées) à la clôture. */
   planningPct: number;
+
+  /* --- Compte-rendu (tout optionnel : les revues clôturées avant restent lisibles).
+     Le CR se lit UNIQUEMENT ici : c'est ce qui le rend figé (un document d'audit
+     ne doit pas changer parce qu'une action a été renommée depuis). --- */
+
+  /** Membres du projet cochés présents (écrit aussi PENDANT la revue). */
+  participantIds?: Id[];
+  /** Invités hors projet présents en séance (client, fournisseur, direction…). */
+  guests?: RevuePerson[];
+  /** Destinataires ajoutés pour la diffusion — distinct des présents, peut évoluer après clôture. */
+  sharedWith?: RevuePerson[];
+  closedByName?: string;
+  /** Durée de la réunion, en minutes. */
+  durationMin?: number;
+  prevRevueAt?: string;
+  prevPlanningPct?: number;
+  /** Actions décidées et assignées pendant la revue. */
+  createdActions?: RevueActionLine[];
+  /** Actions terminées depuis la revue précédente. */
+  doneSince?: RevueActionLine[];
+  /** Actions en retard au moment de la clôture. */
+  lateActions?: RevueActionLine[];
+  /** Risques critiques restants à la clôture. */
+  openRisks?: { label: string; score: number; hasPlan: boolean }[];
+}
+
+/** Ligne d'action figée dans un CR : le responsable est dénormalisé en texte
+ *  pour que le document reste lisible même si le membre quitte le projet. */
+export interface RevueActionLine {
+  title: string;
+  responsible: string;
+  dueDate?: string;
+}
+
+/** Personne rattachée à une revue (invité présent, ou destinataire du CR). */
+export interface RevuePerson {
+  id: Id;
+  name: string;
+  email?: string;
 }
 
 /** Une revue de projet = une réunion d'avancement (préparée, animée, clôturée). */

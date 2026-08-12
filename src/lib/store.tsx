@@ -257,6 +257,7 @@ interface WorkspaceState {
   /** Mode revue de projet (réunions d'avancement animées depuis l'outil). */
   startRevue: (projectId: Id, title: string, type?: RevueType) => Promise<Id>;
   closeRevue: (id: Id, snapshot: RevueSnapshot) => Promise<void>;
+  updateRevueSnapshot: (id: Id, patch: Partial<RevueSnapshot>) => Promise<void>;
   deleteRevue: (id: Id) => Promise<void>;
   addRevueDecision: (revueId: Id, projectId: Id, content: string) => Promise<void>;
   deleteRevueDecision: (id: Id) => Promise<void>;
@@ -1949,19 +1950,47 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [supabase],
   );
 
+  /**
+   * Fusionne un patch dans le `snapshot` jsonb d'une revue. Sert à persister ce
+   * qui se saisit PENDANT la réunion (présents cochés, invités) : ça survit à un
+   * rechargement et se propage aux autres participants via l'abonnement realtime.
+   * Merge et non remplacement — plusieurs écritures visent le même objet.
+   */
+  const updateRevueSnapshot = useCallback(
+    async (id: Id, patch: Partial<RevueSnapshot>) => {
+      const current = revues.find((r) => r.id === id)?.snapshot;
+      const merged: RevueSnapshot = {
+        doneActionIds: [],
+        totalActions: 0,
+        amdecCount: 0,
+        planningPct: 0,
+        ...(current ?? {}),
+        ...patch,
+      };
+      setRevues((s) => s.map((r) => (r.id === id ? { ...r, snapshot: merged } : r)));
+      const { error } = await supabase.from('revues').update({ snapshot: merged }).eq('id', id);
+      if (error) console.warn('[entan] snapshot de revue non enregistré :', error.message);
+    },
+    [supabase, revues],
+  );
+
   const closeRevue = useCallback(
     async (id: Id, snapshot: RevueSnapshot) => {
       const closedAt = new Date().toISOString();
+      // Merge : la clôture ne doit pas effacer ce qui a été saisi en séance
+      // (présents cochés, invités), écrit au fil de la réunion.
+      const current = revues.find((r) => r.id === id)?.snapshot;
+      const merged: RevueSnapshot = { ...(current ?? {}), ...snapshot };
       setRevues((s) =>
-        s.map((r) => (r.id === id ? { ...r, status: 'cloturee', snapshot, closedAt } : r)),
+        s.map((r) => (r.id === id ? { ...r, status: 'cloturee', snapshot: merged, closedAt } : r)),
       );
       const { error } = await supabase
         .from('revues')
-        .update({ status: 'cloturee', snapshot, closed_at: closedAt })
+        .update({ status: 'cloturee', snapshot: merged, closed_at: closedAt })
         .eq('id', id);
       if (error) console.warn('[entan] revue non clôturée :', error.message);
     },
-    [supabase],
+    [supabase, revues],
   );
 
   const deleteRevue = useCallback(
@@ -2097,6 +2126,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     revueDecisions,
     startRevue,
     closeRevue,
+    updateRevueSnapshot,
     deleteRevue,
     addRevueDecision,
     deleteRevueDecision,
