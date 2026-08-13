@@ -46,9 +46,6 @@ import type {
   AmdecEntry,
   AmdecInput,
   AmdecRow,
-  CapaAction,
-  CapaActionInput,
-  CapaActionRow,
   FiveWhyAnalysis,
   FiveWhyAnalysisInput,
   FiveWhyAnalysisRow,
@@ -100,7 +97,6 @@ import {
   amdecInputToRow,
   a3ReportFromRow,
   a3ReportInputToRow,
-  capaActionFromRow,
   costItemFromRow,
   costItemInputToRow,
   swotItemFromRow,
@@ -182,7 +178,6 @@ interface WorkspaceState {
   invitations: Invitation[];
   fiveWhyAnalyses: FiveWhyAnalysis[];
   ishikawaAnalyses: IshikawaAnalysis[];
-  capaActions: CapaAction[];
   /** Les résolutions de problème du projet courant (fix-32 : plusieurs par projet). */
   rdps: Rdp[];
   rdpSubjects: RdpSubject[];
@@ -300,10 +295,6 @@ interface WorkspaceState {
   addIshikawaCause: (analysisId: Id, projectId: Id, rdpId: Id, input: IshikawaCauseInput) => Promise<void>;
   deleteIshikawaCause: (causeId: Id, analysisId: Id) => Promise<void>;
 
-  addCapaAction: (projectId: Id, rdpId: Id, input: CapaActionInput) => Promise<void>;
-  updateCapaAction: (id: Id, patch: Partial<CapaActionInput>) => Promise<void>;
-  deleteCapaAction: (id: Id) => Promise<void>;
-
   addRdp: (projectId: Id, title: string) => Promise<Id>;
   updateRdp: (id: Id, patch: { title?: string; status?: RdpStatus }) => Promise<void>;
   deleteRdp: (id: Id) => Promise<void>;
@@ -361,7 +352,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [fiveWhyAnalyses, setFiveWhyAnalyses] = useState<FiveWhyAnalysis[]>([]);
   const [ishikawaAnalyses, setIshikawaAnalyses] = useState<IshikawaAnalysis[]>([]);
-  const [capaActions, setCapaActions] = useState<CapaAction[]>([]);
   const [rdps, setRdps] = useState<Rdp[]>([]);
   const [rdpSubjects, setRdpSubjects] = useState<RdpSubject[]>([]);
   const [rdpProblems, setRdpProblems] = useState<RdpProblem[]>([]);
@@ -670,7 +660,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const fetchProjectData = useCallback(
     async (projectId: Id) => {
-      const [m, a, z, inv, fwa, isha, capa] = await Promise.all([
+      const [m, a, z, inv, fwa, isha] = await Promise.all([
         supabase.from('members').select('*').eq('project_id', projectId).order('created_at'),
         supabase.from('actions').select('*').eq('project_id', projectId).order('created_at'),
         supabase.from('amdec_items').select('*').eq('project_id', projectId).order('created_at'),
@@ -690,7 +680,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           .select('*, ishikawa_causes(*)')
           .eq('project_id', projectId)
           .order('created_at'),
-        supabase.from('capa_actions').select('*').eq('project_id', projectId).order('created_at'),
       ]);
       const [rdpRows, subj, prob, ind, sol] = await Promise.all([
         supabase.from('rdps').select('*').eq('project_id', projectId).order('created_at'),
@@ -711,7 +700,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       );
       if (!fwa.error) setFiveWhyAnalyses(((fwa.data ?? []) as FiveWhyAnalysisRow[]).map(fiveWhyAnalysisFromRow));
       if (!isha.error) setIshikawaAnalyses(((isha.data ?? []) as IshikawaAnalysisRow[]).map(ishikawaAnalysisFromRow));
-      if (!capa.error) setCapaActions(((capa.data ?? []) as CapaActionRow[]).map(capaActionFromRow));
       if (!rdpRows.error) setRdps(((rdpRows.data ?? []) as RdpRow[]).map(rdpFromRow));
       if (!subj.error) setRdpSubjects(((subj.data ?? []) as RdpSubjectRow[]).map(rdpSubjectFromRow));
       if (!prob.error) setRdpProblems(((prob.data ?? []) as RdpProblemRow[]).map(rdpProblemFromRow));
@@ -887,7 +875,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       const filter = `project_id=eq.${currentProjectId}`;
       let ch = supabase.channel(`project-${currentProjectId}`);
-      for (const table of ['members', 'actions', 'amdec_items', 'five_why_analyses', 'five_why_levels', 'ishikawa_analyses', 'ishikawa_causes', 'capa_actions', 'rdps', 'rdp_subjects', 'rdp_problem', 'rdp_indicators', 'rdp_solutions', 'dashboard_layouts', 'cost_items', 'swot_items', 'a3_reports', 'activity_events', 'revues', 'revue_decisions']) {
+      for (const table of ['members', 'actions', 'amdec_items', 'five_why_analyses', 'five_why_levels', 'ishikawa_analyses', 'ishikawa_causes', 'rdps', 'rdp_subjects', 'rdp_problem', 'rdp_indicators', 'rdp_solutions', 'dashboard_layouts', 'cost_items', 'swot_items', 'a3_reports', 'activity_events', 'revues', 'revue_decisions']) {
         ch = ch.on(
           'postgres_changes',
           { event: '*', schema: 'public', table, filter },
@@ -918,7 +906,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setInvitations([]);
       setFiveWhyAnalyses([]);
       setIshikawaAnalyses([]);
-      setCapaActions([]);
       setRdps([]);
       setRdpSubjects([]);
       setRdpProblems([]);
@@ -1003,8 +990,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           setInvitations([]);
           setFiveWhyAnalyses([]);
           setIshikawaAnalyses([]);
-          setCapaActions([]);
-          setRdps([]);
+              setRdps([]);
           setRdpSubjects([]);
           setRdpProblems([]);
           setRdpIndicators([]);
@@ -1467,61 +1453,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   /* --- RDP : CAPA ------------------------------------------------------------- */
-
-  const addCapaAction = useCallback(
-    async (projectId: Id, rdpId: Id, input: CapaActionInput) => {
-      const id = uid();
-      const createdAt = new Date().toISOString();
-      setCapaActions((s) => [...s, { id, projectId, rdpId, createdAt, ...input }]);
-      const { error } = await supabase.from('capa_actions').insert({
-        id, project_id: projectId, rdp_id: rdpId,
-        type: input.type, title: input.title, description: input.description,
-        responsible_id: input.responsibleId ?? null,
-        status: input.status,
-        due_date: input.dueDate ?? null,
-        source: input.source ?? null,
-        phase: input.phase,
-      });
-      if (error) {
-        onError("Création de l'action CAPA impossible", error.message);
-        await fetchProjectData(projectId);
-      }
-    },
-    [supabase, fetchProjectData],
-  );
-
-  const updateCapaAction = useCallback(
-    async (id: Id, patch: Partial<CapaActionInput>) => {
-      setCapaActions((s) => s.map((a) => (a.id === id ? { ...a, ...patch } : a)));
-      const row: Record<string, unknown> = {};
-      if (patch.type !== undefined) row.type = patch.type;
-      if (patch.title !== undefined) row.title = patch.title;
-      if (patch.description !== undefined) row.description = patch.description;
-      if ('responsibleId' in patch) row.responsible_id = patch.responsibleId ?? null;
-      if (patch.status !== undefined) row.status = patch.status;
-      if ('dueDate' in patch) row.due_date = patch.dueDate ?? null;
-      if ('source' in patch) row.source = patch.source ?? null;
-      if (patch.phase !== undefined) row.phase = patch.phase;
-      const { error } = await supabase.from('capa_actions').update(row).eq('id', id);
-      if (error) {
-        onError("Modification de l'action CAPA impossible", error.message);
-        if (currentProjectId) await fetchProjectData(currentProjectId);
-      }
-    },
-    [supabase, currentProjectId, fetchProjectData],
-  );
-
-  const deleteCapaAction = useCallback(
-    async (id: Id) => {
-      setCapaActions((s) => s.filter((a) => a.id !== id));
-      const { error } = await supabase.from('capa_actions').delete().eq('id', id);
-      if (error) {
-        onError("Suppression de l'action CAPA impossible", error.message);
-        if (currentProjectId) await fetchProjectData(currentProjectId);
-      }
-    },
-    [supabase, currentProjectId, fetchProjectData],
-  );
 
   /* --- RDP : démarche en 7 phases ---------------------------------------------- */
 
@@ -2135,7 +2066,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     members,
     fiveWhyAnalyses,
     ishikawaAnalyses,
-    capaActions,
     rdps,
     rdpSubjects,
     rdpProblems,
@@ -2220,9 +2150,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     deleteIshikawaAnalysis,
     addIshikawaCause,
     deleteIshikawaCause,
-    addCapaAction,
-    updateCapaAction,
-    deleteCapaAction,
     addRdp,
     updateRdp,
     deleteRdp,
@@ -2353,10 +2280,16 @@ export function useRdpIshikawa(rdpId: Id | undefined): IshikawaAnalysis[] {
   return ishikawaAnalyses.filter((a) => a.rdpId === rdpId);
 }
 
-export function useRdpCapa(rdpId: Id | undefined): CapaAction[] {
-  const { capaActions } = useWorkspace();
+/**
+ * Les actions d'une résolution de problème (fix-33). Ce sont de VRAIES actions
+ * du projet : elles remontent donc d'elles-mêmes dans le Gantt, le dashboard,
+ * la revue et « Mes actions ». `phase` filtre 5 (mise en œuvre) ou 6
+ * (standardisation).
+ */
+export function useRdpActions(rdpId: Id | undefined, phase?: 5 | 6): Action[] {
+  const { actions } = useWorkspace();
   if (!rdpId) return [];
-  return capaActions.filter((a) => a.rdpId === rdpId);
+  return actions.filter((a) => a.rdpId === rdpId && (phase === undefined || a.rdpPhase === phase));
 }
 
 export function useRdpSubjects(rdpId: Id | undefined): RdpSubject[] {

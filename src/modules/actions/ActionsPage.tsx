@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { memberName, useCurrentProject, useProjectActions, useProjectAmdecs, useWorkspace } from '@/lib/store';
 import type { Action, ActionStatus, Id } from '@/lib/types';
@@ -155,6 +156,16 @@ export function ActionsPage() {
                       <span title={amdecLabel(a.amdecId)}>
                         <SourceBadge amdec />
                       </span>
+                    ) : a.rdpId ? (
+                      /* fix-33 : l'action vient d'une résolution de problème —
+                         c'est ici que la saisie unique se voit. */
+                      <Link
+                        className="badge source"
+                        href={`/rdp/${a.rdpId}/${a.rdpPhase === 6 ? 'standardisation' : 'capa'}`}
+                        title="Issue d’une résolution de problème"
+                      >
+                        RDP
+                      </Link>
                     ) : (
                       <span className="muted">—</span>
                     )}

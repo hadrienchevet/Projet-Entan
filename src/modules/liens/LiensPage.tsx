@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { useCurrentProject, useProjectActions, useProjectAmdecs, useProjectRdps, useWorkspace } from '@/lib/store';
 import type { Rdp } from '@/lib/types';
-import { CAPA_STATUS_LABELS, criticality, residualCriticality, solutionScore, subjectScore, STATUS_LABELS } from '@/lib/types';
+import { criticality, residualCriticality, solutionScore, subjectScore, STATUS_LABELS } from '@/lib/types';
 import { CriticalityBadge } from '@/components/Badges';
 
 /**
@@ -57,7 +57,7 @@ export function LiensPage() {
   const rdps = useProjectRdps(project?.id);
   /* Données RDP brutes : on les refiltre par résolution, un hook ne pouvant pas
      être appelé dans une boucle. */
-  const { ishikawaAnalyses, rdpSolutions, rdpSubjects, capaActions, rdpProblems } = useWorkspace();
+  const { ishikawaAnalyses, rdpSolutions, rdpSubjects, rdpProblems } = useWorkspace();
 
   if (!project) return null;
 
@@ -68,7 +68,8 @@ export function LiensPage() {
     const subjects = rdpSubjects.filter((x) => x.rdpId === rdp.id);
     const ishikawa = ishikawaAnalyses.filter((x) => x.rdpId === rdp.id);
     const solutions = rdpSolutions.filter((x) => x.rdpId === rdp.id);
-    const capa = capaActions.filter((x) => x.rdpId === rdp.id);
+    // fix-33 : les actions CAPA sont désormais des actions du projet.
+    const capa = actions.filter((x) => x.rdpId === rdp.id);
     const problem = rdpProblems.find((x) => x.rdpId === rdp.id) ?? null;
 
     const children: TreeNodeData[] = [];
@@ -140,15 +141,16 @@ export function LiensPage() {
 
     for (const phase of [5, 6] as const) {
       const list = capa
-        .filter((a) => a.phase === phase)
+        .filter((a) => a.rdpPhase === phase)
         .map((a) => ({
           id: a.id,
           kind: 'capa',
           kindLabel: phase === 5 ? 'Action' : 'Standardisation',
           label: a.title,
           sub:
-            [memberName(a.responsibleId), CAPA_STATUS_LABELS[a.status]].filter(Boolean).join(' · ') ||
-            undefined,
+            [memberName(a.responsibleId), STATUS_LABELS[a.status] + (a.capaVerified ? ' · vérifiée' : '')]
+              .filter(Boolean)
+              .join(' · ') || undefined,
         }));
       if (list.length > 0) {
         children.push({
@@ -178,7 +180,8 @@ export function LiensPage() {
     sub: memberName(a.responsibleId),
   });
 
-  const standalone = actions.filter((a) => !a.amdecId);
+  // Ni AMDEC ni RDP : les actions RDP figurent déjà dans leur propre branche.
+  const standalone = actions.filter((a) => !a.amdecId && !a.rdpId);
   const children: TreeNodeData[] = amdecs
     .slice()
     .sort((a, b) => criticality(b) - criticality(a))

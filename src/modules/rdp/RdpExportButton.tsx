@@ -4,7 +4,7 @@ import { useState } from 'react';
 import {
   useCurrentProject,
   useRdp,
-  useRdpCapa,
+  useRdpActions,
   useRdpFiveWhys,
   useRdpIndicators,
   useRdpIshikawa,
@@ -27,7 +27,7 @@ export function RdpExportButton({ rdpId }: { rdpId: string }) {
   const fiveWhys = useRdpFiveWhys(rdpId);
   const ishikawa = useRdpIshikawa(rdpId);
   const solutions = useRdpSolutions(rdpId);
-  const capa = useRdpCapa(rdpId);
+  const capa = useRdpActions(rdpId);
   const [busy, setBusy] = useState(false);
 
   if (!project || !rdp) return null;

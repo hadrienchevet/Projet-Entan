@@ -119,6 +119,15 @@ export interface Action {
   milestone?: boolean;
   /** Prédécesseurs (fin → début) : l'action ne devrait pas commencer avant leur fin. */
   dependsOnIds?: Id[];
+  /** Résolution de problème d'origine, si l'action en découle (fix-33). */
+  rdpId?: Id;
+  /** Phase de la démarche RDP : 5 = mise en œuvre, 6 = standardisation. */
+  rdpPhase?: 5 | 6;
+  /** Nature CAPA de l'action corrective (contexte RDP uniquement). */
+  capaType?: CapaType;
+  /** Vérification d'efficacité (4e étape du statut CAPA) — hors RDP, l'action
+   *  est simplement « terminée ». */
+  capaVerified?: boolean;
   createdAt: string;
 }
 
@@ -209,6 +218,15 @@ export interface ActionInput {
   notifyEmail?: boolean;
   milestone?: boolean;
   dependsOnIds?: Id[];
+  /** Résolution de problème d'origine, si l'action en découle (fix-33). */
+  rdpId?: Id;
+  /** Phase de la démarche RDP : 5 = mise en œuvre, 6 = standardisation. */
+  rdpPhase?: 5 | 6;
+  /** Nature CAPA de l'action corrective (contexte RDP uniquement). */
+  capaType?: CapaType;
+  /** Vérification d'efficacité (4e étape du statut CAPA) — hors RDP, l'action
+   *  est simplement « terminée ». */
+  capaVerified?: boolean;
 }
 
 export interface AmdecInput {
@@ -265,6 +283,10 @@ export interface ActionRow {
   notify_email?: boolean;
   is_milestone?: boolean;
   depends_on_ids?: string[];
+  rdp_id?: string | null;
+  rdp_phase?: number | null;
+  capa_type?: CapaType | null;
+  capa_verified?: boolean | null;
   created_at: string;
 }
 
@@ -323,6 +345,10 @@ export function actionFromRow(r: ActionRow): Action {
     notifyEmail: r.notify_email ?? false,
     milestone: r.is_milestone ?? false,
     dependsOnIds: r.depends_on_ids ?? [],
+    rdpId: r.rdp_id ?? undefined,
+    rdpPhase: r.rdp_phase === 6 ? 6 : r.rdp_phase === 5 ? 5 : undefined,
+    capaType: r.capa_type ?? undefined,
+    capaVerified: r.capa_verified ?? false,
     createdAt: r.created_at,
   };
 }
@@ -342,6 +368,10 @@ export function actionInputToRow(input: Partial<ActionInput>): Record<string, un
   if (input.notifyEmail !== undefined) row.notify_email = input.notifyEmail;
   if (input.milestone !== undefined) row.is_milestone = input.milestone;
   if (input.dependsOnIds !== undefined) row.depends_on_ids = input.dependsOnIds;
+  if ('rdpId' in input) row.rdp_id = input.rdpId ?? null;
+  if ('rdpPhase' in input) row.rdp_phase = input.rdpPhase ?? null;
+  if ('capaType' in input) row.capa_type = input.capaType ?? null;
+  if (input.capaVerified !== undefined) row.capa_verified = input.capaVerified;
   return row;
 }
 

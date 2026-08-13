@@ -2,7 +2,7 @@
 
 import { Document, Page, View, Text, pdf } from '@react-pdf/renderer';
 import type {
-  CapaAction,
+  Action,
   FiveWhyAnalysis,
   IshikawaAnalysis,
   IshikawaCategory,
@@ -14,8 +14,8 @@ import type {
   RdpSubject,
 } from '@/lib/types';
 import {
-  CAPA_STATUS_LABELS,
   CAPA_TYPE_LABELS,
+  STATUS_LABELS,
   ISHIKAWA_CATEGORIES,
   solutionScore,
   subjectScore,
@@ -43,7 +43,7 @@ export interface RdpReportData {
   fiveWhys: FiveWhyAnalysis[];
   ishikawa: IshikawaAnalysis[];
   solutions: RdpSolution[];
-  capa: CapaAction[];
+  capa: Action[];
 }
 
 const PHASE_NAMES: Record<number, string> = {
@@ -95,7 +95,7 @@ const Box = ({ label, text, flex = 1, mr = false }: { label: string; text: strin
   </View>
 );
 
-function CapaTable({ project, actions }: { project: Project; actions: CapaAction[] }) {
+function CapaTable({ project, actions }: { project: Project; actions: Action[] }) {
   const cols = [
     { label: 'Action', w: '38%' as const },
     { label: 'Type', w: '12%' as const, c: true },
@@ -116,10 +116,12 @@ function CapaTable({ project, actions }: { project: Project; actions: CapaAction
             <Text style={ps.bold}>{a.title}</Text>
             {a.description ? <Text style={{ color: MUTED, marginTop: 1 }}>{a.description}</Text> : null}
           </View>
-          <Text style={[ps.td, { width: '12%' }, ps.center]}>{CAPA_TYPE_LABELS[a.type]}</Text>
+          <Text style={[ps.td, { width: '12%' }, ps.center]}>{CAPA_TYPE_LABELS[a.capaType ?? 'corrective']}</Text>
           <Text style={[ps.td, { width: '20%' }]}>{nameOf(project, a.responsibleId)}</Text>
           <Text style={[ps.td, { width: '14%' }, ps.center]}>{dateFr(a.dueDate)}</Text>
-          <Text style={[ps.td, { width: '16%' }, ps.center]}>{CAPA_STATUS_LABELS[a.status]}</Text>
+          <Text style={[ps.td, { width: '16%' }, ps.center]}>
+            {STATUS_LABELS[a.status]}{a.capaVerified ? ' (vérifiée)' : ''}
+          </Text>
         </View>
       ))}
     </View>
@@ -162,9 +164,9 @@ export function RdpReport({ data }: { data: RdpReportData }) {
   const allCauses = ishikawa.flatMap((a) => a.causes);
   const causeText = (id?: string) => (id ? allCauses.find((c) => c.id === id)?.causeText ?? '—' : '—');
   const retainedSolutions = solutions.filter((s) => s.retained).length;
-  const capaClosed = capa.filter((a) => a.status === 'closed' || a.status === 'verified').length;
-  const capa5 = capa.filter((a) => a.phase === 5);
-  const capa6 = capa.filter((a) => a.phase === 6);
+  const capaClosed = capa.filter((a) => a.status === 'done').length;
+  const capa5 = capa.filter((a) => a.rdpPhase === 5);
+  const capa6 = capa.filter((a) => a.rdpPhase === 6);
   const phase = PHASE_NAMES[rdp.currentPhase] ?? PHASE_NAMES[0];
   const subtitle = `${project.name} · Phase actuelle : ${rdp.currentPhase} — ${phase} · ${todayFr()}`;
 

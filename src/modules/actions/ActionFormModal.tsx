@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { Modal } from '@/components/Modal';
 import { useProjectAmdecs, useWorkspace } from '@/lib/store';
-import type { Action, ActionInput, ActionStatus, Id, Project } from '@/lib/types';
-import { STATUS_LABELS, criticality } from '@/lib/types';
+import type { Action, ActionInput, ActionStatus, CapaType, Id, Project } from '@/lib/types';
+import { CAPA_TYPE_LABELS, STATUS_LABELS, criticality } from '@/lib/types';
 
 interface Props {
   project: Project;
@@ -12,10 +12,14 @@ interface Props {
   action?: Action;
   /** Pré-remplissage (ex. création depuis une analyse AMDEC). */
   defaults?: Partial<ActionInput>;
+  /** Contexte « résolution de problème » : rattache l'action au RDP et fait
+   *  apparaître les champs propres à la méthode CAPA (fix-33). */
+  rdpId?: Id;
+  rdpPhase?: 5 | 6;
   onClose: () => void;
 }
 
-export function ActionFormModal({ project, action, defaults, onClose }: Props) {
+export function ActionFormModal({ project, action, defaults, rdpId, rdpPhase, onClose }: Props) {
   const { addAction, updateAction } = useWorkspace();
   const amdecs = useProjectAmdecs(project.id);
 
@@ -32,7 +36,13 @@ export function ActionFormModal({ project, action, defaults, onClose }: Props) {
   const [amdecId, setAmdecId] = useState<Id>(init.amdecId ?? '');
   const [notifyEmail, setNotifyEmail] = useState(init.notifyEmail ?? false);
   const [milestone, setMilestone] = useState(init.milestone ?? false);
+  const [capaType, setCapaType] = useState<CapaType>(init.capaType ?? 'corrective');
+  const [capaVerified, setCapaVerified] = useState(init.capaVerified ?? false);
   const [error, setError] = useState('');
+
+  // En édition, le rattachement RDP vient de l'action elle-même.
+  const rdp = rdpId ?? init.rdpId;
+  const phase = rdpPhase ?? init.rdpPhase;
 
   // L'email n'est possible que si le responsable a un compte rattaché.
   const responsibleMember = project.members.find((m) => m.id === responsibleId);
@@ -71,6 +81,7 @@ export function ActionFormModal({ project, action, defaults, onClose }: Props) {
       amdecId: amdecId || undefined,
       notifyEmail: canEmail ? notifyEmail : false,
       milestone,
+      ...(rdp ? { rdpId: rdp, rdpPhase: phase, capaType, capaVerified } : {}),
     };
 
     if (action) {
@@ -224,6 +235,39 @@ export function ActionFormModal({ project, action, defaults, onClose }: Props) {
             </span>
           )}
         </div>
+
+        {rdp && (
+          <>
+            <div className="field">
+              <label>Nature (CAPA)</label>
+              <select value={capaType} onChange={(e) => setCapaType(e.target.value as CapaType)}>
+                {(Object.entries(CAPA_TYPE_LABELS) as [CapaType, string][]).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Efficacité</label>
+              <label
+                style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 400, cursor: 'pointer' }}
+              >
+                <input
+                  type="checkbox"
+                  checked={capaVerified}
+                  onChange={(e) => setCapaVerified(e.target.checked)}
+                  style={{ width: 'auto' }}
+                />
+                Vérifiée
+              </label>
+              <span className="form-hint">
+                Étape de vérification propre à la démarche — ailleurs dans l’app, l’action reste
+                simplement « terminée ».
+              </span>
+            </div>
+          </>
+        )}
 
         <div className="field span-2">
           <label>Jalon</label>
