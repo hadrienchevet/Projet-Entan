@@ -1,12 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  memberName,
-  useCurrentProject,
-  useProjectIndicators,
-  useWorkspace,
-} from '@/lib/store';
+import { memberName, useCurrentProject, useRdpIndicators, useRdpProblem, useWorkspace } from '@/lib/store';
 import type { Id, RdpIndicator, RdpIndicatorInput, RdpProblemInput } from '@/lib/types';
 import { Modal } from '@/components/Modal';
 import { IconEdit, IconPlus, IconTrash } from '@/components/icons';
@@ -26,10 +21,11 @@ const QQOQCP_FIELDS: { key: keyof RdpProblemInput; label: string; hint: string }
   { key: 'pourquoi', label: 'Pourquoi ?', hint: 'Pourquoi est-ce un problème ? Enjeux.' },
 ];
 
-export function ProblemePage() {
+export function ProblemePage({ rdpId }: { rdpId: string }) {
   const project = useCurrentProject();
-  const indicators = useProjectIndicators(project?.id);
-  const { rdpProblem, saveRdpProblem, deleteRdpIndicator } = useWorkspace();
+  const indicators = useRdpIndicators(rdpId);
+  const rdpProblem = useRdpProblem(rdpId);
+  const { saveRdpProblem, deleteRdpIndicator } = useWorkspace();
 
   const [indicatorModal, setIndicatorModal] = useState<{ indicator?: RdpIndicator } | null>(null);
 
@@ -37,25 +33,15 @@ export function ProblemePage() {
 
   const save = (key: keyof RdpProblemInput, value: string) => {
     if ((rdpProblem?.[key] ?? '') === value) return;
-    void saveRdpProblem(project.id, { [key]: value });
+    void saveRdpProblem(project.id, rdpId, { [key]: value });
   };
 
   // Les champs sont non contrôlés (defaultValue + onBlur) : la clé force le
   // remontage quand les données du projet changent.
-  const formKey = `${project.id}-${rdpProblem ? 'loaded' : 'empty'}`;
+  const formKey = `${rdpId}-${rdpProblem ? 'loaded' : 'empty'}`;
 
   return (
-    <div className="page" key={formKey}>
-      <div className="page-header">
-        <div>
-          <h1>Phase 1 — Poser le problème</h1>
-          <p className="subtitle">
-            Règle des 3T : tout <strong>voir</strong>, tout <strong>noter</strong>, tout{' '}
-            <strong>mesurer</strong>.
-          </p>
-        </div>
-        <span className="badge rdp-badge">Phase 1</span>
-      </div>
+    <div key={formKey}>
 
       <div className="card">
         <div className="card-header">
@@ -196,6 +182,7 @@ export function ProblemePage() {
       {indicatorModal && (
         <IndicatorFormModal
           projectId={project.id}
+          rdpId={rdpId}
           indicator={indicatorModal.indicator}
           members={project.members}
           onClose={() => setIndicatorModal(null)}
@@ -207,11 +194,13 @@ export function ProblemePage() {
 
 function IndicatorFormModal({
   projectId,
+  rdpId,
   indicator,
   members,
   onClose,
 }: {
   projectId: Id;
+  rdpId: Id;
   indicator?: RdpIndicator;
   members: { id: Id; name: string }[];
   onClose: () => void;
@@ -241,7 +230,7 @@ function IndicatorFormModal({
     if (indicator) {
       void updateRdpIndicator(indicator.id, input);
     } else {
-      void addRdpIndicator(projectId, input);
+      void addRdpIndicator(projectId, rdpId, input);
     }
     onClose();
   };

@@ -2,12 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import {
-  useCurrentProject,
-  useProjectFiveWhys,
-  useProjectSubjects,
-  useWorkspace,
-} from '@/lib/store';
+import { useCurrentProject, useRdpFiveWhys, useRdpSubjects, useWorkspace } from '@/lib/store';
+import { rdpPhaseHref } from '@/lib/rdp';
 import { subjectScore } from '@/lib/types';
 import { IconPlus, IconTrash } from '@/components/icons';
 
@@ -25,10 +21,10 @@ function scoreLevel(score: number): string {
   return 'crit-low';
 }
 
-export function SujetPage() {
+export function SujetPage({ rdpId }: { rdpId: string }) {
   const project = useCurrentProject();
-  const subjects = useProjectSubjects(project?.id);
-  const fiveWhys = useProjectFiveWhys(project?.id);
+  const subjects = useRdpSubjects(rdpId);
+  const fiveWhys = useRdpFiveWhys(rdpId);
   const { addRdpSubject, updateRdpSubject, deleteRdpSubject, setRetainedSubject } = useWorkspace();
 
   const [draft, setDraft] = useState('');
@@ -41,22 +37,12 @@ export function SujetPage() {
   const addSubject = () => {
     const label = draft.trim();
     if (!label) return;
-    void addRdpSubject(project.id, { label, frequency: 1, impact: 1 });
+    void addRdpSubject(project.id, rdpId, { label, frequency: 1, impact: 1 });
     setDraft('');
   };
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>Phase 0 — Choisir un sujet</h1>
-          <p className="subtitle">
-            Brainstormez les problèmes rencontrés, priorisez-les (tableau à double entrée),
-            puis choisissez le sujet à traiter.
-          </p>
-        </div>
-        <span className="badge rdp-badge">Phase 0</span>
-      </div>
+    <>
 
       {retained && (
         <div className="card" style={{ borderLeft: '3px solid var(--accent)', padding: '12px 16px' }}>
@@ -168,7 +154,7 @@ export function SujetPage() {
       <div className="card">
         <div className="card-header">
           <h2>Validation — 5 Pourquoi</h2>
-          <Link href="/cinq-pourquoi" className="btn btn-sm">
+          <Link href={rdpPhaseHref(rdpId, 'cinq-pourquoi')} className="btn btn-sm">
             Ouvrir les analyses
           </Link>
         </div>
@@ -178,7 +164,7 @@ export function SujetPage() {
               Validez que les causes du sujet retenu sont réelles et sérieuses avec une analyse
               5 Pourquoi avant de présenter le choix à la hiérarchie.
             </p>
-            <Link href="/cinq-pourquoi" className="btn btn-primary">
+            <Link href={rdpPhaseHref(rdpId, 'cinq-pourquoi')} className="btn btn-primary">
               <IconPlus /> Créer une analyse 5 Pourquoi
             </Link>
           </div>
@@ -211,6 +197,6 @@ export function SujetPage() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

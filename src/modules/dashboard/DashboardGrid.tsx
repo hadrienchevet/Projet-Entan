@@ -6,10 +6,9 @@ import {
   WIDGETS,
   defaultLayout,
   widgetSetting,
-  widgetsForScope,
+  widgetsForTools,
   type WidgetId,
   type WidgetInstance,
-  type WidgetScope,
 } from '@/lib/widgets';
 import { enabledTools } from '@/lib/tools';
 import { IconPlus } from '@/components/icons';
@@ -73,11 +72,11 @@ export function DashboardGrid() {
   );
 
   if (!project) return null;
-  const scope: WidgetScope = project.projectType === 'rdp' ? 'rdp' : 'gestion';
+  const tools = enabledTools(project.tools);
 
-  // Layout effectif : config stockée (filtrée au scope/ids valides) ou défaut.
-  const valid = stored.filter((w) => WIDGETS[w.id] && WIDGETS[w.id].scope === scope);
-  const layout: WidgetInstance[] = valid.length ? valid : defaultLayout(scope);
+  // Layout effectif : config stockée (ids encore valides) ou défaut.
+  const valid = stored.filter((w) => WIDGETS[w.id]);
+  const layout: WidgetInstance[] = valid.length ? valid : defaultLayout();
 
   const save = (next: WidgetInstance[]) => void setDashboardWidgets(project.id, next);
   const remove = (i: number) => save(layout.filter((_, k) => k !== i));
@@ -88,7 +87,7 @@ export function DashboardGrid() {
     save(layout.map((w, k) => (k === i ? { ...w, settings: { ...w.settings, [key]: val } } : w)));
   const toggleWidth = (i: number) =>
     save(layout.map((w, k) => (k === i ? { ...w, span: ((w.span ?? WIDGETS[w.id].span) === 2 ? 1 : 2) } : w)));
-  const reset = () => save(defaultLayout(scope));
+  const reset = () => save(defaultLayout());
 
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
@@ -99,12 +98,8 @@ export function DashboardGrid() {
     save(arrayMove(layout, oldI, newI));
   };
 
-  // Les widgets de coûts ne sont proposés que si l'outil Suivi des coûts est activé.
-  const coutsOn = enabledTools(project.tools).includes('couts');
-  const needsCouts = (id: WidgetId) => id === 'costs' || id === 'costs-breakdown';
-  const available = widgetsForScope(scope).filter(
-    (id) => !layout.some((w) => w.id === id) && (!needsCouts(id) || coutsOn),
-  );
+  // Un widget n'est proposé que si l'outil dont il dépend est activé (coûts, RDP).
+  const available = widgetsForTools(tools).filter((id) => !layout.some((w) => w.id === id));
   const ids = layout.map((w) => w.id);
 
   return (
@@ -118,7 +113,7 @@ export function DashboardGrid() {
           <button className={`btn btn-sm${editing ? ' btn-primary' : ''}`} onClick={() => { setEditing((v) => !v); setAdding(false); }}>
             {editing ? 'Terminé' : 'Personnaliser'}
           </button>
-          {!editing && scope === 'gestion' && (
+          {!editing && (
             <button className="btn btn-primary" onClick={() => setCreatingAction(true)}>
               <IconPlus /> Nouvelle action
             </button>

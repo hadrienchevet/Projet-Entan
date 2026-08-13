@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useCurrentProject, useProjectIshikawa, useWorkspace } from '@/lib/store';
+import { useCurrentProject, useRdpIshikawa, useWorkspace } from '@/lib/store';
 import type {
   IshikawaAnalysis,
   IshikawaAnalysisInput,
@@ -13,9 +13,9 @@ import { Modal } from '@/components/Modal';
 import { IshikawaDiagram } from '@/components/IshikawaDiagram';
 import { IconChevronLeft, IconEdit, IconPlus, IconTrash } from '@/components/icons';
 
-export function IshikawaPage() {
+export function IshikawaPage({ rdpId }: { rdpId: string }) {
   const project = useCurrentProject();
-  const analyses = useProjectIshikawa(project?.id);
+  const analyses = useRdpIshikawa(rdpId);
   const { deleteIshikawaAnalysis } = useWorkspace();
 
   const [selected, setSelected] = useState<IshikawaAnalysis | null>(null);
@@ -30,21 +30,15 @@ export function IshikawaPage() {
       <IshikawaDetail
         analysis={fresh}
         projectId={project.id}
+        rdpId={rdpId}
         onBack={() => setSelected(null)}
       />
     );
   }
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>Phase 2 — Rechercher les causes</h1>
-          <p className="subtitle">
-            Brainstormez toutes les causes possibles, classez-les par nature avec le
-            diagramme d&apos;Ishikawa / 5M.
-          </p>
-        </div>
+    <>
+      <div className="header-actions" style={{ justifyContent: 'flex-end', marginBottom: 14 }}>
         <button className="btn btn-primary" onClick={() => setCreating(true)}>
           <IconPlus /> Nouveau diagramme
         </button>
@@ -104,28 +98,31 @@ export function IshikawaPage() {
       )}
 
       {creating && (
-        <IshikawaFormModal projectId={project.id} onClose={() => setCreating(false)} />
+        <IshikawaFormModal projectId={project.id} rdpId={rdpId} onClose={() => setCreating(false)} />
       )}
       {editing && (
         <IshikawaFormModal
           projectId={project.id}
+          rdpId={rdpId}
           analysis={editing}
           onClose={() => setEditing(null)}
         />
       )}
-    </div>
+    </>
   );
 }
 
 /* ── Détail d'un diagramme Ishikawa (schéma SVG + grille 5M) ──────────────── */
 
 function IshikawaDetail({
+  rdpId,
   analysis,
   projectId,
   onBack,
 }: {
   analysis: IshikawaAnalysis;
   projectId: string;
+  rdpId: string;
   onBack: () => void;
 }) {
   const { addIshikawaCause, deleteIshikawaCause } = useWorkspace();
@@ -138,7 +135,7 @@ function IshikawaDetail({
   const addCause = (cat: IshikawaCategory) => {
     const text = (drafts[cat] ?? '').trim();
     if (!text) return;
-    void addIshikawaCause(analysis.id, projectId, { category: cat, causeText: text });
+    void addIshikawaCause(analysis.id, projectId, rdpId, { category: cat, causeText: text });
     setDrafts((d) => ({ ...d, [cat]: '' }));
   };
 
@@ -239,10 +236,12 @@ function IshikawaDetail({
 
 function IshikawaFormModal({
   projectId,
+  rdpId,
   analysis,
   onClose,
 }: {
   projectId: string;
+  rdpId: string;
   analysis?: IshikawaAnalysis;
   onClose: () => void;
 }) {
@@ -260,7 +259,7 @@ function IshikawaFormModal({
     if (analysis) {
       void updateIshikawaAnalysis(analysis.id, input);
     } else {
-      void addIshikawaAnalysis(projectId, input);
+      void addIshikawaAnalysis(projectId, rdpId, input);
     }
     onClose();
   };

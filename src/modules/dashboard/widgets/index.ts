@@ -10,11 +10,7 @@ import { TeamLoadWidget } from './TeamLoadWidget';
 import { StatusBreakdownWidget } from './StatusBreakdownWidget';
 import { CostsWidget } from './CostsWidget';
 import { CostsBreakdownWidget } from './CostsBreakdownWidget';
-import { RdpPhaseWidget } from './RdpPhaseWidget';
-import { RdpSubjectWidget } from './RdpSubjectWidget';
-import { RdpStatsWidget } from './RdpStatsWidget';
-import { RdpIndicatorsWidget } from './RdpIndicatorsWidget';
-import { RdpStandardisationWidget } from './RdpStandardisationWidget';
+import { RdpWidget } from './RdpWidget';
 
 export interface WidgetProps {
   project: Project;
@@ -32,9 +28,5 @@ export const WIDGET_COMPONENTS: Record<WidgetId, FC<WidgetProps>> = {
   'status-breakdown': StatusBreakdownWidget,
   costs: CostsWidget,
   'costs-breakdown': CostsBreakdownWidget,
-  'rdp-phase': RdpPhaseWidget,
-  'rdp-subject': RdpSubjectWidget,
-  'rdp-stats': RdpStatsWidget,
-  'rdp-indicators': RdpIndicatorsWidget,
-  'rdp-standardisation': RdpStandardisationWidget,
+  rdp: RdpWidget,
 };

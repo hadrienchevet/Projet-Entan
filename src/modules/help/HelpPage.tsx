@@ -414,10 +414,11 @@ export function HelpPage({
             Et la résolution de problèmes (RDP) ?
           </h2>
           <p className="lead" style={{ marginBottom: 0 }}>
-            Au-delà de la gestion de projet, ENTAN propose un second mode : la{' '}
-            <strong>Résolution de Problèmes</strong>, une démarche structurée en 7 phases (sujet, QQOQCP,
-            Ishikawa 5M, 5 Pourquoi, matrice de décision, PDCA, standardisation). Quand un projet bute sur un
-            problème de fond, on bascule en mode RDP pour le traiter à la racine plutôt qu’en surface.
+            C’est un <strong>outil du projet</strong>, à activer depuis la page Outils : une démarche
+            structurée en 7 phases (sujet, QQOQCP, Ishikawa 5M, 5 Pourquoi, matrice de décision, PDCA,
+            standardisation). Un projet peut en contenir <strong>autant que nécessaire</strong> — un
+            problème surgit dans un projet, il n’en est pas un : chaque résolution reste donc rattachée
+            au projet où le problème est apparu.
           </p>
         </div>
       </div>

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useWorkspace } from '@/lib/store';
 import type { Project, ProjectMeta } from '@/lib/types';
-import { PROJECT_STATUS_LABELS, PROJECT_TYPE_LABELS } from '@/lib/types';
+import { PROJECT_STATUS_LABELS } from '@/lib/types';
 import { ProjectFormModal } from '@/components/ProjectFormModal';
 import {
   IconAmdec,
@@ -148,8 +148,9 @@ export function ProjetsPage() {
           return (
             <div key={meta.id} className={`card project-card${done ? ' is-done' : ''}`}>
               <div className="project-card-top">
-                <span className="tree-kind">{PROJECT_TYPE_LABELS[meta.projectType]}</span>
-                <span className={`badge status-${done ? 'completed' : 'active'}`}>
+                {/* Le type de projet a disparu (fix-32) : tous les projets sont
+                    identiques, ce sont les outils activés qui les distinguent. */}
+                <span className={`badge status-${done ? 'completed' : 'active'}`} style={{ marginLeft: 'auto' }}>
                   {done && <IconCheck />}
                   {PROJECT_STATUS_LABELS[meta.status]}
                 </span>
@@ -165,7 +166,6 @@ export function ProjetsPage() {
               )}
 
               <div className="project-card-meta">
-                {meta.projectType === 'rdp' && <span>Phase {meta.rdpCurrentPhase}/6</span>}
                 <span>
                   {memberCount} compte{memberCount > 1 ? 's' : ''}
                 </span>

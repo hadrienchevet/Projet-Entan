@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import {
   useCurrentProject,
-  useProjectIshikawa,
-  useProjectSolutions,
+  useRdpIshikawa,
+  useRdpSolutions,
   useWorkspace,
 } from '@/lib/store';
 import type { Id, IshikawaCause, RdpSolution, RdpSolutionInput } from '@/lib/types';
@@ -27,10 +27,10 @@ function scoreLevel(score: number): string {
   return 'crit-high';
 }
 
-export function SolutionsPage() {
+export function SolutionsPage({ rdpId }: { rdpId: string }) {
   const project = useCurrentProject();
-  const solutions = useProjectSolutions(project?.id);
-  const ishikawaList = useProjectIshikawa(project?.id);
+  const solutions = useRdpSolutions(rdpId);
+  const ishikawaList = useRdpIshikawa(rdpId);
   const { updateRdpSolution, deleteRdpSolution, setSolutionRetained } = useWorkspace();
 
   const [creating, setCreating] = useState(false);
@@ -46,15 +46,8 @@ export function SolutionsPage() {
   const retainedCount = solutions.filter((s) => s.retained).length;
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>Phases 3-4 — Solutions</h1>
-          <p className="subtitle">
-            Recherchez des solutions pour chaque cause, puis choisissez avec la matrice de
-            décision. « Il vaut mieux un imparfait immédiat qu&apos;un parfait à venir. »
-          </p>
-        </div>
+    <>
+      <div className="header-actions" style={{ justifyContent: 'flex-end', marginBottom: 14 }}>
         <button className="btn btn-primary" onClick={() => setCreating(true)}>
           <IconPlus /> Nouvelle solution
         </button>
@@ -157,27 +150,30 @@ export function SolutionsPage() {
       </div>
 
       {creating && (
-        <SolutionFormModal projectId={project.id} causes={allCauses} onClose={() => setCreating(false)} />
+        <SolutionFormModal projectId={project.id} rdpId={rdpId} causes={allCauses} onClose={() => setCreating(false)} />
       )}
       {editing && (
         <SolutionFormModal
           projectId={project.id}
+          rdpId={rdpId}
           solution={editing}
           causes={allCauses}
           onClose={() => setEditing(null)}
         />
       )}
-    </div>
+    </>
   );
 }
 
 function SolutionFormModal({
   projectId,
+  rdpId,
   solution,
   causes,
   onClose,
 }: {
   projectId: Id;
+  rdpId: Id;
   solution?: RdpSolution;
   causes: IshikawaCause[];
   onClose: () => void;
@@ -205,7 +201,7 @@ function SolutionFormModal({
     if (solution) {
       void updateRdpSolution(solution.id, input);
     } else {
-      void addRdpSolution(projectId, input);
+      void addRdpSolution(projectId, rdpId, input);
     }
     onClose();
   };

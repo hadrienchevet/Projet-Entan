@@ -4,7 +4,7 @@ import { useState } from 'react';
 import {
   memberName,
   useCurrentProject,
-  useProjectFiveWhys,
+  useRdpFiveWhys,
   useWorkspace,
 } from '@/lib/store';
 import type { FiveWhyAnalysis, FiveWhyAnalysisInput, FiveWhyLevelInput, PdcaPhase } from '@/lib/types';
@@ -20,9 +20,9 @@ import {
 
 const PDCA_PHASES: PdcaPhase[] = ['plan', 'do', 'check', 'act', 'closed'];
 
-export function CinqPourquoiPage() {
+export function CinqPourquoiPage({ rdpId }: { rdpId: string }) {
   const project = useCurrentProject();
-  const analyses = useProjectFiveWhys(project?.id);
+  const analyses = useRdpFiveWhys(rdpId);
   const { deleteFiveWhyAnalysis } = useWorkspace();
 
   const [selected, setSelected] = useState<FiveWhyAnalysis | null>(null);
@@ -37,20 +37,15 @@ export function CinqPourquoiPage() {
       <FiveWhyDetail
         analysis={fresh}
         projectId={project.id}
+        rdpId={rdpId}
         onBack={() => setSelected(null)}
       />
     );
   }
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>5 Pourquoi</h1>
-          <p className="subtitle">
-            Remontez la chaîne des causes jusqu'à la cause racine du problème.
-          </p>
-        </div>
+    <>
+      <div className="header-actions" style={{ justifyContent: 'flex-end', marginBottom: 14 }}>
         <button className="btn btn-primary" onClick={() => setCreating(true)}>
           <IconPlus /> Nouvelle analyse
         </button>
@@ -114,28 +109,31 @@ export function CinqPourquoiPage() {
       )}
 
       {creating && (
-        <FiveWhyFormModal projectId={project.id} onClose={() => setCreating(false)} />
+        <FiveWhyFormModal projectId={project.id} rdpId={rdpId} onClose={() => setCreating(false)} />
       )}
       {editing && (
         <FiveWhyFormModal
           projectId={project.id}
+          rdpId={rdpId}
           analysis={editing}
           onClose={() => setEditing(null)}
         />
       )}
-    </div>
+    </>
   );
 }
 
 /* ── Détail d'une analyse (vue complète de la chaîne) ─────────────────────── */
 
 function FiveWhyDetail({
+  rdpId,
   analysis,
   projectId,
   onBack,
 }: {
   analysis: FiveWhyAnalysis;
   projectId: string;
+  rdpId: string;
   onBack: () => void;
 }) {
   const { addFiveWhyLevel, updateFiveWhyLevel, deleteFiveWhyLevel, updateFiveWhyAnalysis } =
@@ -266,7 +264,7 @@ function FiveWhyDetail({
           <div style={{ paddingTop: analysis.levels.length > 0 ? 12 : 0 }}>
             <button
               className="btn"
-              onClick={() => void addFiveWhyLevel(analysis.id, projectId)}
+              onClick={() => void addFiveWhyLevel(analysis.id, projectId, rdpId)}
             >
               <IconPlus /> Ajouter le niveau {analysis.levels.length + 1}
             </button>
@@ -286,10 +284,12 @@ function FiveWhyDetail({
 
 function FiveWhyFormModal({
   projectId,
+  rdpId,
   analysis,
   onClose,
 }: {
   projectId: string;
+  rdpId: string;
   analysis?: FiveWhyAnalysis;
   onClose: () => void;
 }) {
@@ -312,7 +312,7 @@ function FiveWhyFormModal({
     if (analysis) {
       void updateFiveWhyAnalysis(analysis.id, input);
     } else {
-      void addFiveWhyAnalysis(projectId, input);
+      void addFiveWhyAnalysis(projectId, rdpId, input);
     }
     onClose();
   };

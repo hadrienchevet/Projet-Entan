@@ -4,8 +4,6 @@
  * correspondance id → composant vit dans src/modules/dashboard/widgets.
  */
 
-export type WidgetScope = 'gestion' | 'rdp';
-
 export type WidgetId =
   // Gestion
   | 'kpis'
@@ -17,12 +15,8 @@ export type WidgetId =
   | 'status-breakdown'
   | 'costs'
   | 'costs-breakdown'
-  // RDP
-  | 'rdp-phase'
-  | 'rdp-subject'
-  | 'rdp-stats'
-  | 'rdp-indicators'
-  | 'rdp-standardisation';
+  // Résolution de problèmes (outil, cf. fix-32)
+  | 'rdp';
 
 /** Instance de widget telle que stockée (ordre = position dans le tableau). */
 export interface WidgetInstance {
@@ -36,28 +30,25 @@ export interface WidgetDef {
   id: WidgetId;
   title: string;
   description: string;
-  scope: WidgetScope;
+  /** Outil dont dépend le widget : masqué si l'outil n'est pas activé. */
+  requiresTool?: 'couts' | 'rdp';
   /** Largeur : 1 = demi-colonne, 2 = pleine largeur. */
   span: 1 | 2;
   defaultSettings?: Record<string, number | string | boolean>;
 }
 
 export const WIDGETS: Record<WidgetId, WidgetDef> = {
-  kpis: { id: 'kpis', title: 'Chiffres clés', description: 'Actions en cours, avancement, risques critiques.', scope: 'gestion', span: 2 },
-  progress: { id: 'progress', title: 'Avancement', description: 'Frise d’avancement des actions (à faire / en cours / terminé).', scope: 'gestion', span: 2 },
-  delays: { id: 'delays', title: 'Retards & urgences', description: 'Actions en retard et échéances proches.', scope: 'gestion', span: 1, defaultSettings: { urgentDays: 3 } },
-  upcoming: { id: 'upcoming', title: 'À venir (planning)', description: 'Actions à terminer et à démarrer dans les prochains jours.', scope: 'gestion', span: 1, defaultSettings: { horizonDays: 14 } },
-  risks: { id: 'risks', title: 'Risques (AMDEC)', description: 'Criticité après actions correctives.', scope: 'gestion', span: 1 },
-  'team-load': { id: 'team-load', title: 'Charge équipe', description: 'Actions ouvertes par membre.', scope: 'gestion', span: 1 },
-  'status-breakdown': { id: 'status-breakdown', title: 'Répartition par statut', description: 'À faire / en cours / terminée.', scope: 'gestion', span: 1 },
-  costs: { id: 'costs', title: 'Suivi des coûts', description: 'Budget prévu vs réel, écart et consommation.', scope: 'gestion', span: 1 },
-  'costs-breakdown': { id: 'costs-breakdown', title: 'Répartition des coûts', description: 'Poids de chaque poste dans la dépense.', scope: 'gestion', span: 1 },
+  kpis: { id: 'kpis', title: 'Chiffres clés', description: 'Actions en cours, avancement, risques critiques.', span: 2 },
+  progress: { id: 'progress', title: 'Avancement', description: 'Frise d’avancement des actions (à faire / en cours / terminé).', span: 2 },
+  delays: { id: 'delays', title: 'Retards & urgences', description: 'Actions en retard et échéances proches.', span: 1, defaultSettings: { urgentDays: 3 } },
+  upcoming: { id: 'upcoming', title: 'À venir (planning)', description: 'Actions à terminer et à démarrer dans les prochains jours.', span: 1, defaultSettings: { horizonDays: 14 } },
+  risks: { id: 'risks', title: 'Risques (AMDEC)', description: 'Criticité après actions correctives.', span: 1 },
+  'team-load': { id: 'team-load', title: 'Charge équipe', description: 'Actions ouvertes par membre.', span: 1 },
+  'status-breakdown': { id: 'status-breakdown', title: 'Répartition par statut', description: 'À faire / en cours / terminée.', span: 1 },
+  costs: { id: 'costs', requiresTool: 'couts', title: 'Suivi des coûts', description: 'Budget prévu vs réel, écart et consommation.', span: 1 },
+  'costs-breakdown': { id: 'costs-breakdown', requiresTool: 'couts', title: 'Répartition des coûts', description: 'Poids de chaque poste dans la dépense.', span: 1 },
 
-  'rdp-phase': { id: 'rdp-phase', title: 'Avancement de la démarche', description: 'Les 7 phases, navigation et phase courante.', scope: 'rdp', span: 2 },
-  'rdp-subject': { id: 'rdp-subject', title: 'Sujet retenu', description: 'Le problème traité.', scope: 'rdp', span: 2 },
-  'rdp-stats': { id: 'rdp-stats', title: 'Chiffres clés RDP', description: 'Sujets, causes, solutions, actions.', scope: 'rdp', span: 2 },
-  'rdp-indicators': { id: 'rdp-indicators', title: 'Indicateurs de performance', description: 'Valeur actuelle vs objectif.', scope: 'rdp', span: 2 },
-  'rdp-standardisation': { id: 'rdp-standardisation', title: 'Standardisation', description: 'Actions de la phase 6.', scope: 'rdp', span: 2 },
+  rdp: { id: 'rdp', title: 'Résolutions de problèmes', description: 'Les démarches en cours sur ce projet et leur phase.', requiresTool: 'rdp', span: 1 },
 };
 
 export const DEFAULT_LAYOUT_GESTION: WidgetInstance[] = [
@@ -68,15 +59,8 @@ export const DEFAULT_LAYOUT_GESTION: WidgetInstance[] = [
   { id: 'upcoming' },
 ];
 
-export const DEFAULT_LAYOUT_RDP: WidgetInstance[] = [
-  { id: 'rdp-subject' },
-  { id: 'rdp-phase' },
-  { id: 'rdp-stats' },
-  { id: 'rdp-indicators' },
-];
-
-export function defaultLayout(scope: WidgetScope): WidgetInstance[] {
-  return scope === 'rdp' ? DEFAULT_LAYOUT_RDP : DEFAULT_LAYOUT_GESTION;
+export function defaultLayout(): WidgetInstance[] {
+  return DEFAULT_LAYOUT_GESTION;
 }
 
 /** Lecture d'un réglage avec repli sur la valeur par défaut du widget. */
@@ -93,7 +77,10 @@ export function widgetSetting<T extends number | string | boolean>(
   return v as T;
 }
 
-/** Ids valides pour un scope (utile pour filtrer une config stockée). */
-export function widgetsForScope(scope: WidgetScope): WidgetId[] {
-  return (Object.keys(WIDGETS) as WidgetId[]).filter((id) => WIDGETS[id].scope === scope);
+/** Widgets proposables : tout le catalogue, moins ceux dont l'outil est éteint. */
+export function widgetsForTools(enabled: readonly string[]): WidgetId[] {
+  return (Object.keys(WIDGETS) as WidgetId[]).filter((id) => {
+    const need = WIDGETS[id].requiresTool;
+    return !need || enabled.includes(need);
+  });
 }

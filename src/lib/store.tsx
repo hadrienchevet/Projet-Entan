@@ -111,6 +111,10 @@ import {
   memberFromRow,
   projectMemberFromRow,
   rdpIndicatorFromRow,
+  rdpFromRow,
+  type Rdp,
+  type RdpRow,
+  type RdpStatus,
   rdpProblemFromRow,
   rdpProblemInputToRow,
   rdpSolutionFromRow,
@@ -179,8 +183,10 @@ interface WorkspaceState {
   fiveWhyAnalyses: FiveWhyAnalysis[];
   ishikawaAnalyses: IshikawaAnalysis[];
   capaActions: CapaAction[];
+  /** Les résolutions de problème du projet courant (fix-32 : plusieurs par projet). */
+  rdps: Rdp[];
   rdpSubjects: RdpSubject[];
-  rdpProblem: RdpProblem | null;
+  rdpProblems: RdpProblem[];
   rdpIndicators: RdpIndicator[];
   rdpSolutions: RdpSolution[];
   revues: Revue[];
@@ -281,39 +287,43 @@ interface WorkspaceState {
   createInvitation: (projectId: Id) => Promise<void>;
   revokeInvitation: (id: Id) => Promise<void>;
 
-  addFiveWhyAnalysis: (projectId: Id, input: FiveWhyAnalysisInput) => Promise<void>;
+  addFiveWhyAnalysis: (projectId: Id, rdpId: Id, input: FiveWhyAnalysisInput) => Promise<void>;
   updateFiveWhyAnalysis: (id: Id, patch: Partial<FiveWhyAnalysisInput>) => Promise<void>;
   deleteFiveWhyAnalysis: (id: Id) => Promise<void>;
-  addFiveWhyLevel: (analysisId: Id, projectId: Id) => Promise<void>;
+  addFiveWhyLevel: (analysisId: Id, projectId: Id, rdpId: Id) => Promise<void>;
   updateFiveWhyLevel: (levelId: Id, analysisId: Id, patch: Partial<FiveWhyLevelInput>) => Promise<void>;
   deleteFiveWhyLevel: (levelId: Id, analysisId: Id, projectId: Id) => Promise<void>;
 
-  addIshikawaAnalysis: (projectId: Id, input: IshikawaAnalysisInput) => Promise<void>;
+  addIshikawaAnalysis: (projectId: Id, rdpId: Id, input: IshikawaAnalysisInput) => Promise<void>;
   updateIshikawaAnalysis: (id: Id, patch: Partial<IshikawaAnalysisInput>) => Promise<void>;
   deleteIshikawaAnalysis: (id: Id) => Promise<void>;
-  addIshikawaCause: (analysisId: Id, projectId: Id, input: IshikawaCauseInput) => Promise<void>;
+  addIshikawaCause: (analysisId: Id, projectId: Id, rdpId: Id, input: IshikawaCauseInput) => Promise<void>;
   deleteIshikawaCause: (causeId: Id, analysisId: Id) => Promise<void>;
 
-  addCapaAction: (projectId: Id, input: CapaActionInput) => Promise<void>;
+  addCapaAction: (projectId: Id, rdpId: Id, input: CapaActionInput) => Promise<void>;
   updateCapaAction: (id: Id, patch: Partial<CapaActionInput>) => Promise<void>;
   deleteCapaAction: (id: Id) => Promise<void>;
 
-  /** Avance / recule la démarche RDP (phase 0 à 6). */
-  setRdpPhase: (projectId: Id, phase: number) => Promise<void>;
+  addRdp: (projectId: Id, title: string) => Promise<Id>;
+  updateRdp: (id: Id, patch: { title?: string; status?: RdpStatus }) => Promise<void>;
+  deleteRdp: (id: Id) => Promise<void>;
 
-  addRdpSubject: (projectId: Id, input: RdpSubjectInput) => Promise<void>;
+  /** Avance / recule la démarche RDP (phase 0 à 6). */
+  setRdpPhase: (rdpId: Id, phase: number) => Promise<void>;
+
+  addRdpSubject: (projectId: Id, rdpId: Id, input: RdpSubjectInput) => Promise<void>;
   updateRdpSubject: (id: Id, patch: Partial<RdpSubjectInput>) => Promise<void>;
   deleteRdpSubject: (id: Id) => Promise<void>;
   /** Marque un sujet comme retenu (et désélectionne les autres). */
-  setRetainedSubject: (projectId: Id, subjectId: Id) => Promise<void>;
+  setRetainedSubject: (rdpId: Id, subjectId: Id) => Promise<void>;
 
-  saveRdpProblem: (projectId: Id, patch: Partial<RdpProblemInput>) => Promise<void>;
+  saveRdpProblem: (projectId: Id, rdpId: Id, patch: Partial<RdpProblemInput>) => Promise<void>;
 
-  addRdpIndicator: (projectId: Id, input: RdpIndicatorInput) => Promise<void>;
+  addRdpIndicator: (projectId: Id, rdpId: Id, input: RdpIndicatorInput) => Promise<void>;
   updateRdpIndicator: (id: Id, patch: Partial<RdpIndicatorInput>) => Promise<void>;
   deleteRdpIndicator: (id: Id) => Promise<void>;
 
-  addRdpSolution: (projectId: Id, input: RdpSolutionInput) => Promise<void>;
+  addRdpSolution: (projectId: Id, rdpId: Id, input: RdpSolutionInput) => Promise<void>;
   updateRdpSolution: (id: Id, patch: Partial<RdpSolutionInput>) => Promise<void>;
   deleteRdpSolution: (id: Id) => Promise<void>;
   setSolutionRetained: (id: Id, retained: boolean) => Promise<void>;
@@ -352,8 +362,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [fiveWhyAnalyses, setFiveWhyAnalyses] = useState<FiveWhyAnalysis[]>([]);
   const [ishikawaAnalyses, setIshikawaAnalyses] = useState<IshikawaAnalysis[]>([]);
   const [capaActions, setCapaActions] = useState<CapaAction[]>([]);
+  const [rdps, setRdps] = useState<Rdp[]>([]);
   const [rdpSubjects, setRdpSubjects] = useState<RdpSubject[]>([]);
-  const [rdpProblem, setRdpProblem] = useState<RdpProblem | null>(null);
+  const [rdpProblems, setRdpProblems] = useState<RdpProblem[]>([]);
   const [rdpIndicators, setRdpIndicators] = useState<RdpIndicator[]>([]);
   const [rdpSolutions, setRdpSolutions] = useState<RdpSolution[]>([]);
   const [dashboardWidgets, setDashboardWidgetsState] = useState<WidgetInstance[]>([]);
@@ -681,9 +692,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           .order('created_at'),
         supabase.from('capa_actions').select('*').eq('project_id', projectId).order('created_at'),
       ]);
-      const [subj, prob, ind, sol] = await Promise.all([
+      const [rdpRows, subj, prob, ind, sol] = await Promise.all([
+        supabase.from('rdps').select('*').eq('project_id', projectId).order('created_at'),
         supabase.from('rdp_subjects').select('*').eq('project_id', projectId).order('created_at'),
-        supabase.from('rdp_problem').select('*').eq('project_id', projectId).maybeSingle(),
+        supabase.from('rdp_problem').select('*').eq('project_id', projectId),
         supabase.from('rdp_indicators').select('*').eq('project_id', projectId).order('created_at'),
         supabase.from('rdp_solutions').select('*').eq('project_id', projectId).order('created_at'),
       ]);
@@ -700,8 +712,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (!fwa.error) setFiveWhyAnalyses(((fwa.data ?? []) as FiveWhyAnalysisRow[]).map(fiveWhyAnalysisFromRow));
       if (!isha.error) setIshikawaAnalyses(((isha.data ?? []) as IshikawaAnalysisRow[]).map(ishikawaAnalysisFromRow));
       if (!capa.error) setCapaActions(((capa.data ?? []) as CapaActionRow[]).map(capaActionFromRow));
+      if (!rdpRows.error) setRdps(((rdpRows.data ?? []) as RdpRow[]).map(rdpFromRow));
       if (!subj.error) setRdpSubjects(((subj.data ?? []) as RdpSubjectRow[]).map(rdpSubjectFromRow));
-      if (!prob.error) setRdpProblem(prob.data ? rdpProblemFromRow(prob.data as RdpProblemRow) : null);
+      if (!prob.error) setRdpProblems(((prob.data ?? []) as RdpProblemRow[]).map(rdpProblemFromRow));
       if (!ind.error) setRdpIndicators(((ind.data ?? []) as RdpIndicatorRow[]).map(rdpIndicatorFromRow));
       if (!sol.error) setRdpSolutions(((sol.data ?? []) as RdpSolutionRow[]).map(rdpSolutionFromRow));
 
@@ -874,7 +887,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       const filter = `project_id=eq.${currentProjectId}`;
       let ch = supabase.channel(`project-${currentProjectId}`);
-      for (const table of ['members', 'actions', 'amdec_items', 'five_why_analyses', 'five_why_levels', 'ishikawa_analyses', 'ishikawa_causes', 'capa_actions', 'rdp_subjects', 'rdp_problem', 'rdp_indicators', 'rdp_solutions', 'dashboard_layouts', 'cost_items', 'swot_items', 'a3_reports', 'activity_events', 'revues', 'revue_decisions']) {
+      for (const table of ['members', 'actions', 'amdec_items', 'five_why_analyses', 'five_why_levels', 'ishikawa_analyses', 'ishikawa_causes', 'capa_actions', 'rdps', 'rdp_subjects', 'rdp_problem', 'rdp_indicators', 'rdp_solutions', 'dashboard_layouts', 'cost_items', 'swot_items', 'a3_reports', 'activity_events', 'revues', 'revue_decisions']) {
         ch = ch.on(
           'postgres_changes',
           { event: '*', schema: 'public', table, filter },
@@ -906,8 +919,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setFiveWhyAnalyses([]);
       setIshikawaAnalyses([]);
       setCapaActions([]);
+      setRdps([]);
       setRdpSubjects([]);
-      setRdpProblem(null);
+      setRdpProblems([]);
       setRdpIndicators([]);
       setRdpSolutions([]);
       setDashboardWidgetsState([]);
@@ -990,8 +1004,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           setFiveWhyAnalyses([]);
           setIshikawaAnalyses([]);
           setCapaActions([]);
+          setRdps([]);
           setRdpSubjects([]);
-          setRdpProblem(null);
+          setRdpProblems([]);
           setRdpIndicators([]);
           setRdpSolutions([]);
         }
@@ -1256,13 +1271,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   /* --- RDP : 5 Pourquoi ------------------------------------------------------- */
 
   const addFiveWhyAnalysis = useCallback(
-    async (projectId: Id, input: FiveWhyAnalysisInput) => {
+    async (projectId: Id, rdpId: Id, input: FiveWhyAnalysisInput) => {
       const id = uid();
       const createdAt = new Date().toISOString();
-      setFiveWhyAnalyses((s) => [...s, { id, projectId, ...input, levels: [], createdAt }]);
+      setFiveWhyAnalyses((s) => [...s, { id, projectId, rdpId, ...input, levels: [], createdAt }]);
       const { error } = await supabase.from('five_why_analyses').insert({
         id,
         project_id: projectId,
+        rdp_id: rdpId,
         title: input.title,
         problem_statement: input.problemStatement,
         pdca_phase: input.pdcaPhase,
@@ -1306,7 +1322,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const addFiveWhyLevel = useCallback(
-    async (analysisId: Id, projectId: Id) => {
+    async (analysisId: Id, projectId: Id, rdpId: Id) => {
       const id = uid();
       const createdAt = new Date().toISOString();
       setFiveWhyAnalyses((s) =>
@@ -1315,7 +1331,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           const nextNum = (a.levels[a.levels.length - 1]?.levelNum ?? 0) + 1;
           if (nextNum > 5) return a;
           const newLevel: FiveWhyLevel = {
-            id, analysisId, projectId, levelNum: nextNum,
+            id, analysisId, projectId, rdpId, levelNum: nextNum,
             whyQuestion: '', becauseAnswer: '', isRootCause: false, createdAt,
           };
           return { ...a, levels: [...a.levels, newLevel] };
@@ -1325,7 +1341,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const nextNum = (analysis?.levels[analysis.levels.length - 1]?.levelNum ?? 0) + 1;
       if (nextNum > 5) return;
       const { error } = await supabase.from('five_why_levels').insert({
-        id, analysis_id: analysisId, project_id: projectId,
+        id, analysis_id: analysisId, project_id: projectId, rdp_id: rdpId,
         level_num: nextNum, why_question: '', because_answer: '', is_root_cause: false,
       });
       if (error) {
@@ -1378,12 +1394,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   /* --- RDP : Ishikawa --------------------------------------------------------- */
 
   const addIshikawaAnalysis = useCallback(
-    async (projectId: Id, input: IshikawaAnalysisInput) => {
+    async (projectId: Id, rdpId: Id, input: IshikawaAnalysisInput) => {
       const id = uid();
       const createdAt = new Date().toISOString();
-      setIshikawaAnalyses((s) => [...s, { id, projectId, ...input, causes: [], createdAt }]);
+      setIshikawaAnalyses((s) => [...s, { id, projectId, rdpId, ...input, causes: [], createdAt }]);
       const { error } = await supabase.from('ishikawa_analyses').insert({
-        id, project_id: projectId, title: input.title, effect: input.effect,
+        id, project_id: projectId, rdp_id: rdpId, title: input.title, effect: input.effect,
       });
       if (error) {
         onError("Création de l'analyse impossible", error.message);
@@ -1418,15 +1434,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const addIshikawaCause = useCallback(
-    async (analysisId: Id, projectId: Id, input: IshikawaCauseInput) => {
+    async (analysisId: Id, projectId: Id, rdpId: Id, input: IshikawaCauseInput) => {
       const id = uid();
       const createdAt = new Date().toISOString();
-      const newCause: IshikawaCause = { id, analysisId, projectId, ...input, createdAt };
+      const newCause: IshikawaCause = { id, analysisId, projectId, rdpId, ...input, createdAt };
       setIshikawaAnalyses((s) =>
         s.map((a) => (a.id === analysisId ? { ...a, causes: [...a.causes, newCause] } : a)),
       );
       const { error } = await supabase.from('ishikawa_causes').insert({
-        id, analysis_id: analysisId, project_id: projectId,
+        id, analysis_id: analysisId, project_id: projectId, rdp_id: rdpId,
         category: input.category, cause_text: input.causeText,
       });
       if (error) {
@@ -1453,12 +1469,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   /* --- RDP : CAPA ------------------------------------------------------------- */
 
   const addCapaAction = useCallback(
-    async (projectId: Id, input: CapaActionInput) => {
+    async (projectId: Id, rdpId: Id, input: CapaActionInput) => {
       const id = uid();
       const createdAt = new Date().toISOString();
-      setCapaActions((s) => [...s, { id, projectId, createdAt, ...input }]);
+      setCapaActions((s) => [...s, { id, projectId, rdpId, createdAt, ...input }]);
       const { error } = await supabase.from('capa_actions').insert({
-        id, project_id: projectId,
+        id, project_id: projectId, rdp_id: rdpId,
         type: input.type, title: input.title, description: input.description,
         responsible_id: input.responsibleId ?? null,
         status: input.status,
@@ -1509,30 +1525,69 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   /* --- RDP : démarche en 7 phases ---------------------------------------------- */
 
-  const setRdpPhase = useCallback(
-    async (projectId: Id, phase: number) => {
-      setMetas((s) => s.map((p) => (p.id === projectId ? { ...p, rdpCurrentPhase: phase } : p)));
-      const { error } = await supabase
-        .from('projects')
-        .update({ rdp_current_phase: phase })
-        .eq('id', projectId);
+  /* --- L'entité RDP (fix-32) ---------------------------------------------------- */
+
+  const addRdp = useCallback(
+    async (projectId: Id, title: string): Promise<Id> => {
+      const id = uid();
+      const createdAt = new Date().toISOString();
+      setRdps((s) => [...s, { id, projectId, title, status: 'en_cours', currentPhase: 0, createdAt }]);
+      const { error } = await supabase.from('rdps').insert({ id, project_id: projectId, title });
       if (error) {
-        onError('Changement de phase impossible', error.message);
-        await fetchProjects();
+        onError('Création de la résolution de problème impossible', error.message);
+        await fetchProjectData(projectId);
+      }
+      return id;
+    },
+    [supabase, fetchProjectData],
+  );
+
+  const updateRdp = useCallback(
+    async (id: Id, patch: { title?: string; status?: RdpStatus }) => {
+      setRdps((s) => s.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+      const { error } = await supabase.from('rdps').update(patch).eq('id', id);
+      if (error) {
+        onError('Modification de la résolution de problème impossible', error.message);
+        if (currentProjectId) await fetchProjectData(currentProjectId);
       }
     },
-    [supabase, fetchProjects],
+    [supabase, currentProjectId, fetchProjectData],
+  );
+
+  const deleteRdp = useCallback(
+    async (id: Id) => {
+      // Les 9 tables RDP sont en ON DELETE CASCADE sur rdps : rien à nettoyer à la main.
+      setRdps((s) => s.filter((r) => r.id !== id));
+      const { error } = await supabase.from('rdps').delete().eq('id', id);
+      if (error) {
+        onError('Suppression de la résolution de problème impossible', error.message);
+        if (currentProjectId) await fetchProjectData(currentProjectId);
+      }
+    },
+    [supabase, currentProjectId, fetchProjectData],
+  );
+
+  const setRdpPhase = useCallback(
+    async (rdpId: Id, phase: number) => {
+      setRdps((s) => s.map((r) => (r.id === rdpId ? { ...r, currentPhase: phase } : r)));
+      const { error } = await supabase.from('rdps').update({ current_phase: phase }).eq('id', rdpId);
+      if (error) {
+        onError('Changement de phase impossible', error.message);
+        if (currentProjectId) await fetchProjectData(currentProjectId);
+      }
+    },
+    [supabase, currentProjectId, fetchProjectData],
   );
 
   /* --- RDP : phase 0 — sujets (brainstorming + priorisation) -------------------- */
 
   const addRdpSubject = useCallback(
-    async (projectId: Id, input: RdpSubjectInput) => {
+    async (projectId: Id, rdpId: Id, input: RdpSubjectInput) => {
       const id = uid();
       const createdAt = new Date().toISOString();
-      setRdpSubjects((s) => [...s, { id, projectId, ...input, retained: false, createdAt }]);
+      setRdpSubjects((s) => [...s, { id, projectId, rdpId, ...input, retained: false, createdAt }]);
       const { error } = await supabase.from('rdp_subjects').insert({
-        id, project_id: projectId,
+        id, project_id: projectId, rdp_id: rdpId,
         label: input.label, frequency: input.frequency, impact: input.impact,
       });
       if (error) {
@@ -1568,36 +1623,44 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const setRetainedSubject = useCallback(
-    async (projectId: Id, subjectId: Id) => {
-      setRdpSubjects((s) => s.map((x) => ({ ...x, retained: x.id === subjectId })));
-      // Un seul sujet retenu : on remet tout à faux puis on marque le choisi.
-      await supabase.from('rdp_subjects').update({ retained: false }).eq('project_id', projectId);
+    async (rdpId: Id, subjectId: Id) => {
+      // Un seul sujet retenu PAR RDP : ne toucher qu'aux sujets de ce RDP, sinon
+      // choisir un sujet ici effacerait celui des autres RDP du même projet.
+      setRdpSubjects((s) =>
+        s.map((x) => (x.rdpId === rdpId ? { ...x, retained: x.id === subjectId } : x)),
+      );
+      await supabase.from('rdp_subjects').update({ retained: false }).eq('rdp_id', rdpId);
       const { error } = await supabase
         .from('rdp_subjects')
         .update({ retained: true })
         .eq('id', subjectId);
       if (error) {
         onError('Choix du sujet impossible', error.message);
-        await fetchProjectData(projectId);
+        if (currentProjectId) await fetchProjectData(currentProjectId);
       }
     },
-    [supabase, fetchProjectData],
+    [supabase, currentProjectId, fetchProjectData],
   );
 
   /* --- RDP : phase 1 — fiche problème + indicateurs ------------------------------ */
 
   const saveRdpProblem = useCallback(
-    async (projectId: Id, patch: Partial<RdpProblemInput>) => {
-      setRdpProblem((prev) => ({
-        projectId,
-        quoi: '', qui: '', ou: '', quand: '', comment: '', pourquoi: '',
-        situationActuelle: '', situationSouhaitee: '', ecart: '', objectifs: '',
-        ...prev,
-        ...patch,
-      }));
+    async (projectId: Id, rdpId: Id, patch: Partial<RdpProblemInput>) => {
+      setRdpProblems((s) => {
+        const prev = s.find((x) => x.rdpId === rdpId);
+        const next: RdpProblem = {
+          projectId,
+          rdpId,
+          quoi: '', qui: '', ou: '', quand: '', comment: '', pourquoi: '',
+          situationActuelle: '', situationSouhaitee: '', ecart: '', objectifs: '',
+          ...prev,
+          ...patch,
+        };
+        return prev ? s.map((x) => (x.rdpId === rdpId ? next : x)) : [...s, next];
+      });
       const { error } = await supabase
         .from('rdp_problem')
-        .upsert({ project_id: projectId, ...rdpProblemInputToRow(patch) }, { onConflict: 'project_id' });
+        .upsert({ project_id: projectId, rdp_id: rdpId, ...rdpProblemInputToRow(patch) }, { onConflict: 'rdp_id' });
       if (error) {
         onError('Enregistrement de la fiche problème impossible', error.message);
         await fetchProjectData(projectId);
@@ -1607,12 +1670,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const addRdpIndicator = useCallback(
-    async (projectId: Id, input: RdpIndicatorInput) => {
+    async (projectId: Id, rdpId: Id, input: RdpIndicatorInput) => {
       const id = uid();
       const createdAt = new Date().toISOString();
-      setRdpIndicators((s) => [...s, { id, projectId, createdAt, ...input }]);
+      setRdpIndicators((s) => [...s, { id, projectId, rdpId, createdAt, ...input }]);
       const { error } = await supabase.from('rdp_indicators').insert({
-        id, project_id: projectId,
+        id, project_id: projectId, rdp_id: rdpId,
         name: input.name, unit: input.unit,
         current_value: input.currentValue, target_value: input.targetValue,
         frequency: input.frequency, responsible_id: input.responsibleId ?? null,
@@ -1659,12 +1722,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   /* --- RDP : phases 3-4 — solutions + matrice de décision ------------------------ */
 
   const addRdpSolution = useCallback(
-    async (projectId: Id, input: RdpSolutionInput) => {
+    async (projectId: Id, rdpId: Id, input: RdpSolutionInput) => {
       const id = uid();
       const createdAt = new Date().toISOString();
-      setRdpSolutions((s) => [...s, { id, projectId, retained: false, createdAt, ...input }]);
+      setRdpSolutions((s) => [...s, { id, projectId, rdpId, retained: false, createdAt, ...input }]);
       const { error } = await supabase.from('rdp_solutions').insert({
-        id, project_id: projectId,
+        id, project_id: projectId, rdp_id: rdpId,
         cause_id: input.causeId ?? null,
         title: input.title, description: input.description,
         effectiveness: input.effectiveness, ease: input.ease, cost: input.cost,
@@ -2073,8 +2136,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     fiveWhyAnalyses,
     ishikawaAnalyses,
     capaActions,
+    rdps,
     rdpSubjects,
-    rdpProblem,
+    rdpProblems,
     rdpIndicators,
     rdpSolutions,
     currentProjectId,
@@ -2159,6 +2223,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     addCapaAction,
     updateCapaAction,
     deleteCapaAction,
+    addRdp,
+    updateRdp,
+    deleteRdp,
     setRdpPhase,
     addRdpSubject,
     updateRdpSubject,
@@ -2256,38 +2323,63 @@ export function memberName(project: Project | null, id: Id | undefined): string 
   return project.members.find((m) => m.id === id)?.name ?? 'Membre supprimé';
 }
 
-export function useProjectFiveWhys(projectId: Id | undefined): FiveWhyAnalysis[] {
+/* --- Sélecteurs RDP (fix-32) : on filtre par RÉSOLUTION, plus par projet ------
+   Un projet peut contenir plusieurs RDP : filtrer sur projectId mélangerait
+   les données de démarches distinctes. --------------------------------------- */
+
+/** Les résolutions de problème d'un projet. */
+export function useProjectRdps(projectId: Id | undefined): Rdp[] {
+  const { rdps } = useWorkspace();
+  if (!projectId) return [];
+  return rdps.filter((r) => r.projectId === projectId);
+}
+
+/** Une résolution de problème par son id. */
+export function useRdp(rdpId: Id | undefined): Rdp | null {
+  const { rdps } = useWorkspace();
+  if (!rdpId) return null;
+  return rdps.find((r) => r.id === rdpId) ?? null;
+}
+
+export function useRdpFiveWhys(rdpId: Id | undefined): FiveWhyAnalysis[] {
   const { fiveWhyAnalyses } = useWorkspace();
-  if (!projectId) return [];
-  return fiveWhyAnalyses.filter((a) => a.projectId === projectId);
+  if (!rdpId) return [];
+  return fiveWhyAnalyses.filter((a) => a.rdpId === rdpId);
 }
 
-export function useProjectIshikawa(projectId: Id | undefined): IshikawaAnalysis[] {
+export function useRdpIshikawa(rdpId: Id | undefined): IshikawaAnalysis[] {
   const { ishikawaAnalyses } = useWorkspace();
-  if (!projectId) return [];
-  return ishikawaAnalyses.filter((a) => a.projectId === projectId);
+  if (!rdpId) return [];
+  return ishikawaAnalyses.filter((a) => a.rdpId === rdpId);
 }
 
-export function useProjectCapa(projectId: Id | undefined): CapaAction[] {
+export function useRdpCapa(rdpId: Id | undefined): CapaAction[] {
   const { capaActions } = useWorkspace();
-  if (!projectId) return [];
-  return capaActions.filter((a) => a.projectId === projectId);
+  if (!rdpId) return [];
+  return capaActions.filter((a) => a.rdpId === rdpId);
 }
 
-export function useProjectSubjects(projectId: Id | undefined): RdpSubject[] {
+export function useRdpSubjects(rdpId: Id | undefined): RdpSubject[] {
   const { rdpSubjects } = useWorkspace();
-  if (!projectId) return [];
-  return rdpSubjects.filter((s) => s.projectId === projectId);
+  if (!rdpId) return [];
+  return rdpSubjects.filter((s) => s.rdpId === rdpId);
 }
 
-export function useProjectSolutions(projectId: Id | undefined): RdpSolution[] {
+export function useRdpSolutions(rdpId: Id | undefined): RdpSolution[] {
   const { rdpSolutions } = useWorkspace();
-  if (!projectId) return [];
-  return rdpSolutions.filter((s) => s.projectId === projectId);
+  if (!rdpId) return [];
+  return rdpSolutions.filter((s) => s.rdpId === rdpId);
 }
 
-export function useProjectIndicators(projectId: Id | undefined): RdpIndicator[] {
+export function useRdpIndicators(rdpId: Id | undefined): RdpIndicator[] {
   const { rdpIndicators } = useWorkspace();
-  if (!projectId) return [];
-  return rdpIndicators.filter((i) => i.projectId === projectId);
+  if (!rdpId) return [];
+  return rdpIndicators.filter((i) => i.rdpId === rdpId);
+}
+
+/** La fiche problème (QQOQCP) d'une résolution donnée. */
+export function useRdpProblem(rdpId: Id | undefined): RdpProblem | null {
+  const { rdpProblems } = useWorkspace();
+  if (!rdpId) return null;
+  return rdpProblems.find((x) => x.rdpId === rdpId) ?? null;
 }

@@ -13,14 +13,11 @@ import {
   IconA3,
   IconActions,
   IconAmdec,
-  IconBulb,
-  IconCapa,
   IconCost,
   IconSwot,
   IconDashboard,
   IconFolder,
   IconIshikawa,
-  IconLayers,
   IconLogout,
   IconMyActions,
   IconPlanning,
@@ -28,7 +25,6 @@ import {
   IconRaci,
   IconRevue,
   IconStar,
-  IconTarget,
   IconTools,
   IconTree,
   IconUsers,
@@ -43,6 +39,7 @@ const TOOL_ICON: Record<ToolId, ReactElement> = {
   actions: <IconActions />,
   planning: <IconPlanning />,
   revue: <IconRevue />,
+  rdp: <IconIshikawa />,
   liens: <IconTree />,
   couts: <IconCost />,
   a3: <IconA3 />,
@@ -58,24 +55,13 @@ function navGestion(tools: ToolId[] | null | undefined) {
   ];
 }
 
-const NAV_RDP = [
-  { to: '/dashboard', label: 'Tableau de bord', icon: <IconDashboard /> },
-  { to: '/sujet', label: '0 · Sujet', icon: <IconStar /> },
-  { to: '/probleme', label: '1 · Problème', icon: <IconTarget /> },
-  { to: '/ishikawa', label: '2 · Causes', icon: <IconIshikawa /> },
-  { to: '/solutions', label: '3-4 · Solutions', icon: <IconBulb /> },
-  { to: '/capa', label: '5 · Mise en œuvre', icon: <IconCapa /> },
-  { to: '/standardisation', label: '6 · Standardiser', icon: <IconLayers /> },
-  { to: '/liens', label: 'Liens', icon: <IconTree /> },
-];
-
 export function Layout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { projects, currentProjectId, setCurrentProject, userEmail, company, trialEndsAt, isFounder } =
     useWorkspace();
   const currentProject = useCurrentProject();
   const [creating, setCreating] = useState(false);
-  const nav = currentProject?.projectType === 'rdp' ? NAV_RDP : navGestion(currentProject?.tools);
+  const nav = navGestion(currentProject?.tools);
 
   // Aucun projet courant → on masque la nav d'outils (elle mène à des pages
   // vides) et on met en avant la création de projet. Les pages hors-projet

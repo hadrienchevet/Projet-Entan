@@ -7,8 +7,8 @@
 export interface RdpPhaseMeta {
   num: number;
   label: string;
-  /** Page de l'app qui porte la phase. */
-  href: string;
+  /** Slug de la phase — l'URL complète se compose en `/rdp/{rdpId}/{slug}`. */
+  slug: string;
   /** Outils préconisés par la méthodologie. */
   tools: string[];
   description: string;
@@ -18,7 +18,7 @@ export const RDP_PHASES: RdpPhaseMeta[] = [
   {
     num: 0,
     label: 'Choisir un sujet',
-    href: '/sujet',
+    slug: 'sujet',
     tools: ['Brainstorming', 'Tableau à double entrée', '5 Pourquoi'],
     description:
       'Brainstormer les problèmes rencontrés, les prioriser et choisir le sujet à traiter.',
@@ -26,7 +26,7 @@ export const RDP_PHASES: RdpPhaseMeta[] = [
   {
     num: 1,
     label: 'Poser le problème',
-    href: '/probleme',
+    slug: 'probleme',
     tools: ['QQOQCP', 'Pareto', 'Tableau de bord', 'Feuilles de relevés'],
     description:
       'Règle des 3T — tout voir, tout noter, tout mesurer. Décrire la situation actuelle et souhaitée, quantifier l’écart.',
@@ -34,7 +34,7 @@ export const RDP_PHASES: RdpPhaseMeta[] = [
   {
     num: 2,
     label: 'Rechercher les causes',
-    href: '/ishikawa',
+    slug: 'ishikawa',
     tools: ['Brainstorming', 'Ishikawa / 5M', 'Courbe ABC'],
     description:
       'Identifier toutes les causes possibles, les classer par nature (5M) puis par importance.',
@@ -42,14 +42,14 @@ export const RDP_PHASES: RdpPhaseMeta[] = [
   {
     num: 3,
     label: 'Rechercher les solutions',
-    href: '/solutions',
+    slug: 'solutions',
     tools: ['Brainstorming', 'Tableau à double entrée'],
     description: 'Pour chaque cause identifiée, rechercher des solutions et les classer.',
   },
   {
     num: 4,
     label: 'Choisir une solution',
-    href: '/solutions',
+    slug: 'solutions',
     tools: ['Matrice de décision'],
     description:
       'Confronter les solutions aux critères et choisir. « Il vaut mieux un imparfait immédiat qu’un parfait à venir. »',
@@ -57,7 +57,7 @@ export const RDP_PHASES: RdpPhaseMeta[] = [
   {
     num: 5,
     label: 'Mettre en œuvre',
-    href: '/capa',
+    slug: 'capa',
     tools: ['Cycle PDCA', 'QQOQCP'],
     description:
       'Établir le plan d’action — qui fait quoi, où, quand, comment — suivre la mise en œuvre et mesurer les écarts.',
@@ -65,9 +65,27 @@ export const RDP_PHASES: RdpPhaseMeta[] = [
   {
     num: 6,
     label: 'Standardiser',
-    href: '/standardisation',
+    slug: 'standardisation',
     tools: ['Cycle PDCA', 'QQOQCP'],
     description:
       'Étendre la solution aux autres procédés et pérenniser — esprit Kaizen : on peut toujours améliorer.',
   },
 ];
+
+/** URL d'une phase pour un RDP donné. */
+export function rdpPhaseHref(rdpId: string, slug: string): string {
+  return `/rdp/${rdpId}/${slug}`;
+}
+
+/** Slugs valides, pour valider le paramètre de route. */
+export const RDP_SLUGS = [
+  'sujet',
+  'probleme',
+  'ishikawa',
+  'cinq-pourquoi',
+  'solutions',
+  'capa',
+  'standardisation',
+] as const;
+
+export type RdpSlug = (typeof RDP_SLUGS)[number];

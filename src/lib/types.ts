@@ -16,6 +16,11 @@ import type { ToolId } from './tools';
 
 export type Id = string;
 
+/**
+ * @deprecated Legacy (fix-32). La RDP est devenue un OUTIL de projet, plus un
+ * type de projet : ne plus s'en servir pour aiguiller la navigation ni le
+ * dashboard. La colonne reste en base le temps d'un `fix-33` de nettoyage.
+ */
 export type ProjectType = 'gestion' | 'rdp';
 
 export type ProjectStatus = 'active' | 'completed';
@@ -389,6 +394,7 @@ export const PDCA_LABELS: Record<PdcaPhase, string> = {
 export interface FiveWhyAnalysis {
   id: Id;
   projectId: Id;
+  rdpId: Id;
   title: string;
   problemStatement: string;
   pdcaPhase: PdcaPhase;
@@ -400,6 +406,7 @@ export interface FiveWhyLevel {
   id: Id;
   analysisId: Id;
   projectId: Id;
+  rdpId: Id;
   levelNum: number;
   whyQuestion: string;
   becauseAnswer: string;
@@ -439,6 +446,7 @@ export const ISHIKAWA_CATEGORIES: IshikawaCategory[] = [
 export interface IshikawaAnalysis {
   id: Id;
   projectId: Id;
+  rdpId: Id;
   title: string;
   effect: string;
   causes: IshikawaCause[];
@@ -449,6 +457,7 @@ export interface IshikawaCause {
   id: Id;
   analysisId: Id;
   projectId: Id;
+  rdpId: Id;
   category: IshikawaCategory;
   causeText: string;
   createdAt: string;
@@ -483,6 +492,7 @@ export const CAPA_STATUS_LABELS: Record<CapaStatus, string> = {
 export interface CapaAction {
   id: Id;
   projectId: Id;
+  rdpId: Id;
   type: CapaType;
   title: string;
   description: string;
@@ -511,6 +521,7 @@ export interface CapaActionInput {
 export interface FiveWhyAnalysisRow {
   id: string;
   project_id: string;
+  rdp_id: string;
   title: string;
   problem_statement: string;
   pdca_phase: PdcaPhase;
@@ -522,6 +533,7 @@ export interface FiveWhyLevelRow {
   id: string;
   analysis_id: string;
   project_id: string;
+  rdp_id: string;
   level_num: number;
   why_question: string;
   because_answer: string;
@@ -532,6 +544,7 @@ export interface FiveWhyLevelRow {
 export interface IshikawaAnalysisRow {
   id: string;
   project_id: string;
+  rdp_id: string;
   title: string;
   effect: string;
   created_at: string;
@@ -542,6 +555,7 @@ export interface IshikawaCauseRow {
   id: string;
   analysis_id: string;
   project_id: string;
+  rdp_id: string;
   category: IshikawaCategory;
   cause_text: string;
   created_at: string;
@@ -550,6 +564,7 @@ export interface IshikawaCauseRow {
 export interface CapaActionRow {
   id: string;
   project_id: string;
+  rdp_id: string;
   type: CapaType;
   title: string;
   description: string;
@@ -567,6 +582,7 @@ export function fiveWhyAnalysisFromRow(r: FiveWhyAnalysisRow): FiveWhyAnalysis {
   return {
     id: r.id,
     projectId: r.project_id,
+    rdpId: r.rdp_id,
     title: r.title,
     problemStatement: r.problem_statement,
     pdcaPhase: r.pdca_phase,
@@ -582,6 +598,7 @@ export function fiveWhyLevelFromRow(r: FiveWhyLevelRow): FiveWhyLevel {
     id: r.id,
     analysisId: r.analysis_id,
     projectId: r.project_id,
+    rdpId: r.rdp_id,
     levelNum: r.level_num,
     whyQuestion: r.why_question,
     becauseAnswer: r.because_answer,
@@ -594,6 +611,7 @@ export function ishikawaAnalysisFromRow(r: IshikawaAnalysisRow): IshikawaAnalysi
   return {
     id: r.id,
     projectId: r.project_id,
+    rdpId: r.rdp_id,
     title: r.title,
     effect: r.effect,
     causes: ((r.ishikawa_causes ?? []) as IshikawaCauseRow[]).map(ishikawaCauseFromRow),
@@ -606,6 +624,7 @@ export function ishikawaCauseFromRow(r: IshikawaCauseRow): IshikawaCause {
     id: r.id,
     analysisId: r.analysis_id,
     projectId: r.project_id,
+    rdpId: r.rdp_id,
     category: r.category,
     causeText: r.cause_text,
     createdAt: r.created_at,
@@ -616,6 +635,7 @@ export function capaActionFromRow(r: CapaActionRow): CapaAction {
   return {
     id: r.id,
     projectId: r.project_id,
+    rdpId: r.rdp_id,
     type: r.type,
     title: r.title,
     description: r.description,
@@ -630,10 +650,53 @@ export function capaActionFromRow(r: CapaActionRow): CapaAction {
 
 /* --- Méthodologie RDP en 7 phases (0 → 6) ----------------------------------- */
 
+export type RdpStatus = 'en_cours' | 'cloturee';
+
+export const RDP_STATUS_LABELS: Record<RdpStatus, string> = {
+  en_cours: 'En cours',
+  cloturee: 'Clôturée',
+};
+
+/**
+ * Une résolution de problème (fix-32). Depuis que la RDP est un outil et non un
+ * type de projet, un projet peut en contenir plusieurs : c'est cette entité qui
+ * porte l'identité de la démarche, pas le projet.
+ */
+export interface Rdp {
+  id: Id;
+  projectId: Id;
+  title: string;
+  status: RdpStatus;
+  /** Phase courante : 0 = Choisir un sujet … 6 = Standardiser. */
+  currentPhase: number;
+  createdAt: string;
+}
+
+export interface RdpRow {
+  id: string;
+  project_id: string;
+  title: string;
+  status: RdpStatus;
+  current_phase: number;
+  created_at: string;
+}
+
+export function rdpFromRow(r: RdpRow): Rdp {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    title: r.title,
+    status: r.status ?? 'en_cours',
+    currentPhase: r.current_phase ?? 0,
+    createdAt: r.created_at,
+  };
+}
+
 /** Phase 0 — sujet issu du brainstorming, priorisé par fréquence × impact. */
 export interface RdpSubject {
   id: Id;
   projectId: Id;
+  rdpId: Id;
   label: string;
   /** Fréquence d'apparition du problème, 1 à 4. */
   frequency: number;
@@ -653,6 +716,7 @@ export interface RdpSubjectInput {
 /** Phase 1 — fiche problème : QQOQCP + situations + écart (une par projet). */
 export interface RdpProblem {
   projectId: Id;
+  rdpId: Id;
   quoi: string;
   qui: string;
   ou: string;
@@ -665,12 +729,13 @@ export interface RdpProblem {
   objectifs: string;
 }
 
-export type RdpProblemInput = Omit<RdpProblem, 'projectId'>;
+export type RdpProblemInput = Omit<RdpProblem, 'projectId' | 'rdpId'>;
 
 /** Indicateur du tableau de bord (phases 1 et 5). */
 export interface RdpIndicator {
   id: Id;
   projectId: Id;
+  rdpId: Id;
   name: string;
   unit: string;
   currentValue: string;
@@ -695,6 +760,7 @@ export interface RdpIndicatorInput {
 export interface RdpSolution {
   id: Id;
   projectId: Id;
+  rdpId: Id;
   /** Cause traitée (issue de l'Ishikawa). */
   causeId?: Id;
   title: string;
@@ -733,6 +799,7 @@ export function subjectScore(s: Pick<RdpSubject, 'frequency' | 'impact'>): numbe
 export interface RdpSubjectRow {
   id: string;
   project_id: string;
+  rdp_id: string;
   label: string;
   frequency: number;
   impact: number;
@@ -742,6 +809,7 @@ export interface RdpSubjectRow {
 
 export interface RdpProblemRow {
   project_id: string;
+  rdp_id: string;
   quoi: string;
   qui: string;
   ou: string;
@@ -757,6 +825,7 @@ export interface RdpProblemRow {
 export interface RdpIndicatorRow {
   id: string;
   project_id: string;
+  rdp_id: string;
   name: string;
   unit: string;
   current_value: string;
@@ -769,6 +838,7 @@ export interface RdpIndicatorRow {
 export interface RdpSolutionRow {
   id: string;
   project_id: string;
+  rdp_id: string;
   cause_id: string | null;
   title: string;
   description: string;
@@ -783,6 +853,7 @@ export function rdpSubjectFromRow(r: RdpSubjectRow): RdpSubject {
   return {
     id: r.id,
     projectId: r.project_id,
+    rdpId: r.rdp_id,
     label: r.label,
     frequency: r.frequency,
     impact: r.impact,
@@ -794,6 +865,7 @@ export function rdpSubjectFromRow(r: RdpSubjectRow): RdpSubject {
 export function rdpProblemFromRow(r: RdpProblemRow): RdpProblem {
   return {
     projectId: r.project_id,
+    rdpId: r.rdp_id,
     quoi: r.quoi,
     qui: r.qui,
     ou: r.ou,
@@ -826,6 +898,7 @@ export function rdpIndicatorFromRow(r: RdpIndicatorRow): RdpIndicator {
   return {
     id: r.id,
     projectId: r.project_id,
+    rdpId: r.rdp_id,
     name: r.name,
     unit: r.unit,
     currentValue: r.current_value,
@@ -840,6 +913,7 @@ export function rdpSolutionFromRow(r: RdpSolutionRow): RdpSolution {
   return {
     id: r.id,
     projectId: r.project_id,
+    rdpId: r.rdp_id,
     causeId: r.cause_id ?? undefined,
     title: r.title,
     description: r.description,
