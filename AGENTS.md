@@ -44,6 +44,20 @@ Organisation / sièges / accès / profil (validé, à suivre) :
 - Widget lié à un outil → le filtrer dans `DashboardGrid` (cf. `costs` + `coutsOn`).
 - Layouts perso par membre dans `dashboard_layouts` (fix-07).
 
+## Contexte IA (résumé Markdown du projet)
+- `src/lib/projectContext.ts` → `buildProjectContextMd()` : fonction **pure** (`today` injecté, aucun accès store/Supabase), donc testable en `npx tsx`.
+- C'est une **sélection éditoriale, pas un dump** : chiffres pré-calculés (l'IA ne doit rien compter), barèmes expliqués (criticité G×O×D, score matrice /12), coupes annoncées (« n non listées »), aucun id technique ni email.
+- Règles issues d'une relecture par IA sur un vrai projet (2026-08-18), à ne pas casser :
+  - **jamais de marqueur cryptique** (un `(+1)` nu est lu comme une donnée du projet) ni de « autres » quand rien n'a été listé au-dessus (le lecteur additionne les deux nombres) ;
+  - **jamais d'« écart » quand le réel n'est pas saisi** : 0 € réel n'est pas une économie de −100 %, c'est un budget non consommé — cf. `budgetTracked` ;
+  - les **dépendances sont nommées** (« bloque : Mise en production »), sinon la chronologie est invérifiable ;
+  - `clip()` convertit les retours à la ligne en « ; » : aplatis en espace, deux idées se recollent en une phrase que le lecteur prend pour une seule affirmation ;
+  - **une donnée = une ligne** : ne jamais joindre plusieurs items par un séparateur (`·`). Le séparateur disparaît dès que le document est recopié ou cité, et deux items valides se lisent alors comme une seule phrase corrompue (faux diagnostic constaté 2 fois sur le SWOT) ;
+  - **filtrer les items vides** avant de compter : un total annoncé « (4) » avec 2 lignes visibles fait douter de toutes les autres données du document ;
+  - **définir les termes qui ont plusieurs sens** — « en retard » = échéance dépassée ET non terminée. Sans la définition, le lecteur passe un paragraphe à en douter au lieu d'analyser.
+- UI : `src/components/ProjectContextModal.tsx` (copie presse-papier en action principale, `.md` en secondaire, option d'anonymisation des noms) ; bouton « Contexte IA » dans l'en-tête du dashboard.
+- ⚠️ Les sections suivent `enabledTools(project.tools)` : **un nouvel outil doit ajouter sa section ici**, sinon il reste invisible pour l'IA.
+
 ## Supabase — pièges (déjà rencontrés)
 - Migrations **idempotentes** : `CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, `DROP POLICY IF EXISTS` avant `CREATE POLICY`, realtime via `DO $$ IF NOT EXISTS (pg_publication_tables) …`.
 - Après `ADD COLUMN`, l'API REST garde un **cache** → `notify pgrst, 'reload schema';` sinon l'écriture sur la colonne est rejetée silencieusement.

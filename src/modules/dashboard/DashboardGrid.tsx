@@ -11,7 +11,8 @@ import {
   type WidgetInstance,
 } from '@/lib/widgets';
 import { enabledTools } from '@/lib/tools';
-import { IconPlus } from '@/components/icons';
+import { IconPlus, IconSparkles } from '@/components/icons';
+import { ProjectContextModal } from '@/components/ProjectContextModal';
 import { ActionFormModal } from '@/modules/actions/ActionFormModal';
 import { WIDGET_COMPONENTS } from './widgets';
 import type { Project } from '@/lib/types';
@@ -64,6 +65,7 @@ export function DashboardGrid() {
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
   const [creatingAction, setCreatingAction] = useState(false);
+  const [contextOpen, setContextOpen] = useState(false);
   const [activeId, setActiveId] = useState<WidgetId | null>(null);
   const [overId, setOverId] = useState<WidgetId | null>(null);
   const sensors = useSensors(
@@ -114,9 +116,18 @@ export function DashboardGrid() {
             {editing ? 'Terminé' : 'Personnaliser'}
           </button>
           {!editing && (
-            <button className="btn btn-primary" onClick={() => setCreatingAction(true)}>
-              <IconPlus /> Nouvelle action
-            </button>
+            <>
+              <button
+                className="btn btn-sm"
+                onClick={() => setContextOpen(true)}
+                title="Résumer le projet en Markdown pour le donner à un assistant IA"
+              >
+                <IconSparkles /> Contexte IA
+              </button>
+              <button className="btn btn-primary" onClick={() => setCreatingAction(true)}>
+                <IconPlus /> Nouvelle action
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -219,6 +230,7 @@ export function DashboardGrid() {
       </DndContext>
 
       {creatingAction && <ActionFormModal project={project} onClose={() => setCreatingAction(false)} />}
+      {contextOpen && <ProjectContextModal project={project} onClose={() => setContextOpen(false)} />}
     </div>
   );
 }
