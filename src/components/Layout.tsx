@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -18,6 +18,7 @@ import {
   IconDashboard,
   IconFolder,
   IconIshikawa,
+  IconMenu,
   IconMyActions,
   IconPlanning,
   IconPlus,
@@ -60,7 +61,29 @@ export function Layout({ children }: { children: ReactNode }) {
     useWorkspace();
   const currentProject = useCurrentProject();
   const [creating, setCreating] = useState(false);
+  // Mobile : la sidebar sort du flux et devient un tiroir. Sur un écran de
+  // 375 px elle laissait 145 px au contenu, ce qui rend l'app illisible.
+  const [navOpen, setNavOpen] = useState(false);
   const nav = navGestion(currentProject?.tools);
+
+  // Refermer le tiroir dès qu'on navigue : sinon on arrive sur la nouvelle page
+  // avec le tiroir encore ouvert par-dessus. Ajusté pendant le rendu plutôt que
+  // dans un effet — ça capte toute navigation, y compris le bouton retour, sans
+  // afficher un état intermédiaire.
+  const [pathAtRender, setPathAtRender] = useState(pathname);
+  if (pathAtRender !== pathname) {
+    setPathAtRender(pathname);
+    setNavOpen(false);
+  }
+
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setNavOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [navOpen]);
 
   // Aucun projet courant → on masque la nav d'outils (elle mène à des pages
   // vides) et on met en avant la création de projet. Les pages hors-projet
@@ -76,7 +99,26 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="app">
-      <aside className="sidebar">
+      {/* Barre mobile : masquée en CSS au-dessus du point de rupture. */}
+      <header className="topbar">
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={() => setNavOpen(true)}
+          aria-label="Ouvrir la navigation"
+          aria-expanded={navOpen}
+        >
+          <IconMenu />
+        </button>
+        <span className="topbar-title">{currentProject?.name ?? 'ENTAN'}</span>
+        <NotificationsBell />
+      </header>
+
+      {navOpen && (
+        <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />
+      )}
+
+      <aside className={`sidebar${navOpen ? ' nav-open' : ''}`}>
         <div className="sidebar-brand">
           <Image src="/entan-logo-t.png" alt="" width={24} height={24} />
           ENTAN

@@ -268,6 +268,12 @@ export const IconSwot = () => (
   </svg>
 );
 
+export const IconMenu = () => (
+  <svg {...base}>
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </svg>
+);
+
 export const IconSparkles = () => (
   <svg {...base}>
     <path d="M11 4.5 12.6 9 17 10.6 12.6 12.2 11 16.7 9.4 12.2 5 10.6 9.4 9z" />

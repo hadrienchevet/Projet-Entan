@@ -95,6 +95,15 @@ p { margin: 0; }
   height: 100vh;
 }
 
+/* Sur mobile, 100vh inclut la barre d'URL rétractable : le bas de page passe
+   sous le pli. `dvh` suit la hauteur réellement visible. */
+@supports (height: 100dvh) {
+  .app { height: 100dvh; }
+}
+
+/* Barre supérieure — mobile uniquement (affichée dans le bloc @media plus bas). */
+.topbar { display: none; }
+
 .sidebar {
   width: 230px;
   flex-shrink: 0;
@@ -1132,6 +1141,90 @@ a.link:hover { text-decoration: underline; }
 
 @media (max-width: 900px) {
   .dash-grid { grid-template-columns: 1fr; }
+}
+
+/* --- Coquille mobile : sidebar en tiroir ---------------------------------
+   En dessous de ce seuil, garder la sidebar dans le flux ne laisse que ~145 px
+   au contenu sur un téléphone. Elle passe donc hors flux, ouverte par la barre
+   supérieure. */
+@media (max-width: 860px) {
+  .app { flex-direction: column; }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    padding: 8px 12px;
+    background: var(--sidebar-bg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .topbar-title {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 264px;
+    max-width: 82vw;
+    z-index: 60;
+    overflow-y: auto;
+    transform: translateX(-100%);
+    /* `visibility` en plus du décalage : simplement translatée, la sidebar
+       fermée reste dans l'ordre de tabulation et le focus part sur des liens
+       invisibles. La transition la garde visible le temps de l'animation. */
+    visibility: hidden;
+    transition: transform 0.22s ease, visibility 0.22s;
+    box-shadow: var(--shadow-modal);
+  }
+
+  .sidebar.nav-open { transform: none; visibility: visible; }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgb(0 0 0 / 0.45);
+  }
+
+  .main { width: 100%; min-height: 0; }
+
+  /* Cibles tactiles : 24 px se rate au doigt. */
+  .icon-btn { min-width: 34px; min-height: 34px; }
+
+  /* 64 px de padding horizontal sur un écran de 375, c'est un sixième de la
+     largeur perdu. */
+  .page { padding: 16px 12px 48px; gap: 16px; }
+  .page-header { flex-wrap: wrap; }
+  .page-header h1 { font-size: 22px; }
+
+  /* Les boutons d'en-tête passent à la ligne au lieu de pousser la page.
+     Plusieurs pages composent leur en-tête avec des rangées flex en style
+     inline : on les autorise toutes à se replier. */
+  .header-actions { flex-wrap: wrap; width: 100%; }
+  .page-header > div { flex-wrap: wrap; min-width: 0; }
+
+  /* Un élément de grille ne descend pas sous sa largeur min-content sans ça :
+     une seule carte large suffit à faire déborder toute la grille. */
+  .dash-grid { gap: 12px; }
+  .widget-wrap, .dash-grid > * { min-width: 0; }
+}
+
+/* Le tiroir se ferme tout seul en repassant sur grand écran : sans ça, revenir
+   au format bureau après l'avoir ouvert laisserait un état incohérent. */
+@media (min-width: 861px) {
+  .sidebar-backdrop { display: none; }
 }
 
 /* Pastille d'échéance relative (J−2, AUJ., J+5) — même langage que .cal-event. */
