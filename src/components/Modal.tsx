@@ -7,9 +7,12 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  /** Action rendue juste après le titre (ex. lien d'aide). Le titre reste une
+   *  chaîne : c'est lui qui sert d'`aria-label` à la boîte de dialogue. */
+  titleAction?: ReactNode;
 }
 
-export function Modal({ title, onClose, children, footer }: ModalProps) {
+export function Modal({ title, onClose, children, footer, titleAction }: ModalProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -22,7 +25,10 @@ export function Modal({ title, onClose, children, footer }: ModalProps) {
     <div className="modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal-header">
-          <h2>{title}</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {title}
+            {titleAction}
+          </h2>
           <button className="icon-btn" onClick={onClose} aria-label="Fermer">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
               <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" />

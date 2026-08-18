@@ -12,9 +12,11 @@
  * lui-même le texte quelque part.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Modal } from '@/components/Modal';
+import { IconHelp } from '@/components/icons';
 import { useWorkspace } from '@/lib/store';
+import { copyText, selectElementText } from '@/lib/clipboard';
 import { todayISO } from '@/lib/date';
 import { buildProjectContextMd, projectContextFilename } from '@/lib/projectContext';
 import type { Project } from '@/lib/types';
@@ -22,7 +24,8 @@ import type { Project } from '@/lib/types';
 export function ProjectContextModal({ project, onClose }: { project: Project; onClose: () => void }) {
   const ws = useWorkspace();
   const [anonymize, setAnonymize] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'ok' | 'fail'>('idle');
+  const preview = useRef<HTMLPreElement>(null);
 
   const today = todayISO();
   const markdown = useMemo(
@@ -68,15 +71,12 @@ export function ProjectContextModal({ project, onClose }: { project: Project; on
   );
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(markdown);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2500);
-    } catch (err) {
-      // Presse-papier refusé (contexte non sécurisé, permission) : le texte
-      // reste sélectionnable dans l'aperçu, on ne bloque pas l'utilisateur.
-      console.warn('Copie dans le presse-papier refusée', err);
-    }
+    const ok = await copyText(markdown);
+    setCopyState(ok ? 'ok' : 'fail');
+    // Échec : on sélectionne l'aperçu pour que Ctrl+C prenne le relais, plutôt
+    // que de laisser un bouton qui ne fait rien.
+    if (!ok) selectElementText(preview.current);
+    window.setTimeout(() => setCopyState('idle'), ok ? 2500 : 8000);
   };
 
   const download = () => {
@@ -96,13 +96,27 @@ export function ProjectContextModal({ project, onClose }: { project: Project; on
     <Modal
       title="Contexte IA du projet"
       onClose={onClose}
+      // Nouvel onglet : ouvrir l'aide dans le même onglet fermerait la modale et
+      // perdrait le contexte généré, alors qu'on veut lire un exemple ET copier.
+      titleAction={
+        <a
+          className="icon-btn"
+          href="/help/contexte-ia"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Comment s’en servir : exemples et bonnes pratiques"
+          aria-label="Aide : comment utiliser le contexte IA"
+        >
+          <IconHelp />
+        </a>
+      }
       footer={
         <>
           <button className="btn" onClick={download}>
             Télécharger .md
           </button>
           <button className="btn btn-primary" onClick={() => void copy()}>
-            {copied ? 'Copié ✓' : 'Copier le contexte'}
+            {copyState === 'ok' ? 'Copié ✓' : 'Copier le contexte'}
           </button>
         </>
       }
@@ -139,6 +153,7 @@ export function ProjectContextModal({ project, onClose }: { project: Project; on
         </span>
       </div>
       <pre
+        ref={preview}
         style={{
           maxHeight: 320,
           overflow: 'auto',
@@ -154,6 +169,13 @@ export function ProjectContextModal({ project, onClose }: { project: Project; on
       >
         {markdown}
       </pre>
+
+      {copyState === 'fail' && (
+        <p className="form-error" style={{ fontSize: 12.5, margin: 0 }}>
+          Votre navigateur bloque l’accès au presse-papier. L’aperçu a été sélectionné : faites Ctrl+C
+          pour le copier, ou utilisez « Télécharger .md ».
+        </p>
+      )}
 
       <p className="muted" style={{ fontSize: 12 }}>
         Ces données sont internes à votre organisation : vérifiez la politique de votre entreprise
