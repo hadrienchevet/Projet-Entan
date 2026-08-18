@@ -7,8 +7,8 @@ import { usePathname } from 'next/navigation';
 import { useCurrentProject, useWorkspace } from '@/lib/store';
 import { ProjectFormModal } from './ProjectFormModal';
 import { UpgradePrompt } from './UpgradePrompt';
-import { ThemeToggle } from './ThemeToggle';
 import { NotificationsBell } from './NotificationsPanel';
+import { SidebarUserMenu } from './SidebarUserMenu';
 import {
   IconA3,
   IconActions,
@@ -18,7 +18,6 @@ import {
   IconDashboard,
   IconFolder,
   IconIshikawa,
-  IconLogout,
   IconMyActions,
   IconPlanning,
   IconPlus,
@@ -151,51 +150,18 @@ export function Layout({ children }: { children: ReactNode }) {
             <IconMyActions />
             Mes actions
           </Link>
-          <Link href="/equipe" className={`nav-link${pathname === '/equipe' ? ' active' : ''}`}>
-            <IconUsers />
-            Organisation
-          </Link>
-          <Link
-            href="/abonnement"
-            className={`nav-link${pathname === '/abonnement' ? ' active' : ''}`}
-            style={{ marginBottom: 6 }}
-          >
-            <IconStar />
-            Abonnement{company?.isComp ? ' · Offert' : ''}
-          </Link>
-          <Link
-            href="/compte"
-            className={`sidebar-user${pathname === '/compte' ? ' active' : ''}`}
-            title={userEmail ?? undefined}
-          >
-            {userEmail ?? '...'}
-          </Link>
-          <div className="sidebar-footer-row" style={{ alignItems: 'center' }}>
-            <form action="/auth/signout" method="post" style={{ flex: 1 }}>
-              <button type="submit" className="btn btn-ghost btn-sm" style={{ width: '100%' }}>
-                <IconLogout /> Déconnexion
-              </button>
-            </form>
+          {/* Compte, organisation, abonnement, aide, thème et déconnexion sont
+              regroupés dans le menu utilisateur : la sidebar ne montre en
+              permanence que la navigation.
+              Les notifications restent en dehors — leur pastille doit se voir
+              sans ouvrir quoi que ce soit. Le composant se masque de lui-même
+              hors projet, et le déclencheur occupe alors toute la ligne. */}
+          <div className="user-menu-row">
+            <SidebarUserMenu
+              userEmail={userEmail}
+              subscriptionNote={company?.isComp ? 'Offert' : undefined}
+            />
             <NotificationsBell />
-            <ThemeToggle />
-            <Link 
-              href="/help" 
-              className={`icon-btn${pathname === '/help' ? ' active' : ''}`}
-              style={{ 
-                width: '24px', 
-                height: '24px', 
-                borderRadius: '50%', 
-                background: 'var(--accent-soft)',
-                color: 'var(--accent)',
-                display: 'grid',
-                placeItems: 'center',
-                textDecoration: 'none',
-                marginLeft: '4px'
-              }}
-              title="Aide & Tutoriel"
-            >
-              <span style={{ fontWeight: '700', fontSize: '14px' }}>?</span>
-            </Link>
           </div>
         </div>
       </aside>

@@ -180,32 +180,125 @@ p { margin: 0; }
   gap: 6px;
 }
 
-.sidebar-user {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-muted);
-  text-decoration: none;
-  padding: 5px 8px;
+/* --- Menu utilisateur (bas de sidebar) ------------------------------------ */
+
+/* C'est la LIGNE qui porte le positionnement, pas le menu : le panneau doit
+   s'aligner sur toute la largeur disponible, cloche de notifications comprise,
+   sinon il est plus étroit que la sidebar et paraît décalé. */
+.user-menu-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.user-menu { flex: 1; min-width: 0; }
+
+.user-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  background: none;
   border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
   transition: background 0.1s, color 0.1s;
 }
 
-.sidebar-user:hover { background: var(--hover); color: var(--text); }
+.user-menu-trigger:hover { background: var(--hover); color: var(--text); }
 
-.sidebar-user.active {
+.user-menu-trigger.active {
   background: var(--surface);
   color: var(--text);
   box-shadow: var(--shadow);
 }
 
-.sidebar-footer-row {
+.user-menu-avatar {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.user-menu-email {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu-caret { width: 14px; height: 14px; flex-shrink: 0; color: var(--text-muted); }
+
+/* Ancré en bas de l'écran : le panneau s'ouvre vers le haut. */
+.user-menu-pop {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-modal);
+  padding: 4px;
+}
+
+.user-menu-head {
+  padding: 6px 10px 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.1s;
 }
+
+.user-menu-item svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--text-muted); }
+.user-menu-item:hover, .user-menu-item:focus-visible { background: var(--hover); }
+.user-menu-item:hover svg, .user-menu-item:focus-visible svg { color: var(--text); }
+.user-menu-item.danger { color: var(--danger); }
+.user-menu-item.danger svg { color: var(--danger); }
+
+.user-menu-note {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.user-menu-sep { height: 1px; background: var(--border); margin: 4px 6px; }
 
 .main {
   flex: 1;
