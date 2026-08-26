@@ -33,9 +33,9 @@ export default function Page() {
   return (
     <PublicShell>
       <HelpPage
+        variant="public"
         title="Les méthodes de gestion de projet industriel"
         subtitle="RACI, AMDEC, planning, SWOT, A3 et résolution de problèmes : à quoi sert chaque outil, et comment les combiner pour piloter un projet de bout en bout."
-        showVideo={false}
       />
     </PublicShell>
   );
