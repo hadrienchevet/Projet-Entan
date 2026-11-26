@@ -28,6 +28,7 @@ import { createClient } from '@/lib/supabase/client';
 import { daysFromToday } from '@/lib/date';
 import type { WidgetInstance } from '@/lib/widgets';
 import type { ToolId } from '@/lib/tools';
+import { DEMO_PROJECT_NAME } from './demo';
 import type {
   A3Report,
   A3ReportInput,
@@ -1748,7 +1749,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const { data: proj, error } = await supabase
       .from('projects')
       .insert({
-        name: "Ligne d'assemblage A3",
+        name: DEMO_PROJECT_NAME,
         description: 'Fiabilisation de la ligne A3 avant montée en cadence.',
         owner_id: user.id,
       })

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BlogLayout } from '@/components/BlogLayout';
 import { BLOG_POSTS } from '@/content/blog-posts';
+import { DEMO_AMDEC_PATH } from '@/lib/demo';
 import {
   AMDEC_DIAGRAMS_CSS,
   AvantApres,
@@ -43,6 +44,11 @@ const css = `
 .amdec-sheet > h2:first-child { margin-top: 0; }
 .amdec-callout { background: #fffdf9; border-radius: 20px 9px 18px 11px / 11px 18px 9px 20px; padding: 18px 20px; margin: 28px 0; box-shadow: 0 12px 30px rgb(31 30 27 / 0.09); }
 .amdec-callout p { margin: 0; font-size: 15px; line-height: 1.65; }
+.amdec-try { background: #fffdf9; border-radius: 22px 10px 20px 12px / 12px 20px 10px 22px; padding: 24px 24px 22px; margin: 32px 0; box-shadow: 0 14px 34px rgb(31 30 27 / 0.1); text-align: center; }
+.amdec-try h3 { font-family: var(--font-serif); font-size: 21px; letter-spacing: -0.015em; margin: 0 0 8px; }
+.amdec-try p { font-size: 14.5px; line-height: 1.65; color: var(--ink-soft); max-width: 520px; margin: 0 auto 16px; }
+.amdec-try .btn { font-size: 14.5px; padding: 10px 20px; border-radius: 10px; }
+.amdec-try small { display: block; margin-top: 11px; font-size: 12.5px; color: var(--ink-soft); }
 @media (max-width: 640px) { .amdec-sheet { padding: 20px 17px 16px; margin: 26px 0; } }
 ${AMDEC_DIAGRAMS_CSS}
 `;
@@ -182,6 +188,19 @@ export default function Page() {
         </p>
 
         <AvantApres />
+
+        <div className="amdec-try">
+          <h3>Cette AMDEC, déjà remplie, dans un outil</h3>
+          <p>
+            Ouvrez un projet de démonstration contenant cette grille et ses risques cotés. Chaque
+            criticité au-dessus de 24 y génère son action corrective, avec un responsable et une
+            échéance — c’est le chaînon qui manque à un tableur.
+          </p>
+          <Link className="btn btn-primary" href={DEMO_AMDEC_PATH}>
+            Ouvrir l’exemple dans ENTAN →
+          </Link>
+          <small>Gratuit, sans carte bancaire. Vous arrivez directement sur l’AMDEC.</small>
+        </div>
       </section>
 
       <h2>Comment la mettre en place en 4 étapes</h2>

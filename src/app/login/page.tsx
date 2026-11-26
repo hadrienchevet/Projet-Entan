@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
+import { DEMO_AMDEC_PATH } from '@/lib/demo';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
@@ -48,7 +49,11 @@ function LoginForm() {
   // mais est interprété comme une URL absolue par le navigateur → on le refuse.
   const next = /^\/(?![/\\])/.test(rawNext) ? rawNext : '/projets';
 
-  const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin';
+  // Arriver par le lien « voir l'exemple » d'un article public, c'est presque
+  // toujours ne pas avoir de compte : on ouvre sur l'inscription plutôt que
+  // de faire chercher l'onglet.
+  const initialMode =
+    searchParams.get('mode') === 'signup' || next === DEMO_AMDEC_PATH ? 'signup' : 'signin';
   const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
