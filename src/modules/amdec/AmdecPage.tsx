@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useCurrentProject, useProjectActions, useProjectAmdecs, useWorkspace } from '@/lib/store';
 import type { AmdecEntry, AmdecInput } from '@/lib/types';
 import { AMDEC_SCALE_MAX, criticality, residualCriticality } from '@/lib/types';
 import { Modal } from '@/components/Modal';
 import { CriticalityBadge } from '@/components/Badges';
-import { IconEdit, IconPlus, IconTrash } from '@/components/icons';
+import { IconEdit, IconLayers, IconPlus, IconTrash } from '@/components/icons';
 import { ActionFormModal } from '@/modules/actions/ActionFormModal';
 import { RiskMatrixView } from './RiskMatrixView';
 
@@ -14,7 +14,7 @@ export function AmdecPage() {
   const project = useCurrentProject();
   const amdecs = useProjectAmdecs(project?.id);
   const actions = useProjectActions(project?.id);
-  const { deleteAmdec } = useWorkspace();
+  const { addAmdec, updateAmdec, deleteAmdec } = useWorkspace();
 
   const [editing, setEditing] = useState<AmdecEntry | null>(null);
   const [creating, setCreating] = useState(false);
@@ -22,12 +22,33 @@ export function AmdecPage() {
   const [actionFor, setActionFor] = useState<AmdecEntry | null>(null);
   const [view, setView] = useState<'tableau' | 'matrice'>('tableau');
   const [exportOpen, setExportOpen] = useState(false);
+  /* Par défaut, ordre de saisie : trié par criticité, une ligne saute de place
+     dès qu'on modifie une cote, ce qui rend la saisie en session pénible. */
+  const [sortBy, setSortBy] = useState<'saisie' | 'criticite'>('saisie');
 
   if (!project) return null;
 
-  const sorted = [...amdecs].sort((a, b) => criticality(b) - criticality(a));
+  const sorted =
+    sortBy === 'criticite'
+      ? [...amdecs].sort((a, b) => criticality(b) - criticality(a))
+      : amdecs;
+  /** L'export et la matrice restent priorisés par criticité, quel que soit l'affichage. */
+  const byCriticality = [...amdecs].sort((a, b) => criticality(b) - criticality(a));
   const linkedActionsCount = (amdecId: string) =>
     actions.filter((a) => a.amdecId === amdecId).length;
+
+  /** Duplique une ligne : les analyses d'un même élément ne diffèrent souvent
+   *  que par le mode de défaillance. */
+  const duplicate = (entry: AmdecEntry) =>
+    addAmdec(project.id, {
+      element: entry.element,
+      failureMode: entry.failureMode,
+      cause: entry.cause,
+      effect: entry.effect,
+      severity: entry.severity,
+      occurrence: entry.occurrence,
+      detection: entry.detection,
+    });
 
   const remove = (entry: AmdecEntry) => {
     const linked = linkedActionsCount(entry.id);
@@ -71,27 +92,34 @@ export function AmdecPage() {
       </div>
 
       {view === 'matrice' ? (
-        <RiskMatrixView entries={sorted} />
+        <RiskMatrixView entries={byCriticality} />
       ) : (
       <div className="card table-wrap">
-        {sorted.length === 0 ? (
-          <div className="empty">
-            <p>Aucune analyse AMDEC pour le moment.</p>
-            <button className="btn btn-primary" onClick={() => setCreating(true)}>
-              <IconPlus /> Créer la première analyse
-            </button>
-          </div>
-        ) : (
-          <table className="data">
+        {(
+          <table className="data amdec-table">
             <thead>
               <tr>
                 <th>Élément / fonction</th>
                 <th>Mode de défaillance</th>
                 <th>Cause</th>
-                <th title="Gravité">G</th>
-                <th title="Occurrence">O</th>
-                <th title="Détectabilité">D</th>
-                <th>Criticité</th>
+                <th title="Gravité — 1 à 4">G</th>
+                <th title="Occurrence — 1 à 4">O</th>
+                <th title="Détectabilité — 1 à 4">D</th>
+                <th>
+                  <button
+                    type="button"
+                    className="th-sort"
+                    onClick={() => setSortBy((v) => (v === 'criticite' ? 'saisie' : 'criticite'))}
+                    title={
+                      sortBy === 'criticite'
+                        ? 'Revenir à l’ordre de saisie'
+                        : 'Trier par criticité décroissante'
+                    }
+                  >
+                    Criticité {sortBy === 'criticite' ? '↓' : ''}
+                  </button>
+                </th>
+                <th title="Cotation réévaluée après actions correctives">Après</th>
                 <th>Actions liées</th>
                 <th />
               </tr>
@@ -105,14 +133,54 @@ export function AmdecPage() {
                     {entry.effect && <div className="cell-sub">Effet : {entry.effect}</div>}
                   </td>
                   <td>{entry.cause}</td>
-                  <td>{entry.severity}</td>
-                  <td>{entry.occurrence}</td>
-                  <td>{entry.detection}</td>
+                  <td className="cote-cell">
+                    <CoteInput
+                      value={entry.severity}
+                      onCommit={(v) => v && void updateAmdec(entry.id, { severity: v })}
+                      label={`Gravité de ${entry.failureMode}`}
+                    />
+                  </td>
+                  <td className="cote-cell">
+                    <CoteInput
+                      value={entry.occurrence}
+                      onCommit={(v) => v && void updateAmdec(entry.id, { occurrence: v })}
+                      label={`Occurrence de ${entry.failureMode}`}
+                    />
+                  </td>
+                  <td className="cote-cell">
+                    <CoteInput
+                      value={entry.detection}
+                      onCommit={(v) => v && void updateAmdec(entry.id, { detection: v })}
+                      label={`Détectabilité de ${entry.failureMode}`}
+                    />
+                  </td>
                   <td>
                     <CriticalityBadge score={criticality(entry)} />
+                  </td>
+                  <td className="cote-cell">
+                    <span className="cote-after">
+                      <CoteInput
+                        value={entry.severityAfter ?? 0}
+                        onCommit={(v) => void updateAmdec(entry.id, { severityAfter: v || undefined })}
+                        label={`Gravité après actions de ${entry.failureMode}`}
+                        allowEmpty
+                      />
+                      <CoteInput
+                        value={entry.occurrenceAfter ?? 0}
+                        onCommit={(v) => void updateAmdec(entry.id, { occurrenceAfter: v || undefined })}
+                        label={`Occurrence après actions de ${entry.failureMode}`}
+                        allowEmpty
+                      />
+                      <CoteInput
+                        value={entry.detectionAfter ?? 0}
+                        onCommit={(v) => void updateAmdec(entry.id, { detectionAfter: v || undefined })}
+                        label={`Détectabilité après actions de ${entry.failureMode}`}
+                        allowEmpty
+                      />
+                    </span>
                     {residualCriticality(entry) !== null && (
-                      <div className="cell-sub" style={{ marginTop: 4 }}>
-                        après : <CriticalityBadge score={residualCriticality(entry)!} />
+                      <div style={{ marginTop: 5 }}>
+                        <CriticalityBadge score={residualCriticality(entry)!} />
                       </div>
                     )}
                   </td>
@@ -127,6 +195,14 @@ export function AmdecPage() {
                     </button>
                   </td>
                   <td className="actions-cell">
+                    <button
+                      className="icon-btn"
+                      onClick={() => void duplicate(entry)}
+                      aria-label="Dupliquer cette ligne"
+                      title="Dupliquer — même élément, à réécrire le mode"
+                    >
+                      <IconLayers />
+                    </button>
                     <button
                       className="icon-btn"
                       onClick={() => setEditing(entry)}
@@ -144,7 +220,17 @@ export function AmdecPage() {
                   </td>
                 </tr>
               ))}
+              {sorted.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="amdec-empty">
+                    Aucune analyse pour l’instant — saisissez la première ci-dessous.
+                  </td>
+                </tr>
+              )}
             </tbody>
+            <tfoot>
+              <QuickAddRow projectId={project.id} onAdd={addAmdec} />
+            </tfoot>
           </table>
         )}
       </div>
@@ -176,11 +262,166 @@ export function AmdecPage() {
       {exportOpen && (
         <ExportPdfModal
           projectName={project.name}
-          entries={sorted}
+          entries={byCriticality}
           onClose={() => setExportOpen(false)}
         />
       )}
     </div>
+  );
+}
+
+/**
+ * Cote 1–4 éditable sur place.
+ *
+ * Un menu déroulant demande clic, déroulement, clic — soixante manipulations
+ * pour une AMDEC de vingt lignes. Ici la cellule EST le champ : on clique une
+ * fois (le contenu se sélectionne) et on tape le chiffre. Au clavier, en
+ * tabulant depuis la cellule précédente, il n'y a aucun clic du tout.
+ */
+function CoteInput({
+  value,
+  onCommit,
+  label,
+  allowEmpty = false,
+}: {
+  value: number;
+  onCommit: (v: number) => void;
+  label: string;
+  allowEmpty?: boolean;
+}) {
+  return (
+    <input
+      className="cote-input"
+      type="text"
+      inputMode="numeric"
+      aria-label={label}
+      title={label}
+      value={value ? String(value) : ''}
+      placeholder={allowEmpty ? '—' : ''}
+      onFocus={(e) => e.currentTarget.select()}
+      onChange={(e) => {
+        // On ne garde que le dernier caractère valide : retaper un chiffre
+        // par-dessus remplace la cote au lieu de la concaténer.
+        const digit = e.target.value.replace(/[^1-4]/g, '').slice(-1);
+        if (digit) onCommit(Number(digit));
+        else if (allowEmpty) onCommit(0);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+      }}
+    />
+  );
+}
+
+/**
+ * Ligne de saisie permanente, en pied de tableau.
+ *
+ * Une AMDEC se remplit en session : quinze à trente lignes d'affilée. Une
+ * modale par ligne, c'est autant d'allers-retours et, surtout, le tableau
+ * masqué au moment où l'on en a le plus besoin — on cote d'autant mieux qu'on
+ * voit les lignes déjà saisies.
+ *
+ * Seul le mode de défaillance est exigé : la méthode liste les modes d'abord,
+ * les causes viennent après. Entrée crée la ligne et laisse le curseur prêt
+ * pour la suivante.
+ */
+function QuickAddRow({
+  projectId,
+  onAdd,
+}: {
+  projectId: string;
+  onAdd: (projectId: string, input: AmdecInput) => Promise<void>;
+}) {
+  const [element, setElement] = useState('');
+  const [failureMode, setFailureMode] = useState('');
+  const [cause, setCause] = useState('');
+  const [severity, setSeverity] = useState(2);
+  const [occurrence, setOccurrence] = useState(2);
+  const [detection, setDetection] = useState(2);
+  const first = useRef<HTMLInputElement>(null);
+
+  const ready = failureMode.trim().length > 0;
+
+  const add = () => {
+    if (!ready) return;
+    void onAdd(projectId, {
+      element: element.trim(),
+      failureMode: failureMode.trim(),
+      cause: cause.trim(),
+      severity,
+      occurrence,
+      detection,
+    });
+    // On garde l'élément : les lignes suivantes portent souvent sur le même.
+    setFailureMode('');
+    setCause('');
+    first.current?.focus();
+  };
+
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      add();
+    }
+  };
+
+  return (
+    <tr className="amdec-quick" onKeyDown={onKey}>
+      <td>
+        <input
+          type="text"
+          value={element}
+          onChange={(e) => setElement(e.target.value)}
+          placeholder="Élément"
+          aria-label="Élément ou fonction"
+        />
+      </td>
+      <td>
+        <input
+          ref={first}
+          type="text"
+          value={failureMode}
+          onChange={(e) => setFailureMode(e.target.value)}
+          placeholder="Mode de défaillance…"
+          aria-label="Mode de défaillance"
+        />
+      </td>
+      <td>
+        <input
+          type="text"
+          value={cause}
+          onChange={(e) => setCause(e.target.value)}
+          placeholder="Cause"
+          aria-label="Cause"
+        />
+      </td>
+      <td className="cote-cell">
+        <CoteInput value={severity} onCommit={setSeverity} label="Gravité" />
+      </td>
+      <td className="cote-cell">
+        <CoteInput value={occurrence} onCommit={setOccurrence} label="Occurrence" />
+      </td>
+      <td className="cote-cell">
+        <CoteInput value={detection} onCommit={setDetection} label="Détectabilité" />
+      </td>
+      <td>
+        <CriticalityBadge score={severity * occurrence * detection} />
+      </td>
+      <td colSpan={2} className="amdec-quick-hint">
+        {ready ? 'Entrée pour ajouter' : 'Le mode de défaillance suffit'}
+      </td>
+      <td className="actions-cell">
+        <button
+          className="icon-btn"
+          onClick={add}
+          disabled={!ready}
+          aria-label="Ajouter cette analyse"
+          title="Ajouter (Entrée)"
+        >
+          <IconPlus />
+        </button>
+      </td>
+    </tr>
   );
 }
 
