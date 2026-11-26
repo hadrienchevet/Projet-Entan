@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PaperCanvas } from '@/components/PaperCanvas';
 import { EXAMPLE_CSS, FLOW, GUIDE_GROUPS } from './guideContent';
 
 /**
@@ -23,54 +24,8 @@ import { EXAMPLE_CSS, FLOW, GUIDE_GROUPS } from './guideContent';
  */
 
 /* Grain de papier : bruit fractal SVG en data-URI (~300 octets, pas de requête). */
-const GRAIN =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E\")";
-
 const css = `
-.meth {
-  position: relative;
-  overflow-x: clip;
-  /* Papiers pastel — déclinés de la terracotta de la marque, jamais criards. */
-  --p-sage: #e7efe5;
-  --p-sand: #f8eedd;
-  --p-rose: #f9e8e2;
-  --p-sky: #e6eef4;
-  --ink-soft: #6b6a63;
-}
 
-/* Lavis à l'huile : trois nappes diffuses, très lentes. Des dégradés radiaux
-   plutôt qu'un flou — même rendu, sans le coût d'un filtre au défilement. */
-.meth-wash { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-.meth-wash i {
-  position: absolute; display: block; border-radius: 50%;
-  background: radial-gradient(circle at 50% 50%, var(--c) 0%, transparent 68%);
-  opacity: 0.75;
-}
-.meth-wash i:nth-child(1) { --c: #f3d9cc; width: 760px; height: 760px; top: -220px; left: -200px; }
-.meth-wash i:nth-child(2) { --c: #dde9e1; width: 680px; height: 680px; top: 42%; right: -260px; }
-.meth-wash i:nth-child(3) { --c: #e8dff0; width: 620px; height: 620px; bottom: -180px; left: 8%; }
-@keyframes meth-drift-a { to { transform: translate3d(60px, 40px, 0) scale(1.07); } }
-@keyframes meth-drift-b { to { transform: translate3d(-70px, -30px, 0) scale(1.05); } }
-@media (prefers-reduced-motion: no-preference) {
-  .meth-wash i:nth-child(1) { animation: meth-drift-a 46s ease-in-out infinite alternate; }
-  .meth-wash i:nth-child(2) { animation: meth-drift-b 58s ease-in-out infinite alternate; }
-  .meth-wash i:nth-child(3) { animation: meth-drift-a 52s ease-in-out infinite alternate reverse; }
-}
-
-/* Grain de papier sur toute la page. */
-.meth::after {
-  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background-image: ${GRAIN}; opacity: 0.05; mix-blend-mode: multiply;
-}
-
-.meth-wrap { position: relative; z-index: 2; max-width: 1080px; margin: 0 auto; padding: 0 24px; }
-
-@keyframes meth-reveal { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .meth [data-reveal] { animation: meth-reveal both; animation-timeline: view(); animation-range: entry 4% entry 38%; }
-  }
-}
 @keyframes meth-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
 
 /* --- Héros ---------------------------------------------------------------- */
@@ -112,18 +67,7 @@ const css = `
 .meth-toc-grid p { font-size: 12.5px; line-height: 1.5; color: var(--ink-soft); }
 
 /* --- Sections : une feuille par famille ----------------------------------- */
-.meth-section {
-  position: relative; margin: 54px 0; padding: 44px 38px 34px; background: var(--sheet);
-  border-radius: 34px 14px 30px 16px / 16px 32px 14px 30px;
-  box-shadow: 0 1px 0 rgb(255 255 255 / 0.75) inset, 0 16px 40px rgb(31 30 27 / 0.08);
-  transform: rotate(var(--rot));
-}
-/* Grain propre à la feuille, un peu plus marqué que celui du fond. */
-.meth-section::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
-  background-image: ${GRAIN}; opacity: 0.07; mix-blend-mode: multiply;
-}
-.meth-section > * { position: relative; }
+.meth-section { padding: 44px 38px 34px; margin: 54px 0; }
 .meth-section-head { max-width: 720px; margin-bottom: 10px; }
 .meth-num { font-family: var(--font-serif); font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: var(--accent-text); }
 .meth-section-head h2 { font-family: var(--font-serif); font-size: 31px; line-height: 1.14; letter-spacing: -0.02em; margin: 10px 0 12px; }
@@ -141,29 +85,13 @@ const css = `
 .meth-item p .lbl { color: var(--text); font-weight: 600; }
 
 /* La figure est un découpage blanc posé sur la feuille, penché à l'inverse. */
-.meth-fig {
-  position: sticky; top: 24px; margin: 0; padding: 17px; background: #fffdf9;
-  border-radius: 18px 8px 16px 10px / 10px 18px 8px 16px;
-  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, 0 14px 32px rgb(31 30 27 / 0.12);
-  transform: rotate(0.7deg);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
+.meth-fig { position: sticky; top: 24px; margin: 0; padding: 17px; transform: rotate(0.7deg); transition: transform 0.25s ease, box-shadow 0.25s ease; }
 .meth-item:nth-child(even) .meth-fig { transform: rotate(-0.8deg); }
 .meth-fig:hover { transform: rotate(0deg) translateY(-3px); box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, 0 20px 42px rgb(31 30 27 / 0.16); }
 .meth-fig .cap { font-size: 10px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 11px; }
 
 /* --- Fil rouge ------------------------------------------------------------ */
-.meth-flow-block {
-  position: relative; margin: 54px 0 10px; padding: 36px 30px; text-align: center; background: #fffdf9;
-  border-radius: 30px 16px 28px 14px / 14px 28px 16px 30px;
-  box-shadow: 0 1px 0 rgb(255 255 255 / 0.85) inset, 0 16px 40px rgb(31 30 27 / 0.09);
-  transform: rotate(-0.25deg);
-}
-.meth-flow-block::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
-  background-image: ${GRAIN}; opacity: 0.06; mix-blend-mode: multiply;
-}
-.meth-flow-block > * { position: relative; }
+.meth-flow-block { margin: 54px 0 10px; padding: 36px 30px; text-align: center; transform: rotate(-0.25deg); }
 .meth-flow-block h2 { font-family: var(--font-serif); font-size: 27px; letter-spacing: -0.02em; margin-bottom: 10px; }
 .meth-flow-block .intro { font-size: 15.5px; line-height: 1.68; color: var(--text-secondary); max-width: 640px; margin: 0 auto 24px; }
 .meth-flow { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 9px; }
@@ -192,10 +120,6 @@ const css = `
   .meth-flow-block { padding: 28px 18px; }
 }
 
-/* Papier immobile pour qui préfère : plus de rotation ni de dérive. */
-@media (prefers-reduced-motion: reduce) {
-  .meth-section, .meth-flow-block, .meth-fig, .meth-toc-grid a { transform: none; }
-}
 ${EXAMPLE_CSS}
 `;
 
@@ -211,16 +135,9 @@ export function MethodesPage() {
   const total = GUIDE_GROUPS.reduce((n, g) => n + g.cards.length, 0);
 
   return (
-    <div className="meth">
+    <PaperCanvas className="meth">
       <style dangerouslySetInnerHTML={{ __html: css }} />
-
-      <div className="meth-wash" aria-hidden="true">
-        <i />
-        <i />
-        <i />
-      </div>
-
-      <div className="meth-wrap">
+      <div className="paper-wrap">
         <header className="meth-hero">
           <span className="meth-eyebrow">Guide des méthodes</span>
           <h1>
@@ -263,7 +180,7 @@ export function MethodesPage() {
           <section
             key={group.id}
             id={group.id}
-            className="meth-section"
+            className="paper-sheet meth-section"
             style={
               {
                 '--sheet': SHEETS[i % SHEETS.length].tint,
@@ -299,7 +216,7 @@ export function MethodesPage() {
                     {card.link}
                   </p>
                 </div>
-                <figure className="meth-fig">
+                <figure className="paper-cut meth-fig">
                   <div className="cap">Exemple</div>
                   {card.example}
                 </figure>
@@ -308,7 +225,7 @@ export function MethodesPage() {
           </section>
         ))}
 
-        <section className="meth-flow-block" data-reveal>
+        <section className="paper-cut meth-flow-block" data-reveal>
           <h2>Comment tout s’articule</h2>
           <p className="intro">
             Pris isolément, chaque outil est utile. Reliés, ils forment un système où l’information
@@ -349,6 +266,6 @@ export function MethodesPage() {
           avec des exemples chiffrés.
         </p>
       </div>
-    </div>
+    </PaperCanvas>
   );
 }

@@ -2,6 +2,15 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BlogLayout } from '@/components/BlogLayout';
 import { BLOG_POSTS } from '@/content/blog-posts';
+import {
+  AMDEC_DIAGRAMS_CSS,
+  AvantApres,
+  BoucleAmdec,
+  ChaineDefaillance,
+  EchellesCotation,
+  FormuleCriticite,
+  JaugeCriticite,
+} from '@/components/diagrams/AmdecDiagrams';
 
 const post = BLOG_POSTS.find((p) => p.slug === 'amdec-methode-exemple')!;
 
@@ -25,9 +34,24 @@ export const metadata: Metadata = {
   },
 };
 
+/* Mise en page propre à l'article : colonne élargie pour laisser respirer les
+   schémas, et feuilles de papier pour séparer les parties. */
+const css = `
+.paper-article { max-width: 820px; }
+.paper-article h2 { margin-top: 46px; }
+.amdec-sheet { padding: 26px 26px 20px; margin: 34px 0; }
+.amdec-sheet > h2:first-child { margin-top: 0; }
+.amdec-callout { background: #fffdf9; border-radius: 20px 9px 18px 11px / 11px 18px 9px 20px; padding: 18px 20px; margin: 28px 0; box-shadow: 0 12px 30px rgb(31 30 27 / 0.09); }
+.amdec-callout p { margin: 0; font-size: 15px; line-height: 1.65; }
+@media (max-width: 640px) { .amdec-sheet { padding: 20px 17px 16px; margin: 26px 0; } }
+${AMDEC_DIAGRAMS_CSS}
+`;
+
 export default function Page() {
   return (
-    <BlogLayout title={post.title} description={post.description} date={post.date} slug={post.slug}>
+    <BlogLayout title={post.title} description={post.description} date={post.date} slug={post.slug} paper>
+      <style dangerouslySetInnerHTML={{ __html: css }} />
+
       <p className="lead">
         Un risque identifié en réunion, coté « à l’instinct », puis oublié dans un compte-rendu — c’est la
         façon la plus sûre de le voir se transformer en non-conformité six mois plus tard. L’AMDEC sert
@@ -43,30 +67,39 @@ export default function Page() {
         et qui chiffre la priorité à traiter chaque risque plutôt que de les traiter tous pareil.
       </p>
 
-      <h2>Les trois facteurs qui composent la criticité</h2>
-      <p>Chaque mode de défaillance est coté sur trois facteurs, en général sur une échelle de 1 à 4 :</p>
-      <ul>
-        <li>
-          <strong>Gravité (G)</strong> — l’impact si la défaillance se produit. 1 = effet mineur, à peine
-          perceptible ; 4 = catastrophique (arrêt de production, non-conformité client, sécurité).
-        </li>
-        <li>
-          <strong>Occurrence (O)</strong> — la fréquence probable de la défaillance. 1 = rare, jamais
-          observée ; 4 = fréquente, déjà arrivée plusieurs fois.
-        </li>
-        <li>
-          <strong>Détectabilité (D)</strong> — la capacité à repérer le problème avant qu’il n’ait un
-          impact. 1 = toujours détecté avant conséquence ; 4 = indétectable, découvert trop tard.
-        </li>
-      </ul>
+      <ChaineDefaillance />
 
-      <div className="callout">
+      <section className="paper-sheet amdec-sheet" style={{ ['--sheet' as string]: 'var(--p-sand)', ['--rot' as string]: '-0.3deg' }}>
+        <h2>Les trois facteurs qui composent la criticité</h2>
+        <p>Chaque mode de défaillance est coté sur trois facteurs, en général sur une échelle de 1 à 4 :</p>
+        <ul>
+          <li>
+            <strong>Gravité (G)</strong> — l’impact si la défaillance se produit. 1 = effet mineur, à peine
+            perceptible ; 4 = catastrophique (arrêt de production, non-conformité client, sécurité).
+          </li>
+          <li>
+            <strong>Occurrence (O)</strong> — la fréquence probable de la défaillance. 1 = rare, jamais
+            observée ; 4 = fréquente, déjà arrivée plusieurs fois.
+          </li>
+          <li>
+            <strong>Détectabilité (D)</strong> — la capacité à repérer le problème avant qu’il n’ait un
+            impact. 1 = toujours détecté avant conséquence ; 4 = indétectable, découvert trop tard.
+          </li>
+        </ul>
+
+        <EchellesCotation />
+        <FormuleCriticite g={4} o={2} d={4} />
+      </section>
+
+      <div className="amdec-callout">
         <p>
           <strong>Criticité = Gravité × Occurrence × Détectabilité.</strong> Sur une échelle 1-4, le score
           maximum est 64. Au-delà de <strong>24</strong>, le risque est considéré critique et doit
           déclencher une action corrective tracée — pas juste une note dans un compte-rendu de réunion.
         </p>
       </div>
+
+      <JaugeCriticite score={32} />
 
       <h2>Pourquoi la cotation part souvent en vrille</h2>
       <ul>
@@ -92,60 +125,64 @@ export default function Page() {
         </li>
       </ul>
 
-      <h2>Exemple chiffré : ligne d’assemblage</h2>
-      <p>
-        Sur une ligne d’assemblage de sous-ensembles électroniques, trois modes de défaillance identifiés
-        en revue :
-      </p>
+      <section className="paper-sheet amdec-sheet" style={{ ['--sheet' as string]: 'var(--p-sky)', ['--rot' as string]: '0.35deg' }}>
+        <h2>Exemple chiffré : ligne d’assemblage</h2>
+        <p>
+          Sur une ligne d’assemblage de sous-ensembles électroniques, trois modes de défaillance identifiés
+          en revue :
+        </p>
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Mode de défaillance</th>
-              <th>Effet</th>
-              <th>G</th>
-              <th>O</th>
-              <th>D</th>
-              <th>Criticité</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Connecteur mal serti</td>
-              <td>Panne intermittente chez le client</td>
-              <td>4</td>
-              <td>2</td>
-              <td>4</td>
-              <td>32 — critique</td>
-            </tr>
-            <tr>
-              <td>Étiquette de traçabilité illisible</td>
-              <td>Retard au contrôle qualité</td>
-              <td>2</td>
-              <td>3</td>
-              <td>2</td>
-              <td>12</td>
-            </tr>
-            <tr>
-              <td>Vis de fixation sous-couple</td>
-              <td>Jeu mécanique après vibrations</td>
-              <td>3</td>
-              <td>2</td>
-              <td>3</td>
-              <td>18</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Mode de défaillance</th>
+                <th>Effet</th>
+                <th>G</th>
+                <th>O</th>
+                <th>D</th>
+                <th>Criticité</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Connecteur mal serti</td>
+                <td>Panne intermittente chez le client</td>
+                <td>4</td>
+                <td>2</td>
+                <td>4</td>
+                <td>32 — critique</td>
+              </tr>
+              <tr>
+                <td>Étiquette de traçabilité illisible</td>
+                <td>Retard au contrôle qualité</td>
+                <td>2</td>
+                <td>3</td>
+                <td>2</td>
+                <td>12</td>
+              </tr>
+              <tr>
+                <td>Vis de fixation sous-couple</td>
+                <td>Jeu mécanique après vibrations</td>
+                <td>3</td>
+                <td>2</td>
+                <td>3</td>
+                <td>18</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <p>
-        Seul le connecteur mal serti (32, au-dessus du seuil de 24) déclenche une action corrective
-        immédiate — ici, l’ajout d’un contrôle visuel systématique en sortie de sertissage, qui fait
-        chuter la Détectabilité de 4 à 1. Recalculée : 4 × 2 × 1 = 8. Le risque est sorti de la zone
-        critique, et cette criticité résiduelle est ce qui prouve — en revue de projet — que l’action a
-        été efficace, pas juste mise en œuvre.
-      </p>
+        <p>
+          Seul le connecteur mal serti (32, au-dessus du seuil de 24) déclenche une action corrective
+          immédiate — ici, l’ajout d’un contrôle visuel systématique en sortie de sertissage, qui fait
+          chuter la Détectabilité de 4 à 1. Recalculée : 4 × 2 × 1 = 8. Le risque est sorti de la zone
+          critique, et cette criticité résiduelle est ce qui prouve — en revue de projet — que l’action a
+          été efficace, pas juste mise en œuvre.
+        </p>
+
+        <AvantApres />
+      </section>
 
       <h2>Comment la mettre en place en 4 étapes</h2>
       <ul>
@@ -154,6 +191,8 @@ export default function Page() {
         <li><strong>3. Cotez en groupe</strong>, pas seul — la valeur de l’AMDEC vient autant de la discussion que du chiffre final.</li>
         <li><strong>4. Assignez une action corrective à tout ce qui dépasse le seuil critique</strong>, avec un responsable et une échéance, puis recotez après mise en œuvre pour vérifier la criticité résiduelle.</li>
       </ul>
+
+      <BoucleAmdec />
 
       <h2>Et après ?</h2>
       <p>
