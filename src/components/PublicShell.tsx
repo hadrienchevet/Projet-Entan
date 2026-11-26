@@ -92,6 +92,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
           <span className="pub-foot-links">
             <Link href="/">Accueil</Link>
             <Link href="/blog">Blog</Link>
+            <Link href="/faq">FAQ</Link>
             <Link href="/login">Connexion</Link>
             <Link href="/cgv">CGV</Link>
             <Link href="/confidentialite">Confidentialité</Link>

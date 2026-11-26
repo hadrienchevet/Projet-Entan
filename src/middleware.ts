@@ -51,6 +51,7 @@ export default async function proxy(request: NextRequest) {
   const isPublic =
     pathname === '/' ||
     pathname === '/methodes' ||
+    pathname === '/faq' ||
     pathname === '/blog' ||
     pathname.startsWith('/blog/') ||
     pathname === '/robots.txt' ||
