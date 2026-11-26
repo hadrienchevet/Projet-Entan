@@ -128,73 +128,8 @@ export function AmdecPage() {
     if (window.confirm(msg)) void deleteAmdec(entry.id);
   };
 
-  return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h1>AMDEC</h1>
-          <p className="subtitle">
-            Analyse des modes de défaillance — criticité = gravité × occurrence × détectabilité.
-            Chaque analyse peut générer des actions correctives.
-          </p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className="segmented">
-            {(['tableau', 'matrice'] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                className={view === v ? 'active' : ''}
-                onClick={() => setView(v)}
-              >
-                {v === 'tableau' ? 'Tableau' : 'Matrice de risque'}
-              </button>
-            ))}
-          </div>
-          <button className="btn" onClick={() => setExportOpen(true)} disabled={sorted.length === 0}>
-            Exporter PDF
-          </button>
-          <button className="btn btn-primary" onClick={() => setCreating(true)}>
-            <IconPlus /> Nouvelle analyse
-          </button>
-        </div>
-      </div>
-
-      {view === 'matrice' ? (
-        <RiskMatrixView entries={byCriticality} />
-      ) : (
-      <div className="card table-wrap">
-        {(
-          <table className="data amdec-table">
-            <thead>
-              <tr>
-                <th>Élément / fonction</th>
-                <th>Mode de défaillance</th>
-                <th>Cause</th>
-                <th title="Gravité — 1 à 4">G</th>
-                <th title="Occurrence — 1 à 4">O</th>
-                <th title="Détectabilité — 1 à 4">D</th>
-                <th>
-                  <button
-                    type="button"
-                    className="th-sort"
-                    onClick={() => setSortBy((v) => (v === 'finale' ? 'saisie' : 'finale'))}
-                    title={
-                      sortBy === 'finale'
-                        ? 'Figer dans l’ordre de saisie (utile pendant le remplissage)'
-                        : 'Reclasser par criticité finale décroissante'
-                    }
-                  >
-                    Criticité {sortBy === 'finale' ? '↓' : '·'}
-                  </button>
-                </th>
-                <th title="Cotation réévaluée après actions correctives">Après</th>
-                <th>Actions liées</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((entry) => (
+  /** Une ligne du tableau. Extrait pour être rendu à plat ou sous un groupe. */
+  const renderRow = (entry: AmdecEntry, grouped: boolean) => (
                 <tr
                   key={entry.id}
                   ref={(el) => {
@@ -203,7 +138,7 @@ export function AmdecPage() {
                   }}
                   className={improved.has(entry.id) ? 'amdec-improved' : undefined}
                 >
-                  <td className="cell-title">{entry.element}</td>
+                  <td className="cell-title">{grouped ? null : entry.element}</td>
                   <td>
                     <div>{entry.failureMode}</div>
                     {entry.effect && <div className="cell-sub">Effet : {entry.effect}</div>}
@@ -303,7 +238,117 @@ export function AmdecPage() {
                     </button>
                   </td>
                 </tr>
-              ))}
+  );
+
+  /** Pire criticité finale d'un groupe — c'est elle qui le classe. */
+  const worst = (list: AmdecEntry[]) => Math.max(...list.map(finalCriticality));
+
+  /* Regroupement par élément : une AMDEC s'organise par fonction analysée, pas
+     en liste plate. Clé insensible à la casse et aux espaces, pour que
+     « Convoyeur » et « convoyeur  » ne fassent pas deux groupes. */
+  const groups = (() => {
+    const map = new Map<string, { label: string; entries: AmdecEntry[] }>();
+    for (const e of sorted) {
+      const key = e.element.trim().toLowerCase();
+      const g = map.get(key);
+      if (g) g.entries.push(e);
+      else map.set(key, { label: e.element.trim(), entries: [e] });
+    }
+    return [...map.values()].sort((a, b) => {
+      if (!a.label) return 1; // les lignes sans élément ferment la marche
+      if (!b.label) return -1;
+      return worst(b.entries) - worst(a.entries);
+    });
+  })();
+
+  /* En ordre de saisie on reste à plat : le regroupement n'a de sens que pour
+     l'analyse, pas pendant le remplissage. */
+  const body =
+    sortBy === 'saisie'
+      ? sorted.map((entry) => renderRow(entry, false))
+      : groups.flatMap((g) => [
+          <tr key={`groupe:${g.label}`} className="amdec-group">
+            <td colSpan={10}>
+              <span className="amdec-group-name">{g.label || 'Sans élément'}</span>
+              <span className="amdec-group-count">
+                {g.entries.length} mode{g.entries.length > 1 ? 's' : ''}
+              </span>
+              <CriticalityBadge score={worst(g.entries)} />
+            </td>
+          </tr>,
+          ...g.entries.map((entry) => renderRow(entry, true)),
+        ]);
+
+  /** Éléments déjà saisis — alimente l'autocomplétion de la ligne de saisie. */
+  const knownElements = [...new Set(amdecs.map((e) => e.element.trim()).filter(Boolean))];
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h1>AMDEC</h1>
+          <p className="subtitle">
+            Analyse des modes de défaillance — criticité = gravité × occurrence × détectabilité.
+            Chaque analyse peut générer des actions correctives.
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="segmented">
+            {(['tableau', 'matrice'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                className={view === v ? 'active' : ''}
+                onClick={() => setView(v)}
+              >
+                {v === 'tableau' ? 'Tableau' : 'Matrice de risque'}
+              </button>
+            ))}
+          </div>
+          <button className="btn" onClick={() => setExportOpen(true)} disabled={sorted.length === 0}>
+            Exporter PDF
+          </button>
+          <button className="btn btn-primary" onClick={() => setCreating(true)}>
+            <IconPlus /> Nouvelle analyse
+          </button>
+        </div>
+      </div>
+
+      {view === 'matrice' ? (
+        <RiskMatrixView entries={byCriticality} />
+      ) : (
+      <div className="card table-wrap">
+        {(
+          <table className="data amdec-table">
+            <thead>
+              <tr>
+                <th>Élément / fonction</th>
+                <th>Mode de défaillance</th>
+                <th>Cause</th>
+                <th title="Gravité — 1 à 4">G</th>
+                <th title="Occurrence — 1 à 4">O</th>
+                <th title="Détectabilité — 1 à 4">D</th>
+                <th>
+                  <button
+                    type="button"
+                    className="th-sort"
+                    onClick={() => setSortBy((v) => (v === 'finale' ? 'saisie' : 'finale'))}
+                    title={
+                      sortBy === 'finale'
+                        ? 'Figer dans l’ordre de saisie (utile pendant le remplissage)'
+                        : 'Reclasser par criticité finale décroissante'
+                    }
+                  >
+                    Criticité {sortBy === 'finale' ? '↓' : '·'}
+                  </button>
+                </th>
+                <th title="Cotation réévaluée après actions correctives">Après</th>
+                <th>Actions liées</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {body}
               {sorted.length === 0 && (
                 <tr>
                   <td colSpan={10} className="amdec-empty">
@@ -313,7 +358,7 @@ export function AmdecPage() {
               )}
             </tbody>
             <tfoot>
-              <QuickAddRow projectId={project.id} onAdd={addAmdec} />
+              <QuickAddRow projectId={project.id} onAdd={addAmdec} elements={knownElements} />
             </tfoot>
           </table>
         )}
@@ -412,9 +457,13 @@ function CoteInput({
 function QuickAddRow({
   projectId,
   onAdd,
+  elements,
 }: {
   projectId: string;
   onAdd: (projectId: string, input: AmdecInput) => Promise<void>;
+  /** Éléments déjà saisis — autocomplétion : moins de frappe, et des groupes
+   *  qui ne se dédoublent pas sur une faute d'orthographe. */
+  elements: string[];
 }) {
   const [element, setElement] = useState('');
   const [failureMode, setFailureMode] = useState('');
@@ -454,11 +503,17 @@ function QuickAddRow({
       <td>
         <input
           type="text"
+          list="amdec-elements"
           value={element}
           onChange={(e) => setElement(e.target.value)}
           placeholder="Élément"
           aria-label="Élément ou fonction"
         />
+        <datalist id="amdec-elements">
+          {elements.map((el) => (
+            <option key={el} value={el} />
+          ))}
+        </datalist>
       </td>
       <td>
         <input
