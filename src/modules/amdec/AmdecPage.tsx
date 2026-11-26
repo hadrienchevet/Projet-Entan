@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useCurrentProject, useProjectActions, useProjectAmdecs, useWorkspace } from '@/lib/store';
 import type { AmdecEntry, AmdecInput } from '@/lib/types';
 import { AMDEC_SCALE_MAX, criticality, residualCriticality } from '@/lib/types';
@@ -9,6 +9,50 @@ import { CriticalityBadge } from '@/components/Badges';
 import { IconEdit, IconLayers, IconPlus, IconTrash } from '@/components/icons';
 import { ActionFormModal } from '@/modules/actions/ActionFormModal';
 import { RiskMatrixView } from './RiskMatrixView';
+
+/** Criticité qui fait foi : la réévaluée si elle existe, sinon l'initiale. */
+function finalCriticality(e: AmdecEntry): number {
+  return residualCriticality(e) ?? criticality(e);
+}
+
+/**
+ * Anime le reclassement des lignes (technique FLIP).
+ *
+ * Le saut d'une ligne qui change de rang est désorientant quand il est
+ * instantané — mais c'est justement le moment le plus parlant de la méthode :
+ * on vient de saisir une cotation après action, et le risque descend sous le
+ * seuil. Animé, le déplacement explique la cause au lieu de la masquer.
+ *
+ * On mesure la position avant peinture, on remet la ligne à son ancienne
+ * place, puis on la laisse rejoindre la nouvelle.
+ */
+function useFlipRows(signature: string) {
+  const rows = useRef(new Map<string, HTMLTableRowElement>());
+  const previous = useRef(new Map<string, number>());
+
+  useLayoutEffect(() => {
+    const current = new Map<string, number>();
+    rows.current.forEach((el, id) => current.set(id, el.getBoundingClientRect().top));
+
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!still) {
+      current.forEach((top, id) => {
+        const before = previous.current.get(id);
+        const el = rows.current.get(id);
+        if (before === undefined || !el) return;
+        const delta = before - top;
+        if (Math.abs(delta) < 2) return;
+        el.animate(
+          [{ transform: `translateY(${delta}px)` }, { transform: 'none' }],
+          { duration: 460, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+        );
+      });
+    }
+    previous.current = current;
+  }, [signature]);
+
+  return rows;
+}
 
 export function AmdecPage() {
   const project = useCurrentProject();
@@ -22,18 +66,43 @@ export function AmdecPage() {
   const [actionFor, setActionFor] = useState<AmdecEntry | null>(null);
   const [view, setView] = useState<'tableau' | 'matrice'>('tableau');
   const [exportOpen, setExportOpen] = useState(false);
-  /* Par défaut, ordre de saisie : trié par criticité, une ligne saute de place
-     dès qu'on modifie une cote, ce qui rend la saisie en session pénible. */
-  const [sortBy, setSortBy] = useState<'saisie' | 'criticite'>('saisie');
-
-  if (!project) return null;
+  /* Par défaut, les risques les plus critiques en tête — criticité FINALE,
+     donc réévaluée quand elle existe. Le reclassement est animé (FLIP) : une
+     ligne qui descend après une action corrective le fait voir. L'ordre de
+     saisie reste disponible pour les sessions de remplissage, où un tableau
+     stable vaut mieux. */
+  const [sortBy, setSortBy] = useState<'finale' | 'saisie'>('finale');
 
   const sorted =
-    sortBy === 'criticite'
-      ? [...amdecs].sort((a, b) => criticality(b) - criticality(a))
+    sortBy === 'finale'
+      ? [...amdecs].sort((a, b) => finalCriticality(b) - finalCriticality(a))
       : amdecs;
   /** L'export et la matrice restent priorisés par criticité, quel que soit l'affichage. */
   const byCriticality = [...amdecs].sort((a, b) => criticality(b) - criticality(a));
+
+  /* Change dès qu'un rang ou une cote bouge : c'est le signal de reclassement. */
+  const flipRows = useFlipRows(sorted.map((e) => `${e.id}:${finalCriticality(e)}`).join('|'));
+
+  /* Lignes dont la criticité finale vient de baisser — mises en avant une
+     seconde, pour relier le déplacement à sa cause. */
+  const [improved, setImproved] = useState<Set<string>>(new Set());
+  const lastScores = useRef(new Map<string, number>());
+  useLayoutEffect(() => {
+    const dropped: string[] = [];
+    amdecs.forEach((e) => {
+      const before = lastScores.current.get(e.id);
+      const now = finalCriticality(e);
+      if (before !== undefined && now < before) dropped.push(e.id);
+      lastScores.current.set(e.id, now);
+    });
+    if (dropped.length === 0) return;
+    setImproved(new Set(dropped));
+    const t = window.setTimeout(() => setImproved(new Set()), 1600);
+    return () => window.clearTimeout(t);
+  }, [amdecs]);
+
+  if (!project) return null;
+
   const linkedActionsCount = (amdecId: string) =>
     actions.filter((a) => a.amdecId === amdecId).length;
 
@@ -109,14 +178,14 @@ export function AmdecPage() {
                   <button
                     type="button"
                     className="th-sort"
-                    onClick={() => setSortBy((v) => (v === 'criticite' ? 'saisie' : 'criticite'))}
+                    onClick={() => setSortBy((v) => (v === 'finale' ? 'saisie' : 'finale'))}
                     title={
-                      sortBy === 'criticite'
-                        ? 'Revenir à l’ordre de saisie'
-                        : 'Trier par criticité décroissante'
+                      sortBy === 'finale'
+                        ? 'Figer dans l’ordre de saisie (utile pendant le remplissage)'
+                        : 'Reclasser par criticité finale décroissante'
                     }
                   >
-                    Criticité {sortBy === 'criticite' ? '↓' : ''}
+                    Criticité {sortBy === 'finale' ? '↓' : '·'}
                   </button>
                 </th>
                 <th title="Cotation réévaluée après actions correctives">Après</th>
@@ -126,7 +195,14 @@ export function AmdecPage() {
             </thead>
             <tbody>
               {sorted.map((entry) => (
-                <tr key={entry.id}>
+                <tr
+                  key={entry.id}
+                  ref={(el) => {
+                    if (el) flipRows.current.set(entry.id, el);
+                    else flipRows.current.delete(entry.id);
+                  }}
+                  className={improved.has(entry.id) ? 'amdec-improved' : undefined}
+                >
                   <td className="cell-title">{entry.element}</td>
                   <td>
                     <div>{entry.failureMode}</div>
@@ -179,8 +255,16 @@ export function AmdecPage() {
                       />
                     </span>
                     {residualCriticality(entry) !== null && (
-                      <div style={{ marginTop: 5 }}>
+                      <div className="cote-drop">
                         <CriticalityBadge score={residualCriticality(entry)!} />
+                        {residualCriticality(entry)! < criticality(entry) && (
+                          <span
+                            className="cote-delta"
+                            title="Baisse obtenue grâce aux actions correctives"
+                          >
+                            ↓ {criticality(entry) - residualCriticality(entry)!}
+                          </span>
+                        )}
                       </div>
                     )}
                   </td>

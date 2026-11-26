@@ -690,6 +690,22 @@ textarea { resize: vertical; min-height: 64px; }
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
+/* Baisse obtenue après actions correctives. */
+.cote-drop { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 5px; }
+.cote-delta { font-size: 11px; font-weight: 700; color: var(--success); }
+
+/* Une ligne dont la criticité finale vient de baisser : on la signale le temps
+   qu'elle rejoigne sa nouvelle place, pour relier le déplacement à sa cause. */
+@keyframes amdec-improved-sweep {
+  0% { background-color: var(--success-soft); }
+  70% { background-color: var(--success-soft); }
+  100% { background-color: transparent; }
+}
+.amdec-improved > td { animation: amdec-improved-sweep 1.6s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .amdec-improved > td { animation: none; }
+}
+
 .amdec-quick-hint { font-size: 11.5px; color: var(--text-muted); white-space: nowrap; }
 .amdec-empty { text-align: center; color: var(--text-muted); font-size: 13px; padding: 22px 10px; }
 
