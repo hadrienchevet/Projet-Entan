@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { PaperCanvas } from '@/components/PaperCanvas';
+import { Bloom, PaperCanvas } from '@/components/PaperCanvas';
 import { EXAMPLE_CSS, FLOW, GUIDE_GROUPS } from './guideContent';
 
 /**
@@ -29,7 +29,14 @@ const css = `
 @keyframes meth-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
 
 /* --- Héros ---------------------------------------------------------------- */
-.meth-hero { text-align: center; padding: 60px 0 10px; }
+.meth-hero { position: relative; text-align: center; padding: 60px 0 10px; }
+/* Les taches vivent dans les marges : le texte doit rester sur du blanc. */
+.meth-b-hero-l { top: -34px; left: -168px; }
+.meth-b-hero-r { top: 6px; right: -150px; }
+.meth-b-hero-r2 { top: 150px; right: -78px; }
+.meth-b-sec-l { top: 20px; left: -176px; }
+.meth-b-sec-r { bottom: 40px; right: -160px; }
+@media (max-width: 1180px) { .paper-bloom { display: none; } }
 .meth-eyebrow { display: inline-block; font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent-text); background: rgb(255 255 255 / 0.7); border: 1px solid var(--accent-faint); border-radius: 999px; padding: 5px 15px; margin-bottom: 22px; }
 .meth-hero h1 { font-size: 44px; line-height: 1.08; letter-spacing: -0.025em; max-width: 800px; margin: 0 auto 18px; }
 /* Coup de pinceau sous un mot clé du titre. */
@@ -57,17 +64,17 @@ const css = `
 .meth-toc-grid a {
   display: block; padding: 18px 19px; background: var(--sheet);
   border-radius: 22px 10px 20px 12px / 12px 22px 10px 20px;
-  box-shadow: 0 1px 0 rgb(255 255 255 / 0.8) inset, 0 10px 24px rgb(31 30 27 / 0.08);
+  box-shadow: none;
   transform: rotate(var(--rot));
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  transition: transform 0.22s ease, opacity 0.22s ease;
 }
-.meth-toc-grid a:hover { transform: rotate(0deg) translateY(-3px); box-shadow: 0 1px 0 rgb(255 255 255 / 0.8) inset, 0 16px 34px rgb(31 30 27 / 0.13); }
+.meth-toc-grid a:hover { transform: rotate(0deg) translateY(-2px); opacity: 0.82; }
 .meth-toc-grid .num { font-family: var(--font-serif); font-size: 13px; font-weight: 700; color: var(--accent-text); }
 .meth-toc-grid h2 { font-size: 16px; margin: 5px 0 6px; letter-spacing: -0.01em; }
 .meth-toc-grid p { font-size: 12.5px; line-height: 1.5; color: var(--ink-soft); }
 
 /* --- Sections : une feuille par famille ----------------------------------- */
-.meth-section { padding: 44px 38px 34px; margin: 54px 0; }
+.meth-section { padding: 46px 26px 30px; margin: 64px 0; }
 .meth-section-head { max-width: 720px; margin-bottom: 10px; }
 .meth-num { font-family: var(--font-serif); font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: var(--accent-text); }
 .meth-section-head h2 { font-family: var(--font-serif); font-size: 31px; line-height: 1.14; letter-spacing: -0.02em; margin: 10px 0 12px; }
@@ -85,13 +92,13 @@ const css = `
 .meth-item p .lbl { color: var(--text); font-weight: 600; }
 
 /* La figure est un découpage blanc posé sur la feuille, penché à l'inverse. */
-.meth-fig { position: sticky; top: 24px; margin: 0; padding: 17px; transform: rotate(0.7deg); transition: transform 0.25s ease, box-shadow 0.25s ease; }
+.meth-fig { position: sticky; top: 24px; margin: 0; padding: 16px; transform: rotate(0.6deg); transition: transform 0.25s ease; }
 .meth-item:nth-child(even) .meth-fig { transform: rotate(-0.8deg); }
-.meth-fig:hover { transform: rotate(0deg) translateY(-3px); box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, 0 20px 42px rgb(31 30 27 / 0.16); }
+.meth-fig:hover { transform: rotate(0deg) translateY(-2px); }
 .meth-fig .cap { font-size: 10px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 11px; }
 
 /* --- Fil rouge ------------------------------------------------------------ */
-.meth-flow-block { margin: 54px 0 10px; padding: 36px 30px; text-align: center; transform: rotate(-0.25deg); }
+.meth-flow-block { margin: 64px 0 10px; padding: 38px 26px; text-align: center; }
 .meth-flow-block h2 { font-family: var(--font-serif); font-size: 27px; letter-spacing: -0.02em; margin-bottom: 10px; }
 .meth-flow-block .intro { font-size: 15.5px; line-height: 1.68; color: var(--text-secondary); max-width: 640px; margin: 0 auto 24px; }
 .meth-flow { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 9px; }
@@ -139,6 +146,9 @@ export function MethodesPage() {
       <style dangerouslySetInnerHTML={{ __html: css }} />
       <div className="paper-wrap">
         <header className="meth-hero">
+          <Bloom color="#5b86d6" seed={7} size={300} className="meth-b-hero-l" />
+          <Bloom color="#d94f86" seed={23} size={270} className="meth-b-hero-r" />
+          <Bloom color="#e9b63a" seed={41} size={180} className="meth-b-hero-r2" />
           <span className="meth-eyebrow">Guide des méthodes</span>
           <h1>
             Les méthodes de <em>gestion de projet</em> industriel
@@ -188,6 +198,12 @@ export function MethodesPage() {
               } as React.CSSProperties
             }
           >
+            <Bloom
+              color={['#6a9b4a', '#e9b63a', '#d6452f', '#5b86d6'][i % 4]}
+              seed={13 + i * 9}
+              size={i % 2 === 0 ? 290 : 250}
+              className={i % 2 === 0 ? 'meth-b-sec-l' : 'meth-b-sec-r'}
+            />
             <div className="meth-section-head" data-reveal>
               <span className="meth-num">{String(i + 1).padStart(2, '0')}</span>
               <h2>{group.label}</h2>
