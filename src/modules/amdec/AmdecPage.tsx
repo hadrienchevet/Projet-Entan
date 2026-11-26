@@ -85,6 +85,16 @@ export function AmdecPage() {
 
   /* Lignes dont la criticité finale vient de baisser — mises en avant une
      seconde, pour relier le déplacement à sa cause. */
+  /** Groupes repliés — arborescence de fichiers : tout ouvert par défaut. */
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const toggleGroup = (key: string) =>
+    setCollapsed((s) => {
+      const next = new Set(s);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
   const [improved, setImproved] = useState<Set<string>>(new Set());
   const lastScores = useRef(new Map<string, number>());
   useLayoutEffect(() => {
@@ -136,7 +146,11 @@ export function AmdecPage() {
                     if (el) flipRows.current.set(entry.id, el);
                     else flipRows.current.delete(entry.id);
                   }}
-                  className={improved.has(entry.id) ? 'amdec-improved' : undefined}
+                  className={
+                    [grouped ? 'amdec-child' : '', improved.has(entry.id) ? 'amdec-improved' : '']
+                      .filter(Boolean)
+                      .join(' ') || undefined
+                  }
                 >
                   <td className="cell-title">{grouped ? null : entry.element}</td>
                   <td>
@@ -247,12 +261,12 @@ export function AmdecPage() {
      en liste plate. Clé insensible à la casse et aux espaces, pour que
      « Convoyeur » et « convoyeur  » ne fassent pas deux groupes. */
   const groups = (() => {
-    const map = new Map<string, { label: string; entries: AmdecEntry[] }>();
+    const map = new Map<string, { key: string; label: string; entries: AmdecEntry[] }>();
     for (const e of sorted) {
       const key = e.element.trim().toLowerCase();
       const g = map.get(key);
       if (g) g.entries.push(e);
-      else map.set(key, { label: e.element.trim(), entries: [e] });
+      else map.set(key, { key, label: e.element.trim(), entries: [e] });
     }
     return [...map.values()].sort((a, b) => {
       if (!a.label) return 1; // les lignes sans élément ferment la marche
@@ -266,18 +280,52 @@ export function AmdecPage() {
   const body =
     sortBy === 'saisie'
       ? sorted.map((entry) => renderRow(entry, false))
-      : groups.flatMap((g) => [
-          <tr key={`groupe:${g.label}`} className="amdec-group">
-            <td colSpan={10}>
-              <span className="amdec-group-name">{g.label || 'Sans élément'}</span>
-              <span className="amdec-group-count">
-                {g.entries.length} mode{g.entries.length > 1 ? 's' : ''}
-              </span>
-              <CriticalityBadge score={worst(g.entries)} />
-            </td>
-          </tr>,
-          ...g.entries.map((entry) => renderRow(entry, true)),
-        ]);
+      : groups.flatMap((g) => {
+          const open = !collapsed.has(g.key);
+          return [
+            <tr key={`groupe:${g.key}`} className={`amdec-group${open ? ' open' : ''}`}>
+              <td colSpan={10}>
+                <button
+                  type="button"
+                  className="amdec-group-toggle"
+                  onClick={() => toggleGroup(g.key)}
+                  aria-expanded={open}
+                >
+                  <svg
+                    className="amdec-chevron"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="9 6 15 12 9 18" />
+                  </svg>
+                  <span className="amdec-group-name">{g.label || 'Sans élément'}</span>
+                  <span className="amdec-group-count">
+                    {g.entries.length} mode{g.entries.length > 1 ? 's' : ''}
+                  </span>
+                  <span className="amdec-group-worst">
+                    <CriticalityBadge score={worst(g.entries)} />
+                  </span>
+                </button>
+              </td>
+            </tr>,
+            ...(open
+              ? [
+                  ...g.entries.map((entry) => renderRow(entry, true)),
+                  <GroupAddRow
+                    key={`ajout:${g.key}`}
+                    projectId={project.id}
+                    element={g.label}
+                    onAdd={addAmdec}
+                  />,
+                ]
+              : []),
+          ];
+        });
 
   /** Éléments déjà saisis — alimente l'autocomplétion de la ligne de saisie. */
   const knownElements = [...new Set(amdecs.map((e) => e.element.trim()).filter(Boolean))];
@@ -400,6 +448,133 @@ export function AmdecPage() {
 }
 
 /**
+ * Ajout d'un mode de défaillance **dans** un élément.
+ *
+ * Sans ça, le regroupement ne sert à rien : il faudrait retaper le nom de
+ * l'élément dans la ligne du bas pour que la nouvelle analyse atterrisse au
+ * bon endroit. Ici l'élément est porté par le groupe, donc implicite.
+ *
+ * Replié, c'est une simple ligne « + Ajouter un mode » ; déplié, les champs
+ * sont prêts et Entrée enchaîne sans refermer — on remplit un élément d'une
+ * traite.
+ */
+function GroupAddRow({
+  projectId,
+  element,
+  onAdd,
+}: {
+  projectId: string;
+  element: string;
+  onAdd: (projectId: string, input: AmdecInput) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [failureMode, setFailureMode] = useState('');
+  const [cause, setCause] = useState('');
+  const [severity, setSeverity] = useState(2);
+  const [occurrence, setOccurrence] = useState(2);
+  const [detection, setDetection] = useState(2);
+  const first = useRef<HTMLInputElement>(null);
+
+  const ready = failureMode.trim().length > 0;
+
+  const add = () => {
+    if (!ready) return;
+    void onAdd(projectId, {
+      element,
+      failureMode: failureMode.trim(),
+      cause: cause.trim(),
+      severity,
+      occurrence,
+      detection,
+    });
+    setFailureMode('');
+    setCause('');
+    first.current?.focus();
+  };
+
+  if (!open) {
+    return (
+      <tr className="amdec-addline">
+        <td />
+        <td colSpan={9}>
+          <button
+            type="button"
+            className="amdec-addline-btn"
+            onClick={() => {
+              setOpen(true);
+              // Le champ n'existe qu'au rendu suivant.
+              window.setTimeout(() => first.current?.focus(), 0);
+            }}
+          >
+            + Ajouter un mode de défaillance
+          </button>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr
+      className="amdec-child amdec-quick"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          add();
+        }
+        if (e.key === 'Escape') setOpen(false);
+      }}
+    >
+      <td />
+      <td>
+        <input
+          ref={first}
+          type="text"
+          value={failureMode}
+          onChange={(e) => setFailureMode(e.target.value)}
+          placeholder="Mode de défaillance…"
+          aria-label={`Mode de défaillance pour ${element || 'cet élément'}`}
+        />
+      </td>
+      <td>
+        <input
+          type="text"
+          value={cause}
+          onChange={(e) => setCause(e.target.value)}
+          placeholder="Cause"
+          aria-label="Cause"
+        />
+      </td>
+      <td className="cote-cell">
+        <CoteInput value={severity} onCommit={setSeverity} label="Gravité" />
+      </td>
+      <td className="cote-cell">
+        <CoteInput value={occurrence} onCommit={setOccurrence} label="Occurrence" />
+      </td>
+      <td className="cote-cell">
+        <CoteInput value={detection} onCommit={setDetection} label="Détectabilité" />
+      </td>
+      <td>
+        <CriticalityBadge score={severity * occurrence * detection} />
+      </td>
+      <td colSpan={2} className="amdec-quick-hint">
+        Entrée pour ajouter · Échap pour fermer
+      </td>
+      <td className="actions-cell">
+        <button
+          className="icon-btn"
+          onClick={add}
+          disabled={!ready}
+          aria-label="Ajouter ce mode"
+          title="Ajouter (Entrée)"
+        >
+          <IconPlus />
+        </button>
+      </td>
+    </tr>
+  );
+}
+
+/**
  * Cote 1–4 éditable sur place.
  *
  * Un menu déroulant demande clic, déroulement, clic — soixante manipulations
@@ -506,7 +681,7 @@ function QuickAddRow({
           list="amdec-elements"
           value={element}
           onChange={(e) => setElement(e.target.value)}
-          placeholder="Élément"
+          placeholder="Nouvel élément…"
           aria-label="Élément ou fonction"
         />
         <datalist id="amdec-elements">
@@ -547,7 +722,7 @@ function QuickAddRow({
         <CriticalityBadge score={severity * occurrence * detection} />
       </td>
       <td colSpan={2} className="amdec-quick-hint">
-        {ready ? 'Entrée pour ajouter' : 'Le mode de défaillance suffit'}
+        {ready ? 'Entrée pour ajouter' : 'Nouvel élément : le mode suffit'}
       </td>
       <td className="actions-cell">
         <button

@@ -690,23 +690,70 @@ textarea { resize: vertical; min-height: 64px; }
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
-/* En-tête de groupe : une AMDEC se lit par élément analysé. */
-.amdec-group > td {
-  background: var(--surface-2);
-  padding: 9px 16px;
-  border-top: 1px solid var(--border-strong);
-}
-.amdec-group-name {
-  font-weight: 600;
-  font-size: 13px;
+/* --- AMDEC : arborescence par élément ------------------------------------
+   Lecture en dossiers : un élément se déplie et se replie, ses modes de
+   défaillance sont ses enfants. */
+
+.amdec-group > td { padding: 0; border-top: 1px solid var(--border); }
+.amdec-group:first-child > td { border-top: none; }
+
+.amdec-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  font: inherit;
   color: var(--text);
-  margin-right: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
 }
-.amdec-group-count {
-  font-size: 11.5px;
+.amdec-group-toggle:hover { background: var(--hover); }
+.amdec-group-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.amdec-chevron {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
   color: var(--text-muted);
-  margin-right: 10px;
+  transition: transform 0.18s ease;
 }
+.amdec-group.open .amdec-chevron { transform: rotate(90deg); }
+
+.amdec-group-name { font-weight: 600; font-size: 13.5px; }
+.amdec-group-count { font-size: 11.5px; color: var(--text-muted); }
+/* Collée au titre : repoussée à droite par `margin-left: auto`, elle se
+   retrouvait à plus d'un mètre du nom sur un écran large. */
+.amdec-group-worst { display: inline-flex; margin-left: 2px; }
+
+/* Les enfants sont décalés, avec un filet qui matérialise la branche. */
+.amdec-child > td:first-child { position: relative; }
+.amdec-child > td:first-child::before {
+  content: '';
+  position: absolute;
+  left: 23px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+.amdec-child > td:nth-child(2) { padding-left: 18px; }
+
+/* Ligne « + Ajouter un mode », discrète tant qu'on ne s'en sert pas. */
+.amdec-addline > td { padding: 0 16px 8px; border-top: none; }
+.amdec-addline-btn {
+  border: none;
+  background: none;
+  padding: 4px 0 4px 18px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.amdec-addline-btn:hover { color: var(--accent-text); }
 
 /* Baisse obtenue après actions correctives. */
 .cote-drop { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 5px; }
