@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { IconHelp } from '@/components/icons';
-import { FLOW, GUIDE_GROUPS } from './guideContent';
+import { EXAMPLE_CSS, FLOW, GUIDE_GROUPS } from './guideContent';
 import { AcademyBridge } from './AcademyBridge';
 
 /**
@@ -85,48 +85,7 @@ const css = `
 .guide-example { margin-top: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 11px 12px; }
 .guide-example .cap { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 9px; }
 
-.ex-swot { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.ex-swot > div { border-radius: 6px; padding: 6px 8px; font-size: 11.5px; line-height: 1.3; color: var(--text); }
-.ex-swot b { display: block; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 2px; }
-.ex-swot .s { background: var(--success-soft); }
-.ex-swot .w { background: var(--danger-soft); }
-.ex-swot .o { background: var(--accent-soft); }
-.ex-swot .t { background: var(--warning-soft); }
-
-.ex-raci .act { font-size: 12.5px; font-weight: 600; margin-bottom: 9px; }
-.ex-raci .roles { display: flex; flex-wrap: wrap; gap: 6px; }
-.ex-raci .role { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 3px 9px 3px 4px; }
-.ex-raci .role b { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 9.5px; font-weight: 700; }
-
-.ex-amdec { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12.5px; }
-.ex-amdec .calc b { color: var(--text); }
-.ex-amdec .crit { background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger-border); border-radius: 999px; padding: 2px 9px; font-weight: 700; font-size: 11.5px; }
-
-.ex-action { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12.5px; }
-.ex-action .st { background: var(--accent-soft); color: var(--accent-text); border-radius: 999px; padding: 2px 9px; font-weight: 600; font-size: 11px; }
-.ex-action .due { color: var(--text-muted); margin-left: auto; font-size: 11.5px; }
-
-.ex-gantt { display: grid; gap: 7px; }
-.ex-gantt .lbl { font-size: 11px; color: var(--text-secondary); margin-bottom: 3px; }
-.ex-gantt .track { position: relative; height: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; }
-.ex-gantt .bar { position: absolute; top: 2px; height: 8px; border-radius: 4px; background: var(--accent); }
-.ex-gantt .bar.late { background: var(--danger); }
-
-.ex-cost .line { font-size: 12.5px; margin-bottom: 9px; }
-.ex-cost .line b { color: var(--text); }
-.ex-cost .over { color: var(--danger); font-weight: 600; }
-.ex-cost .bar { height: 9px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
-.ex-cost .bar span { display: block; height: 100%; width: 100%; background: var(--danger); }
-
-.ex-link { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
-.ex-link .node { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 5px 9px; }
-.ex-link .node small { display: block; color: var(--text-muted); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em; }
-.ex-link .arr { color: var(--text-muted); font-weight: 700; }
-
-.ex-a3 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.ex-a3 > div { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 11px; color: var(--text-secondary); }
-.ex-a3 .full { grid-column: 1 / -1; }
-.ex-a3 b { display: block; color: var(--text); font-size: 11px; margin-bottom: 1px; }
+${EXAMPLE_CSS}
 `;
 
 const Chevron = () => (
@@ -138,8 +97,6 @@ const Chevron = () => (
 export interface HelpPageProps {
   title?: string;
   subtitle?: string;
-  /** « app » = guide produit ; « public » = page de référencement. */
-  variant?: 'app' | 'public';
   /** Checklist de démarrage — injectée par `/help` seulement (a besoin du store). */
   checklist?: ReactNode;
 }
@@ -147,10 +104,8 @@ export interface HelpPageProps {
 export function HelpPage({
   title = 'Aide & Tutoriel',
   subtitle = 'Ce que fait chaque outil, quand vous en servir, et comment le faire dans ENTAN.',
-  variant = 'app',
   checklist,
 }: HelpPageProps = {}) {
-  const isApp = variant === 'app';
 
   return (
     <div className="page guide">
@@ -180,8 +135,7 @@ export function HelpPage({
             <p className="lead">{group.intro}</p>
             <div className="guide-cards">
               {group.cards.map((card) => (
-                /* Déplié d'office en public : le lecteur vient lire, pas cliquer. */
-                <details key={card.id} className="gcard" open={!isApp}>
+                <details key={card.id} className="gcard">
                   <summary>
                     <span className="ic">{card.icon}</span>
                     <span className="q">
@@ -202,7 +156,7 @@ export function HelpPage({
                       {card.example}
                     </div>
 
-                    {isApp && (
+                    {(
                       <div className="gcard-app">
                         <div className="cap">Dans ENTAN</div>
                         <ol>
@@ -266,7 +220,7 @@ export function HelpPage({
         </div>
       </div>
 
-      {isApp && <AcademyBridge />}
+      <AcademyBridge />
     </div>
   );
 }
